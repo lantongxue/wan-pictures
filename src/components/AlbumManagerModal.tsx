@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FolderPlus,
   Folder,
@@ -35,7 +36,7 @@ interface AlbumManagerModalProps {
   onCreateAlbum: (album: Album) => void;
   onUpdateAlbum: (album: Album) => void;
   onDeleteAlbum: (id: string) => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onOpenAuth?: (mode?: 'login' | 'register') => void;
 }
 
@@ -61,6 +62,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
   onShowToast,
   onOpenAuth,
 }) => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState('');
@@ -82,9 +84,9 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
               <Lock className="w-6 h-6" />
             </div>
             <div className="space-y-1.5">
-              <DialogTitle className="text-lg font-bold">相册功能需登录后使用</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{t('albumModal.loginRequiredTitle')}</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground max-w-xs mx-auto">
-                相册分类与资产归档属于个人私有数据，请登录或注册您的账号后再查看和管理相册。
+                {t('albumModal.loginRequiredDesc')}
               </DialogDescription>
             </div>
             <div className="flex gap-2.5 w-full pt-2">
@@ -94,7 +96,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                 onClick={onClose}
                 className="flex-1 text-xs h-9 rounded-full cursor-pointer"
               >
-                关闭
+                {t('common.close')}
               </Button>
               <Button
                 size="sm"
@@ -105,7 +107,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                 className="flex-1 text-xs h-9 rounded-full gap-1.5 cursor-pointer shadow-xs"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>立即登录</span>
+                <span>{t('auth.login')}</span>
               </Button>
             </div>
           </div>
@@ -134,7 +136,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
     };
 
     onCreateAlbum(newAlbum);
-    onShowToast('相册创建成功', newAlbum.name, 'success');
+    onShowToast(t('albumModal.createSuccess'), newAlbum.name, 'success');
     setIsCreating(false);
   };
 
@@ -151,7 +153,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
       name: editName.trim(),
       color: editColor || album.color,
     });
-    onShowToast('相册更新成功', editName.trim(), 'success');
+    onShowToast(t('albumModal.updateSuccess'), editName.trim(), 'success');
     setEditingAlbumId(null);
   };
 
@@ -165,9 +167,9 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle>相册分类与资产归档</DialogTitle>
+              <DialogTitle>{t('albumModal.title')}</DialogTitle>
               <DialogDescription className="mt-0.5 uppercase tracking-wide text-[11px]">
-                Organize image libraries into categorized spaces
+                {t('albumModal.subtitle')}
               </DialogDescription>
             </div>
           </div>
@@ -182,10 +184,10 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                 id="create-album-trigger-btn"
                 variant="outline"
                 onClick={handleStartCreate}
-                className="w-full py-5 border-dashed rounded-2xl gap-2 font-medium uppercase tracking-wider text-xs"
+                className="w-full py-5 border-dashed rounded-2xl gap-2 font-medium uppercase tracking-wider text-xs cursor-pointer"
               >
                 <FolderPlus className="w-4 h-4 text-primary" />
-                <span>Create New Collection</span>
+                <span>{t('albumModal.createBtn')}</span>
               </Button>
             ) : (
               <form
@@ -194,14 +196,14 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                    新建相册
+                    {t('albumModal.createTitle')}
                   </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsCreating(false)}
-                    className="h-6 w-6 rounded-full text-muted-foreground"
+                    className="h-6 w-6 rounded-full text-muted-foreground cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -210,25 +212,25 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="new-album-name-input" className="text-[10px] font-medium uppercase">
-                      相册名称 *
+                      {t('albumModal.nameLabel')}
                     </Label>
                     <Input
                       id="new-album-name-input"
                       type="text"
                       required
-                      placeholder="如：技术文档插图"
+                      placeholder={t('albumModal.namePlaceholder')}
                       value={newAlbumName}
                       onChange={(e) => setNewAlbumName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="new-album-desc-input" className="text-[10px] font-medium uppercase">
-                      相册描述 (选填)
+                      {t('albumModal.descLabel')}
                     </Label>
                     <Input
                       id="new-album-desc-input"
                       type="text"
-                      placeholder="简要说明此相册用途"
+                      placeholder={t('albumModal.descPlaceholder')}
                       value={newAlbumDesc}
                       onChange={(e) => setNewAlbumDesc(e.target.value)}
                     />
@@ -237,7 +239,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
 
                 {/* Color selection */}
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-medium uppercase">主题色标</Label>
+                  <Label className="text-[10px] font-medium uppercase">{t('albumModal.colorLabel')}</Label>
                   <div className="flex items-center gap-2.5">
                     {PRESET_COLORS.map((c) => (
                       <button
@@ -261,17 +263,17 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setIsCreating(false)}
-                    className="rounded-full text-xs font-medium"
+                    className="rounded-full text-xs font-medium cursor-pointer"
                   >
-                    取消
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     id="confirm-create-album-btn"
                     type="submit"
                     size="sm"
-                    className="rounded-full text-xs font-semibold"
+                    className="rounded-full text-xs font-semibold cursor-pointer"
                   >
-                    保存相册
+                    {t('albumModal.saveBtn')}
                   </Button>
                 </div>
               </form>
@@ -314,7 +316,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                           variant="ghost"
                           size="icon"
                           onClick={() => handleSaveEdit(album)}
-                          className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                          className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 cursor-pointer"
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -322,7 +324,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                           variant="ghost"
                           size="icon"
                           onClick={() => setEditingAlbumId(null)}
-                          className="h-8 w-8 text-muted-foreground"
+                          className="h-8 w-8 text-muted-foreground cursor-pointer"
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -348,7 +350,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                               )}
                             </div>
                             <p className="text-[11px] font-mono mt-0.5 text-muted-foreground">
-                              {albumImages.length} 张图片 · {formatFileSize(totalBytes)}
+                              {albumImages.length} {t('common.items')} · {formatFileSize(totalBytes)}
                               {album.description && ` · ${album.description}`}
                             </p>
                           </div>
@@ -360,8 +362,8 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                             variant="ghost"
                             size="icon"
                             onClick={() => handleStartEdit(album)}
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            title="编辑名称与颜色"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                            title={t('albumModal.editTooltip')}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
@@ -372,15 +374,15 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                               onClick={() => {
                                 if (
                                   window.confirm(
-                                    `确定删除相册 "${album.name}" 吗？相册内的图片将被自动移入默认相册。`
+                                    t('albumModal.confirmDeletePrompt', { name: album.name })
                                   )
                                 ) {
                                   onDeleteAlbum(album.id);
-                                  onShowToast('相册已删除', album.name, 'info');
+                                  onShowToast(t('albumModal.deletedSuccess'), album.name, 'info');
                                 }
                               }}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              title="删除相册"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                              title={t('albumModal.deleteTooltip')}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
@@ -399,9 +401,9 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
         <DialogFooter className="p-4 px-6 border-t border-border/80 bg-muted/20 shrink-0">
           <Button
             onClick={onClose}
-            className="rounded-full px-6 uppercase tracking-wider text-xs font-bold"
+            className="rounded-full px-6 uppercase tracking-wider text-xs font-bold cursor-pointer"
           >
-            Done
+            {t('common.done')}
           </Button>
         </DialogFooter>
       </DialogContent>

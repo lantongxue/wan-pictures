@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
+import { useTranslation } from 'react-i18next';
 import {
   Sparkles,
   Upload,
@@ -50,6 +51,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Badge } from './components/ui/badge';
 
 function WanPicturesApp() {
+  const { t } = useTranslation();
   const { isDark } = useTheme();
   const { isAuthenticated } = useAuth();
 
@@ -180,12 +182,12 @@ function WanPicturesApp() {
         if (files.length > 0) {
           e.preventDefault();
           if (!isAuthenticated) {
-            showToast('需要登录', '请先登录账号后再上传和存储图片', 'warning');
+            showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
             setAuthModalMode('login');
             setIsAuthModalOpen(true);
             return;
           }
-          showToast('已捕获剪贴板截图', `正在上传 ${files.length} 张图片...`, 'info');
+          showToast(t('common.info'), `Capturing ${files.length} images...`, 'info');
           handleFilesSelected(files);
         }
       }
@@ -193,14 +195,14 @@ function WanPicturesApp() {
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [uploadTargetAlbumId, settings, isAuthenticated]);
+  }, [uploadTargetAlbumId, settings, isAuthenticated, t]);
 
   // Handle Files Selected / Dragged
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
 
     if (!isAuthenticated) {
-      showToast('需要登录', '请先登录账号后再上传和管理存储资产', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -245,7 +247,7 @@ function WanPicturesApp() {
         setUploadQueue((prev) =>
           prev.map((item) =>
             item.id === qItem.id
-              ? { ...item, status: 'error', error: '图片解析异常' }
+              ? { ...item, status: 'error', error: 'Process Error' }
               : item
           )
         );
@@ -265,8 +267,8 @@ function WanPicturesApp() {
       });
 
       showToast(
-        '上传解析成功',
-        `已成功处理 ${processedResults.length} 张图片，点击可查看外链`,
+        t('uploadModal.titleDone'),
+        t('uploadModal.progressSubtitle', { done: processedResults.length, total: processedResults.length }),
         'success'
       );
       setLinkModalImages(processedResults);
@@ -276,12 +278,12 @@ function WanPicturesApp() {
   // Handle URL Import
   const handleUrlImport = async (url: string) => {
     if (!isAuthenticated) {
-      showToast('需要登录', '请先登录账号后再导入和保存图片', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
     }
-    showToast('正在抓取网络图片...', url, 'info');
+    showToast(t('hero.importUrl'), url, 'info');
     try {
       const meta = await getImageMetadata(url);
       const extMatch = url.match(/\.([a-zA-Z0-9]+)(\?|$)/);
@@ -312,17 +314,17 @@ function WanPicturesApp() {
       setImages(all);
       setLinkModalImages([newImage]);
       setIsLinkModalOpen(true);
-      showToast('网络图片导入成功', newImage.name, 'success');
+      showToast(t('common.success'), newImage.name, 'success');
     } catch (err) {
       console.error(err);
-      showToast('导入失败', '远程图片地址无效或存在跨域限制', 'error');
+      showToast(t('common.error'), 'Failed to import remote URL', 'error');
     }
   };
 
   // Image CRUD actions
   const handleDeleteImage = async (id: string) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再删除图片资产', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -337,12 +339,12 @@ function WanPicturesApp() {
     if (previewImage?.id === id) {
       setPreviewImage(null);
     }
-    showToast('图片已删除', undefined, 'info');
+    showToast(t('toast.deleteSuccess'), undefined, 'info');
   };
 
   const handleToggleFavorite = async (id: string) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再收藏图片', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -354,12 +356,12 @@ function WanPicturesApp() {
     if (previewImage?.id === id) {
       setPreviewImage(updated);
     }
-    showToast(updated.favorite ? '已加入精选收藏' : '已移出收藏', target.name, 'info');
+    showToast(updated.favorite ? t('card.favorite') : t('card.unfavorite'), target.name, 'info');
   };
 
   const handleUpdateImage = async (id: string, updates: Partial<ImageItem>) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再编辑图片信息', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -374,7 +376,7 @@ function WanPicturesApp() {
   // Album actions
   const handleCreateAlbum = async (album: Album) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再创建相册', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -386,7 +388,7 @@ function WanPicturesApp() {
 
   const handleUpdateAlbum = async (album: Album) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再修改相册', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -398,7 +400,7 @@ function WanPicturesApp() {
 
   const handleDeleteAlbum = async (id: string) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再删除相册', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -436,7 +438,7 @@ function WanPicturesApp() {
 
   const handleBatchMoveToAlbum = async (targetAlbumId: string) => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再移动资产', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -452,17 +454,17 @@ function WanPicturesApp() {
 
   const handleBatchDelete = async () => {
     if (!isAuthenticated) {
-      showToast('操作受限', '请先登录账号后再批量删除', 'warning');
+      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
     }
     const ids: string[] = Array.from(selectedIds);
-    if (window.confirm(`确定批量删除选中的 ${ids.length} 张图片吗？`)) {
+    if (window.confirm(`Confirm batch delete ${ids.length} images?`)) {
       await dbService.deleteImages(ids);
       setImages((prev) => prev.filter((img) => !selectedIds.has(img.id)));
       setSelectedIds(new Set());
-      showToast('批量删除成功', `已删除 ${ids.length} 项`, 'info');
+      showToast(t('toast.batchDeleteSuccess', { count: ids.length }), undefined, 'info');
     }
   };
 
@@ -592,7 +594,7 @@ function WanPicturesApp() {
         onFilterChange={(newFilters) => setFilters((prev) => ({ ...prev, ...newFilters }))}
         onOpenUpload={() => {
           if (!isAuthenticated) {
-            showToast('需要登录', '请先登录账号后再上传和管理存储资产', 'warning');
+            showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
             setAuthModalMode('login');
             setIsAuthModalOpen(true);
             return;
@@ -607,7 +609,7 @@ function WanPicturesApp() {
         }}
         onOpenAlbums={() => {
           if (!isAuthenticated) {
-            showToast('需要登录', '请先登录账号后再查看和管理相册', 'warning');
+            showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
             setAuthModalMode('login');
             setIsAuthModalOpen(true);
             return;
@@ -637,7 +639,7 @@ function WanPicturesApp() {
             onShowToast={showToast}
             onOpenUpload={() => {
               if (!isAuthenticated) {
-                showToast('需要登录', '请先登录账号后再上传图片', 'warning');
+                showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
                 setAuthModalMode('login');
                 setIsAuthModalOpen(true);
                 return;
@@ -681,9 +683,9 @@ function WanPicturesApp() {
                       isDark ? 'text-white' : 'text-neutral-950'
                     }`}
                   >
-                    <span>图库资产管理</span>
+                    <span>{t('nav.workspace')}</span>
                     <Badge variant="subtle" className="text-xs font-mono">
-                      {filteredImages.length} 项
+                      {filteredImages.length} {t('common.items')}
                     </Badge>
                   </h2>
                   <p
@@ -726,11 +728,11 @@ function WanPicturesApp() {
       >
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className={`font-bold ${isDark ? 'text-white' : 'text-neutral-900'}`}>万图 Wan Pictures</span>
-            <span>— 极简大气的现代 Web 图床与相册管理系统</span>
+            <span className={`font-bold ${isDark ? 'text-white' : 'text-neutral-900'}`}>{t('common.appName')} Wan Pictures</span>
+            <span>— {t('common.appSubtitle')}</span>
           </div>
           <p className={isDark ? 'text-white/30' : 'text-neutral-400'}>
-            支持拖拽上传 · 剪贴板快速粘贴 · 自动出链 · 亮色/深色主题自由切换 · 本地高性能存储
+            Drag & Drop Upload · Clipboard Paste · Auto Link Generator · Light/Dark Theme · High-speed Storage
           </p>
         </div>
       </footer>
@@ -821,7 +823,7 @@ function WanPicturesApp() {
           setImages([]);
           setAlbums(DEFAULT_ALBUMS);
           setSelectedIds(new Set());
-          showToast('图库已清空重置', undefined, 'info');
+          showToast(t('settings.backupSection.clearedSuccess'), undefined, 'info');
         }}
         onShowToast={showToast}
         onOpenAuth={(mode = 'login') => {

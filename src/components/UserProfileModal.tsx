@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { useAuth } from '../context/AuthContext';
-import { User as UserIcon, Shield, Mail, Calendar, LogOut, Check, RefreshCw } from 'lucide-react';
+import { Mail, LogOut, Check, RefreshCw } from 'lucide-react';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   onShowToast,
 }) => {
+  const { t } = useTranslation();
   const { user, logout, updateProfile, backendOnline } = useAuth();
   const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
@@ -47,17 +49,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     });
     setIsSaving(false);
     if (res.success) {
-      onShowToast('个人信息已更新', undefined, 'success');
+      onShowToast(t('profile.saveProfile'), undefined, 'success');
       onClose();
     } else {
-      onShowToast('更新失败', res.message, 'error');
+      onShowToast(t('common.error'), res.message, 'error');
     }
   };
 
   const handleLogout = () => {
     logout();
     onClose();
-    onShowToast('已退出登录', '欢迎下次使用万图 (Wan Pictures)', 'info');
+    onShowToast(t('profile.logoutAccount'), undefined, 'info');
   };
 
   return (
@@ -77,7 +79,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   {user.nickname || user.username}
                 </DialogTitle>
                 <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="text-[10px]">
-                  {user.role === 'admin' ? '管理员' : '标准用户'}
+                  {user.role === 'admin' ? t('nav.systemRoleAdmin') : t('nav.systemRoleUser')}
                 </Badge>
               </div>
               <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 truncate">
@@ -92,53 +94,53 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         <form onSubmit={handleSave} className="p-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="profile-username" className="text-xs font-medium text-muted-foreground">
-              用户账号 (不可更改)
+              {t('profile.accountField')}
             </Label>
             <Input
               id="profile-username"
               value={user.username}
               disabled
-              className="text-xs h-9 bg-muted/50 cursor-not-allowed"
+              className="text-xs h-9 bg-muted/50 cursor-not-allowed font-mono"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="profile-nickname" className="text-xs font-medium text-foreground">
-              显示昵称
+              {t('profile.nicknameField')}
             </Label>
             <Input
               id="profile-nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="请输入显示昵称"
+              placeholder={t('profile.nicknamePlaceholder')}
               className="text-xs h-9"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="profile-bio" className="text-xs font-medium text-foreground">
-              个人简介
+              {t('profile.bioField')}
             </Label>
             <Input
               id="profile-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="一句话介绍自己..."
+              placeholder={t('profile.bioPlaceholder')}
               className="text-xs h-9"
             />
           </div>
 
           <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-1.5 text-[11px] text-muted-foreground">
             <div className="flex justify-between items-center">
-              <span>数据存储模式:</span>
+              <span>{t('settings.storageSection.storageType')}:</span>
               <span className="font-medium text-foreground">
-                {backendOnline ? '云端数据库同步' : '本地安全存储'}
+                {backendOnline ? 'Golang+Gin Cloud' : 'Local IndexedDB'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span>服务连接状态:</span>
-              <span className={backendOnline ? 'text-emerald-500 font-medium' : 'text-emerald-500 font-medium'}>
-                {backendOnline ? '🟢 云端服务正常' : '🟢 本地环境已就绪'}
+              <span>{t('profile.serviceHealth')}:</span>
+              <span className="text-emerald-500 font-medium">
+                {backendOnline ? `🟢 ${t('profile.serviceOnline')}` : `🟢 ${t('profile.serviceOffline')}`}
               </span>
             </div>
           </div>
@@ -152,7 +154,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 text-xs h-8 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5 mr-1.5" />
-              退出登录
+              {t('profile.logoutAccount')}
             </Button>
 
             <div className="flex gap-2">
@@ -163,7 +165,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 onClick={onClose}
                 className="text-xs h-8 cursor-pointer"
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -172,7 +174,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 className="text-xs h-8 cursor-pointer gap-1"
               >
                 {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                保存设置
+                {t('common.save')}
               </Button>
             </div>
           </div>

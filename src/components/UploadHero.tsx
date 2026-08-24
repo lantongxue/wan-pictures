@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   UploadCloud,
   Layers,
   Sparkles,
   Sliders,
   Globe,
-  Plus,
 } from 'lucide-react';
 import { Album, UploadSettings } from '../types';
 import { Button } from './ui/button';
@@ -49,6 +49,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
   settings,
   onSettingsChange,
 }) => {
+  const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState('');
@@ -112,21 +113,20 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
         {/* Title & Badge */}
         <Badge variant="subtle" className="gap-1.5 py-1 px-3.5 mb-4">
           <Sparkles className="w-3 h-3 text-primary" />
-          <span>High Performance Cloud Asset Engine</span>
+          <span>{t('hero.engineBadge')}</span>
         </Badge>
 
         <h1 className="text-2xl sm:text-4xl font-light tracking-tight text-foreground mb-2">
-          Drop images here to{' '}
+          {t('hero.title')}{' '}
           <span className="font-semibold text-foreground">
-            start processing
+            {t('hero.titleHighlight')}
           </span>
         </h1>
         <p className="text-xs sm:text-sm max-w-2xl mb-8 uppercase tracking-wide text-muted-foreground">
-          Supports PNG, JPG, WEBP, GIF, SVG, AVIF (Up to 50MB) · Press{' '}
+          {t('hero.formatSupport')} · {t('hero.clipboardSupport')}{' '}
           <kbd className="px-2 py-0.5 rounded-lg border border-border bg-muted/60 text-foreground font-mono text-[10px]">
             Ctrl + V
-          </kbd>{' '}
-          to paste clipboard
+          </kbd>
         </p>
 
         {/* Dropzone Container */}
@@ -144,7 +144,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
         >
           {/* Background watermark */}
           <h2 className="text-[72px] sm:text-[110px] font-black leading-none tracking-tighter select-none absolute pointer-events-none -translate-y-2 text-foreground/5">
-            DROP FILES
+            {t('hero.dropWatermark')}
           </h2>
 
           <input
@@ -164,18 +164,18 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
 
             <div className="text-center">
               <p className="text-base sm:text-lg font-light tracking-wide text-foreground">
-                Drag & drop files here, or browse from device
+                {t('hero.dragPrompt')}
               </p>
               <p className="text-[11px] uppercase tracking-widest mt-1 text-muted-foreground">
-                Multi-file batch upload · Lossless resolution parse
+                {t('hero.batchTip')}
               </p>
             </div>
 
             <Button
               type="button"
-              className="mt-2 rounded-full px-8 py-3 uppercase tracking-widest shadow-md text-xs font-bold"
+              className="mt-2 rounded-full px-8 py-3 uppercase tracking-widest shadow-md text-xs font-bold cursor-pointer"
             >
-              Select from computer
+              {t('hero.selectBtn')}
             </Button>
 
             {/* Supported Format Pills */}
@@ -199,12 +199,12 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-primary" />
             <span className="text-[11px] uppercase tracking-wider text-foreground font-medium">
-              相册分类:
+              {t('hero.targetAlbum')}:
             </span>
             <div className="w-44">
               <Select value={selectedAlbumId} onValueChange={onAlbumChange}>
                 <SelectTrigger id="upload-album-select" className="h-8 rounded-full">
-                  <SelectValue placeholder="选择归属相册" />
+                  <SelectValue placeholder={t('hero.selectAlbumPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {albums.map((alb) => (
@@ -231,10 +231,10 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
               variant="outline"
               size="sm"
               onClick={() => setIsUrlModalOpen(true)}
-              className="rounded-full gap-1.5"
+              className="rounded-full gap-1.5 cursor-pointer"
             >
               <Globe className="w-3.5 h-3.5 text-primary" />
-              <span>导入网络 URL</span>
+              <span>{t('hero.importUrl')}</span>
             </Button>
 
             <Button
@@ -243,10 +243,10 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
               variant={showOptions ? 'secondary' : 'outline'}
               size="sm"
               onClick={() => setShowOptions(!showOptions)}
-              className="rounded-full gap-1.5"
+              className="rounded-full gap-1.5 cursor-pointer"
             >
               <Sliders className="w-3.5 h-3.5 text-amber-500" />
-              <span>预处理策略</span>
+              <span>{t('hero.preprocessStrategy')}</span>
             </Button>
           </div>
         </div>
@@ -257,7 +257,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="opt-auto-compress" className="cursor-pointer font-medium">
-                  自动压缩大图
+                  {t('hero.autoCompress')}
                 </Label>
                 <Switch
                   id="opt-auto-compress"
@@ -268,12 +268,12 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                压缩体积，提升外链加载速度
+                {t('hero.autoCompressDesc')}
               </p>
               {settings.autoCompress && (
                 <div className="pt-2 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>压缩质量</span>
+                    <span>{t('hero.compressQuality')}</span>
                     <span className="text-foreground font-semibold">
                       {Math.round(settings.compressQuality * 100)}%
                     </span>
@@ -295,7 +295,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="opt-convert-webp" className="cursor-pointer font-medium">
-                  转换为 WebP 格式
+                  {t('hero.convertToWebp')}
                 </Label>
                 <Switch
                   id="opt-convert-webp"
@@ -306,12 +306,12 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                大幅减少体积，完美保留高清画质
+                {t('hero.convertToWebpDesc')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="font-medium text-foreground">重命名规范</Label>
+              <Label className="font-medium text-foreground">{t('hero.namingRule')}</Label>
               <Select
                 value={settings.namingRule}
                 onValueChange={(val) =>
@@ -325,10 +325,10 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="original">保留原始文件名</SelectItem>
-                  <SelectItem value="timestamp">时间戳规范命名</SelectItem>
-                  <SelectItem value="random">随机哈希命名</SelectItem>
-                  <SelectItem value="custom">自定义前缀命名</SelectItem>
+                  <SelectItem value="original">{t('hero.namingOriginal')}</SelectItem>
+                  <SelectItem value="timestamp">{t('hero.namingTimestamp')}</SelectItem>
+                  <SelectItem value="random">{t('hero.namingRandom')}</SelectItem>
+                  <SelectItem value="custom">{t('hero.namingCustom')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -342,16 +342,16 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="w-5 h-5 text-primary" />
-              <span>导入网络图片 URL</span>
+              <span>{t('hero.importUrlTitle')}</span>
             </DialogTitle>
             <DialogDescription>
-              输入远程公开图片地址，系统将自动抓取并持久化存入您的图库资产。
+              {t('hero.importUrlDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="remote-url-input">图片链接地址</Label>
+              <Label htmlFor="remote-url-input">{t('hero.importUrlLabel')}</Label>
               <Input
                 id="remote-url-input"
                 type="url"
@@ -369,16 +369,16 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => setIsUrlModalOpen(false)}
-                className="rounded-full"
+                className="rounded-full cursor-pointer"
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 id="confirm-url-import-btn"
                 type="submit"
-                className="rounded-full"
+                className="rounded-full cursor-pointer"
               >
-                开始导入
+                {t('hero.startImport')}
               </Button>
             </DialogFooter>
           </form>

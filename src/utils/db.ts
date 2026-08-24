@@ -97,12 +97,15 @@ export const DEFAULT_STORAGE_CONFIGS: StorageConfigItem[] = [
   {
     id: 1,
     driver: 'local',
-    name: '本地离线与浏览器存储 (Local IndexedDB)',
+    name: '本地文件系统与离线存储 (Local Storage)',
     isActive: true,
     config: {
-      maxSizeMB: 500,
+      storagePath: './uploads/images',
+      publicUrlPrefix: '/uploads/',
+      subfolderFormat: 'YYYY/MM',
+      maxSizeMB: 10240,
+      autoCleanEnabled: false,
       retentionDays: 0,
-      storagePath: 'IndexedDB/WanPictures_DB',
     },
     updatedAt: new Date().toISOString(),
   },

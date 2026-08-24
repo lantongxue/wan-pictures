@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   X,
   ZoomIn,
@@ -48,7 +49,7 @@ interface ImageLightboxProps {
   onUpdateImage: (id: string, updates: Partial<ImageItem>) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
 export const ImageLightbox: React.FC<ImageLightboxProps> = ({
@@ -62,6 +63,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onToggleFavorite,
   onShowToast,
 }) => {
+  const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [showInfo, setShowInfo] = useState(true);
@@ -109,7 +111,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     const ok = await copyToClipboard(text);
     if (ok) {
       setCopiedFormat(format);
-      onShowToast('复制成功', `${format.toUpperCase()} 链接已写入剪贴板`, 'success');
+      onShowToast(t('lightbox.copySuccess'), `${format.toUpperCase()}`, 'success');
       setTimeout(() => setCopiedFormat(null), 1800);
     }
   };
@@ -117,7 +119,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const handleSaveName = () => {
     if (editedName.trim() && editedName !== image.name) {
       onUpdateImage(image.id, { name: editedName.trim() });
-      onShowToast('重命名成功', editedName.trim(), 'success');
+      onShowToast(t('lightbox.renameSuccess'), editedName.trim(), 'success');
     }
     setIsEditingName(false);
   };
@@ -129,7 +131,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    onShowToast('开始下载', image.name, 'info');
+    onShowToast(t('common.downloading'), image.name, 'info');
   };
 
   return (
@@ -139,9 +141,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         hideCloseButton
         className="w-[96vw] max-w-7xl h-[94vh] max-h-[94vh] p-0 flex flex-col gap-0 overflow-hidden sm:rounded-3xl border border-border/80 shadow-2xl bg-background/98 backdrop-blur-2xl"
       >
-        <DialogTitle className="sr-only">{image.name} 详情检视器</DialogTitle>
+        <DialogTitle className="sr-only">{image.name} {t('lightbox.title')}</DialogTitle>
         <DialogDescription className="sr-only">
-          全屏预览图片、旋转缩放、多格式编译导出外链与属性分析
+          {t('lightbox.subtitle')}
         </DialogDescription>
 
         {/* Top Floating Control Bar */}
@@ -166,16 +168,16 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                     size="sm"
                     variant="ghost"
                     onClick={handleSaveName}
-                    className="text-xs text-primary font-mono uppercase h-8 px-2"
+                    className="text-xs text-primary font-mono uppercase h-8 px-2 cursor-pointer"
                   >
-                    保存
+                    {t('common.save')}
                   </Button>
                 </div>
               ) : (
                 <h3
                   onClick={() => setIsEditingName(true)}
                   className="text-xs sm:text-sm font-medium truncate cursor-pointer hover:text-primary transition-colors text-foreground"
-                  title="点击重命名"
+                  title={t('lightbox.clickToRename')}
                 >
                   {image.name}
                 </h3>
@@ -189,8 +191,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}
-              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="缩小"
+              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title={t('lightbox.zoomOut')}
             >
               <ZoomOut className="w-4 h-4" />
             </Button>
@@ -198,8 +200,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => setZoom((z) => Math.min(3.0, z + 0.2))}
-              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="放大"
+              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title={t('lightbox.zoomIn')}
             >
               <ZoomIn className="w-4 h-4" />
             </Button>
@@ -207,8 +209,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => setRotation((r) => (r + 90) % 360)}
-              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="顺时针旋转"
+              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title={t('lightbox.rotateCw')}
             >
               <RotateCw className="w-4 h-4" />
             </Button>
@@ -216,12 +218,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => onToggleFavorite(image.id)}
-              className={`rounded-full h-8 w-8 ${
+              className={`rounded-full h-8 w-8 cursor-pointer ${
                 image.favorite
                   ? 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="收藏"
+              title={image.favorite ? t('card.unfavorite') : t('card.favorite')}
             >
               <Heart className={`w-4 h-4 ${image.favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
             </Button>
@@ -229,8 +231,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={handleDownload}
-              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="下载原图"
+              className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title={t('lightbox.download')}
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -238,8 +240,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant={showInfo ? 'default' : 'ghost'}
               size="icon"
               onClick={() => setShowInfo(!showInfo)}
-              className="rounded-full h-8 w-8"
-              title="图片信息与外链"
+              className="rounded-full h-8 w-8 cursor-pointer"
+              title={t('lightbox.info')}
             >
               <Info className="w-4 h-4" />
             </Button>
@@ -248,7 +250,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="rounded-full h-8 w-8 ml-1 text-muted-foreground hover:text-foreground"
+              className="rounded-full h-8 w-8 ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -263,7 +265,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="outline"
               size="icon"
               onClick={handlePrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-background/80 hover:bg-background backdrop-blur-md shadow-xl border-border"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-background/80 hover:bg-background backdrop-blur-md shadow-xl border-border cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
@@ -275,7 +277,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               variant="outline"
               size="icon"
               onClick={handleNext}
-              className="absolute right-4 md:right-[calc(20rem+1rem)] lg:right-[calc(24rem+1rem)] top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-background/80 hover:bg-background backdrop-blur-md shadow-xl border-border"
+              className="absolute right-4 md:right-[calc(20rem+1rem)] lg:right-[calc(24rem+1rem)] top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-background/80 hover:bg-background backdrop-blur-md shadow-xl border-border cursor-pointer"
             >
               <ChevronRight className="w-5 h-5" />
             </Button>
@@ -302,7 +304,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 <div className="p-5 space-y-5">
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2.5 text-muted-foreground">
-                      LINK EXPORT & COMPILER
+                      {t('lightbox.linkExport')}
                     </h4>
 
                     {/* Format selection */}
@@ -313,7 +315,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           variant={selectedFormat === opt.type ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setSelectedFormat(opt.type)}
-                          className="rounded-full text-[10px] font-mono uppercase h-7 px-2"
+                          className="rounded-full text-[10px] font-mono uppercase h-7 px-2 cursor-pointer"
                         >
                           {opt.type.toUpperCase()}
                         </Button>
@@ -329,17 +331,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         <Button
                           size="sm"
                           onClick={() => handleCopyLink(selectedFormat)}
-                          className="rounded-full gap-1 h-6 text-xs font-bold uppercase px-2.5 shadow-xs"
+                          className="rounded-full gap-1 h-6 text-xs font-bold uppercase px-2.5 shadow-xs cursor-pointer"
                         >
                           {copiedFormat === selectedFormat ? (
                             <>
                               <Check className="w-3 h-3 text-emerald-400" />
-                              <span>已复制</span>
+                              <span>{t('common.copied')}</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>复制</span>
+                              <span>{t('common.copy')}</span>
                             </>
                           )}
                         </Button>
@@ -353,35 +355,35 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                   {/* Metadata Details */}
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2.5 text-muted-foreground">
-                      ASSET SPECIFICATIONS
+                      {t('lightbox.specs')}
                     </h4>
                     <div className="space-y-2 text-xs border border-border/80 rounded-2xl p-3.5 bg-background/80">
                       <div className="flex justify-between py-1 border-b border-border/60">
-                        <span className="text-muted-foreground">分辨率</span>
+                        <span className="text-muted-foreground">{t('lightbox.resolution')}</span>
                         <span className="font-mono text-foreground">
                           {image.width} × {image.height} px
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/60">
-                        <span className="text-muted-foreground">文件大小</span>
+                        <span className="text-muted-foreground">{t('lightbox.fileSize')}</span>
                         <span className="font-mono text-foreground">
                           {formatFileSize(image.size)}
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/60">
-                        <span className="text-muted-foreground">格式类型</span>
+                        <span className="text-muted-foreground">{t('lightbox.formatType')}</span>
                         <span className="font-mono uppercase text-foreground">
                           {image.extension} ({image.type})
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/60">
-                        <span className="text-muted-foreground">宽高比</span>
+                        <span className="text-muted-foreground">{t('lightbox.aspectRatio')}</span>
                         <span className="font-mono text-foreground">
                           {image.aspectRatio.toFixed(2)} : 1
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/60">
-                        <span className="text-muted-foreground">上传时间</span>
+                        <span className="text-muted-foreground">{t('lightbox.uploadTime')}</span>
                         <span className="font-mono text-foreground">
                           {formatDate(image.createdAt)}
                         </span>
@@ -389,7 +391,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
                       {/* Album select */}
                       <div className="flex justify-between items-center py-1">
-                        <span className="text-muted-foreground">所属相册</span>
+                        <span className="text-muted-foreground">{t('lightbox.album')}</span>
                         <div className="w-36">
                           <Select
                             value={image.albumId}
@@ -416,7 +418,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                     <div>
                       <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5 text-muted-foreground">
                         <Palette className="w-3 h-3 text-primary" />
-                        <span>COLOR PALETTE</span>
+                        <span>{t('lightbox.colorPalette')}</span>
                       </h4>
                       <div className="flex items-center gap-2">
                         {image.colorPalette.map((color, idx) => (
@@ -424,11 +426,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                             key={idx}
                             onClick={async () => {
                               await copyToClipboard(color);
-                              onShowToast('色值已复制', color, 'success');
+                              onShowToast(t('lightbox.copiedColor'), color, 'success');
                             }}
                             className="flex-1 h-8 rounded-xl cursor-pointer border border-border flex items-center justify-center text-[9px] font-mono font-bold text-white shadow-xs hover:scale-105 transition-transform"
                             style={{ backgroundColor: color }}
-                            title={`点击复制 ${color}`}
+                            title={`${t('lightbox.copyColor')} ${color}`}
                           >
                             {color}
                           </div>
@@ -448,19 +450,19 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                     onDelete(image.id);
                     onClose();
                   }}
-                  className="rounded-full gap-1.5 text-xs text-destructive hover:bg-destructive/10 border-destructive/30"
+                  className="rounded-full gap-1.5 text-xs text-destructive hover:bg-destructive/10 border-destructive/30 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>删除</span>
+                  <span>{t('common.delete')}</span>
                 </Button>
 
                 <Button
                   size="sm"
                   onClick={handleDownload}
-                  className="rounded-full gap-1.5 px-4 text-xs font-bold uppercase tracking-wider shadow-md"
+                  className="rounded-full gap-1.5 px-4 text-xs font-bold uppercase tracking-wider shadow-md cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>下载原图</span>
+                  <span>{t('lightbox.download')}</span>
                 </Button>
               </div>
             </div>
@@ -470,4 +472,3 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     </Dialog>
   );
 };
-

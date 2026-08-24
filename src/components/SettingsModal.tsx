@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Settings,
   HardDrive,
@@ -13,12 +14,15 @@ import {
   Palette,
   Lock,
   LogIn,
+  Languages,
+  Globe2,
 } from 'lucide-react';
 import { UploadSettings, Album, ImageItem } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
 import { dbService } from '../utils/db';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { changeLanguage } from '../i18n';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Label } from './ui/label';
@@ -66,6 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onShowToast,
   onOpenAuth,
 }) => {
+  const { t, i18n } = useTranslation();
   const { theme, isDark, setTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const [localSettings, setLocalSettings] = useState<UploadSettings>(settings);
@@ -74,12 +79,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     quotaBytes: 1024 * 1024 * 1024 * 2,
   });
 
+  const currentLang = i18n.language?.startsWith('en') ? 'en' : 'zh';
+
   useEffect(() => {
     setLocalSettings({ ...settings, theme: theme });
     dbService.getStorageEstimate().then(setStorageInfo);
   }, [isOpen, settings, theme]);
 
   if (!isOpen) return null;
+
+  const handleLanguageChange = (lang: 'zh' | 'en') => {
+    changeLanguage(lang);
+    onShowToast(
+      t('toast.langSwitched', { lang: lang === 'zh' ? '简体中文' : 'English' }),
+      lang === 'zh' ? '已更新界面显示语言' : 'Interface language updated',
+      'success'
+    );
+  };
 
   const handleThemeChange = (newTheme: 'dark' | 'light') => {
     setTheme(newTheme);
@@ -88,13 +104,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSave = () => {
     onSaveSettings(localSettings);
-    onShowToast('设置已保存', '全局上传偏好与主题配置已更新', 'success');
+    onShowToast(t('settings.saveDone'), t('toast.savedSettings'), 'success');
     onClose();
   };
 
   const handleExportBackup = () => {
     if (!isAuthenticated) {
-      onShowToast('需要登录', '请先登录账号后再导出备份数据', 'warning');
+      onShowToast(t('common.warning'), t('albums.authRequiredDesc'), 'warning');
       onClose();
       onOpenAuth?.('login');
       return;
@@ -114,12 +130,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    onShowToast('备份导出成功', '完整图库与相册结构已生成 JSON 备份', 'success');
+    onShowToast(t('common.success'), t('settings.backupSection.exportDesc'), 'success');
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAuthenticated) {
-      onShowToast('需要登录', '请先登录账号后再恢复备份数据', 'warning');
+      onShowToast(t('common.warning'), t('albums.authRequiredDesc'), 'warning');
       onClose();
       onOpenAuth?.('login');
       return;
@@ -133,13 +149,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         const json = JSON.parse(event.target?.result as string);
         if (Array.isArray(json.images)) {
           onRestoreData(json.images, json.albums || albums);
-          onShowToast('备份恢复成功', `成功导入 ${json.images.length} 张图片`, 'success');
+          onShowToast(t('common.success'), `Imported ${json.images.length} images`, 'success');
           onClose();
         } else {
-          onShowToast('导入失败', 'JSON 格式不兼容', 'error');
+          onShowToast(t('common.error'), 'Invalid JSON schema', 'error');
         }
       } catch {
-        onShowToast('导入失败', '无法解析 JSON 文件', 'error');
+        onShowToast(t('common.error'), 'Failed to parse JSON', 'error');
       }
     };
     reader.readAsText(file);
@@ -147,14 +163,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleClear = () => {
     if (!isAuthenticated) {
-      onShowToast('需要登录', '请先登录账号后再执行清空数据操作', 'warning');
+      onShowToast(t('common.warning'), t('albums.authRequiredDesc'), 'warning');
       onClose();
       onOpenAuth?.('login');
       return;
     }
-    if (window.confirm('警告：此操作将清空所有已上传图片与自定义相册，确定重置吗？')) {
+    if (window.confirm(t('settings.backupSection.confirmClear'))) {
       onClearAll();
-      onShowToast('数据已清空', '所有图片与自定义相册已重置', 'info');
+      onShowToast(t('common.info'), t('settings.backupSection.clearedSuccess'), 'info');
       onClose();
     }
   };
@@ -174,9 +190,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle>图床偏好与存储中心</DialogTitle>
+              <DialogTitle>{t('settings.title')}</DialogTitle>
               <DialogDescription className="mt-0.5 uppercase tracking-wide text-[11px]">
-                Configure themes, storage, pre-processing & data export
+                {t('settings.subtitle')}
               </DialogDescription>
             </div>
           </div>
@@ -185,19 +201,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Body */}
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-6 space-y-6">
+            {/* Language Switcher Section */}
+            <div className="p-5 rounded-2xl border border-border/80 bg-muted/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <Languages className="w-4 h-4 text-primary" />
+                  <span>{t('settings.languageSection.title')}</span>
+                </div>
+                <Badge variant="subtle" className="text-[10px] uppercase font-mono">
+                  {t('settings.languageSection.current')}: {currentLang === 'zh' ? '简体中文' : 'ENGLISH'}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t('settings.languageSection.desc')}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Simplified Chinese */}
+                <button
+                  type="button"
+                  id="lang-select-zh"
+                  onClick={() => handleLanguageChange('zh')}
+                  className={`p-3.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                    currentLang === 'zh'
+                      ? 'bg-background border-primary shadow-xs text-foreground ring-1 ring-primary'
+                      : 'bg-muted/40 border-border hover:border-muted-foreground/30 text-muted-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold flex items-center justify-center text-xs">
+                      中
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">简体中文</p>
+                      <p className="text-[10px] text-muted-foreground">Simplified Chinese</p>
+                    </div>
+                  </div>
+                  {currentLang === 'zh' && (
+                    <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                  )}
+                </button>
+
+                {/* English */}
+                <button
+                  type="button"
+                  id="lang-select-en"
+                  onClick={() => handleLanguageChange('en')}
+                  className={`p-3.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                    currentLang === 'en'
+                      ? 'bg-background border-primary shadow-xs text-foreground ring-1 ring-primary'
+                      : 'bg-muted/40 border-border hover:border-muted-foreground/30 text-muted-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 font-bold flex items-center justify-center text-xs">
+                      EN
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">English (US)</p>
+                      <p className="text-[10px] text-muted-foreground">Standard English</p>
+                    </div>
+                  </div>
+                  {currentLang === 'en' && (
+                    <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Theme Mode Selector */}
             <div className="p-5 rounded-2xl border border-border/80 bg-muted/20 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
                   <Palette className="w-4 h-4 text-primary" />
-                  <span>界面视觉主题</span>
+                  <span>{t('settings.themeSection.title')}</span>
                 </div>
-                <Badge variant="subtle" className="text-[10px]">
-                  ACTIVE: {isDark ? 'DARK THEME' : 'LIGHT THEME'}
+                <Badge variant="subtle" className="text-[10px] uppercase font-mono">
+                  {t('settings.themeSection.current')}: {isDark ? 'DARK' : 'LIGHT'}
                 </Badge>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                {t('settings.themeSection.desc')}
+              </p>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
                   id="theme-select-dark"
@@ -212,8 +303,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Moon className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-foreground">深色主题 (Dark)</p>
-                    <p className="text-[10px] text-muted-foreground">大气沉稳 · 极致黑金</p>
+                    <p className="text-xs font-bold text-foreground">{t('settings.themeSection.dark')}</p>
+                    <p className="text-[10px] text-muted-foreground">{t('settings.themeSection.darkDesc')}</p>
                   </div>
                 </button>
 
@@ -231,8 +322,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-foreground">亮色主题 (Light)</p>
-                    <p className="text-[10px] text-muted-foreground">纯净素雅 · 通透直观</p>
+                    <p className="text-xs font-bold text-foreground">{t('settings.themeSection.light')}</p>
+                    <p className="text-[10px] text-muted-foreground">{t('settings.themeSection.lightDesc')}</p>
                   </div>
                 </button>
               </div>
@@ -243,7 +334,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
                   <HardDrive className="w-4 h-4 text-primary" />
-                  <span>本地持久存储用量</span>
+                  <span>{t('settings.storageSection.title')}</span>
                 </div>
                 {isAuthenticated ? (
                   <span className="text-xs font-mono text-primary font-medium">
@@ -251,7 +342,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </span>
                 ) : (
                   <Badge variant="subtle" className="text-[10px] text-amber-500 bg-amber-500/10">
-                    需登录查看
+                    {t('settings.storageSection.loginHint')}
                   </Badge>
                 )}
               </div>
@@ -265,14 +356,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    基于高性能 IndexedDB 引擎，支持存储海量高分辨率图片，页面刷新数据永不丢失。
+                    {t('settings.storageSection.desc')}
                   </p>
                 </>
               ) : (
                 <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span>登录账号后即可查看存储用量、容量分配与管理资产</span>
+                    <span>{t('settings.storageSection.loginHint')}</span>
                   </div>
                   <Button
                     size="sm"
@@ -284,7 +375,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="h-7 text-xs rounded-full gap-1 shrink-0 cursor-pointer"
                   >
                     <LogIn className="w-3 h-3 text-primary" />
-                    <span>立即登录</span>
+                    <span>{t('common.actions')}</span>
                   </Button>
                 </div>
               )}
@@ -294,14 +385,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-muted-foreground">
                 <Sliders className="w-3.5 h-3.5 text-primary" />
-                <span>上传预处理策略</span>
+                <span>{t('settings.uploadSection.title')}</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="setting-auto-compress" className="cursor-pointer font-medium">
-                      开启默认自动压缩
+                      {t('settings.uploadSection.autoCompress')}
                     </Label>
                     <Switch
                       id="setting-auto-compress"
@@ -312,12 +403,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    有效压缩尺寸，加速外链在网页中的加载。
+                    {t('settings.uploadSection.autoCompressDesc')}
                   </p>
                   {localSettings.autoCompress && (
                     <div className="pt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                        <span>质量</span>
+                        <span>{t('settings.uploadSection.compressQuality')}</span>
                         <span className="text-foreground font-semibold">
                           {Math.round(localSettings.compressQuality * 100)}%
                         </span>
@@ -338,7 +429,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="setting-convert-webp" className="cursor-pointer font-medium">
-                      自动转换为 WebP
+                      {t('settings.uploadSection.convertToWebp')}
                     </Label>
                     <Switch
                       id="setting-convert-webp"
@@ -349,12 +440,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    下一代高效格式，体积减少达 70%。
+                    {t('settings.uploadSection.convertToWebpDesc')}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-1.5">
-                  <Label className="font-medium text-foreground">默认命名规范</Label>
+                  <Label className="font-medium text-foreground">
+                    {t('settings.uploadSection.namingRule')}
+                  </Label>
                   <Select
                     value={localSettings.namingRule}
                     onValueChange={(val) =>
@@ -368,16 +461,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="original">保留原始文件名</SelectItem>
-                      <SelectItem value="timestamp">时间戳规范命名</SelectItem>
-                      <SelectItem value="random">随机哈希命名</SelectItem>
-                      <SelectItem value="custom">自定义前缀命名</SelectItem>
+                      <SelectItem value="original">{t('hero.namingOriginal')}</SelectItem>
+                      <SelectItem value="timestamp">{t('hero.namingTimestamp')}</SelectItem>
+                      <SelectItem value="random">{t('hero.namingRandom')}</SelectItem>
+                      <SelectItem value="custom">{t('hero.namingCustom')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-1.5">
-                  <Label className="font-medium text-foreground">默认存入相册</Label>
+                  <Label className="font-medium text-foreground">
+                    {t('settings.uploadSection.defaultAlbum')}
+                  </Label>
                   <Select
                     value={localSettings.defaultAlbumId}
                     onValueChange={(val) =>
@@ -403,7 +498,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-muted-foreground">
                 <Database className="w-3.5 h-3.5 text-emerald-500" />
-                <span>数据备份与迁移</span>
+                <span>{t('settings.backupSection.title')}</span>
               </h4>
 
               <div className="flex flex-wrap gap-2.5">
@@ -412,10 +507,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handleExportBackup}
-                  className="rounded-full gap-1.5 text-xs font-medium"
+                  className="rounded-full gap-1.5 text-xs font-medium cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-primary" />
-                  <span>导出全库数据 (JSON)</span>
+                  <span>{t('settings.backupSection.exportJson')}</span>
                 </Button>
 
                 <Button
@@ -426,7 +521,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   <label>
                     <Upload className="w-3.5 h-3.5 text-primary" />
-                    <span>导入备份恢复</span>
+                    <span>{t('settings.backupSection.importJson')}</span>
                     <input
                       type="file"
                       accept=".json"
@@ -440,10 +535,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   variant="destructive"
                   size="sm"
                   onClick={handleClear}
-                  className="rounded-full gap-1.5 text-xs font-medium ml-auto bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/30"
+                  className="rounded-full gap-1.5 text-xs font-medium ml-auto bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/30 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>清空所有数据</span>
+                  <span>{t('settings.backupSection.clearAll')}</span>
                 </Button>
               </div>
             </div>
@@ -455,17 +550,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <Button
             variant="outline"
             onClick={onClose}
-            className="rounded-full px-5 text-xs font-medium"
+            className="rounded-full px-5 text-xs font-medium cursor-pointer"
           >
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             id="save-settings-btn"
             onClick={handleSave}
-            className="rounded-full px-6 gap-1.5 text-xs font-semibold shadow-md"
+            className="rounded-full px-6 gap-1.5 text-xs font-semibold shadow-md cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
-            <span>保存偏好</span>
+            <span>{t('common.save')}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

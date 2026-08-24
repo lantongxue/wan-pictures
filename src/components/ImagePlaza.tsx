@@ -1,32 +1,20 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Sparkles,
   Compass,
   Search,
-  Filter,
   Heart,
-  Eye,
   Copy,
   FileCode,
   Download,
-  Share2,
   Maximize2,
-  Layers,
-  ArrowUpDown,
   Check,
-  Grid2X2,
-  LayoutGrid,
-  Columns,
   Palette,
   Tag,
   Upload,
   RefreshCw,
-  Flame,
-  Camera,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { ImageItem, Album, SortOption, AspectRatioFilter } from '../types';
-import { formatFileSize } from '../utils/imageProcessing';
 import { copyToClipboard } from '../utils/linkFormatter';
 import { DimensionFilterPopover } from './DimensionFilterPopover';
 import { Button } from './ui/button';
@@ -59,20 +47,20 @@ interface ImagePlazaProps {
 type ColorToneFilter = 'all' | 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'neutral';
 
 interface ColorFilterOption {
-  label: string;
+  key: string;
   value: ColorToneFilter;
   color: string;
   bgClass: string;
 }
 
 const COLOR_FILTERS: ColorFilterOption[] = [
-  { label: '全部色系', value: 'all', color: '#94a3b8', bgClass: 'bg-muted-foreground/30' },
-  { label: '暖阳金黄', value: 'yellow', color: '#eab308', bgClass: 'bg-amber-400' },
-  { label: '落日赤红', value: 'red', color: '#ef4444', bgClass: 'bg-rose-500' },
-  { label: '静谧蔚蓝', value: 'blue', color: '#3b82f6', bgClass: 'bg-blue-500' },
-  { label: '翡翠森绿', value: 'green', color: '#10b981', bgClass: 'bg-emerald-500' },
-  { label: '霓虹冷紫', value: 'purple', color: '#a855f7', bgClass: 'bg-purple-500' },
-  { label: '极简黑白', value: 'neutral', color: '#64748b', bgClass: 'bg-slate-500' },
+  { key: 'allColors', value: 'all', color: '#94a3b8', bgClass: 'bg-muted-foreground/30' },
+  { key: 'yellowTone', value: 'yellow', color: '#eab308', bgClass: 'bg-amber-400' },
+  { key: 'redTone', value: 'red', color: '#ef4444', bgClass: 'bg-rose-500' },
+  { key: 'blueTone', value: 'blue', color: '#3b82f6', bgClass: 'bg-blue-500' },
+  { key: 'greenTone', value: 'green', color: '#10b981', bgClass: 'bg-emerald-500' },
+  { key: 'purpleTone', value: 'purple', color: '#a855f7', bgClass: 'bg-purple-500' },
+  { key: 'neutralTone', value: 'neutral', color: '#64748b', bgClass: 'bg-slate-500' },
 ];
 
 export const ImagePlaza: React.FC<ImagePlazaProps> = ({
@@ -84,6 +72,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   onShowToast,
   onOpenUpload,
 }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>('all');
@@ -233,7 +222,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     const success = await copyToClipboard(img.dataUrl);
     if (success) {
       setCopiedId(img.id);
-      onShowToast('直链复制成功', img.name, 'success');
+      onShowToast(t('card.copyUrlSuccess'), img.name, 'success');
       setTimeout(() => setCopiedId(null), 2000);
     }
   };
@@ -244,7 +233,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     const success = await copyToClipboard(md);
     if (success) {
       setCopiedId(img.id);
-      onShowToast('Markdown 外链复制成功', md, 'success');
+      onShowToast(t('card.copyMarkdownSuccess'), md, 'success');
       setTimeout(() => setCopiedId(null), 2000);
     }
   };
@@ -257,7 +246,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    onShowToast('正在下载原始图片', img.name, 'info');
+    onShowToast(t('common.downloading'), img.name, 'info');
   };
 
   // Reset all plaza filters
@@ -304,14 +293,14 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   <Compass className="w-5 h-5" />
                 </span>
                 <Badge variant="subtle" className="text-[11px] font-mono tracking-wider">
-                  DISCOVERY PLAZA · 瀑布流画廊
+                  {t('plaza.badge')}
                 </Badge>
               </div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
-                图片广场 · 视觉灵感探索
+                {t('plaza.title')}
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                全景瀑布流自适应布局，支持高分辨率图片浏览、智能色系筛选、标签聚合与一键获取各种 Markdown/HTML 外链代码。
+                {t('plaza.subtitle')}
               </p>
             </div>
 
@@ -320,10 +309,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
               <Button
                 id="plaza-upload-btn"
                 onClick={onOpenUpload}
-                className="rounded-full gap-2 px-5 font-semibold text-xs shadow-md active:scale-95 transition-all"
+                className="rounded-full gap-2 px-5 font-semibold text-xs shadow-md active:scale-95 transition-all cursor-pointer"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>上传至广场</span>
+                <span>{t('plaza.uploadToPlaza')}</span>
               </Button>
             </div>
           </div>
@@ -338,7 +327,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="搜索广场资产名称、标签或格式..."
+                placeholder={t('plaza.searchPlaceholder')}
                 className="pl-9 pr-8 rounded-full border-border/80 bg-background/60 focus-visible:bg-background h-9 text-xs"
               />
               {searchQuery && (
@@ -357,10 +346,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
               <div className="w-36 sm:w-40">
                 <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
                   <SelectTrigger className="h-8 rounded-full text-xs font-normal">
-                    <SelectValue placeholder="分类相册" />
+                    <SelectValue placeholder={t('common.all')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部分类 ({images.length})</SelectItem>
+                    <SelectItem value="all">{t('plaza.allCategories', { count: images.length })}</SelectItem>
                     {albums.map((alb) => (
                       <SelectItem key={alb.id} value={alb.id}>
                         <div className="flex items-center gap-1.5">
@@ -401,11 +390,11 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date-desc">最新发布优先</SelectItem>
-                    <SelectItem value="date-asc">最早发布优先</SelectItem>
-                    <SelectItem value="dimension-desc">超清分辨率优先</SelectItem>
-                    <SelectItem value="size-desc">文件体积最大</SelectItem>
-                    <SelectItem value="name-asc">名称拼音 (A-Z)</SelectItem>
+                    <SelectItem value="date-desc">{t('plaza.sortDateDesc')}</SelectItem>
+                    <SelectItem value="date-asc">{t('plaza.sortDateAsc')}</SelectItem>
+                    <SelectItem value="dimension-desc">{t('plaza.sortDimensionDesc')}</SelectItem>
+                    <SelectItem value="size-desc">{t('plaza.sortSizeDesc')}</SelectItem>
+                    <SelectItem value="name-asc">{t('plaza.sortNameAsc')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -421,10 +410,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                         columnCount === 2 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      2列
+                      2
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>大画幅海报流</TooltipContent>
+                  <TooltipContent>{t('plaza.col2')}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -436,10 +425,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                         columnCount === 3 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      3列
+                      3
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>标准探索视图</TooltipContent>
+                  <TooltipContent>{t('plaza.col3')}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -451,10 +440,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                         columnCount === 4 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      4列
+                      4
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>高密瀑布流</TooltipContent>
+                  <TooltipContent>{t('plaza.col4')}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -466,10 +455,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                         columnCount === 5 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      5列
+                      5
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>超密全景视图</TooltipContent>
+                  <TooltipContent>{t('plaza.col5')}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -479,7 +468,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
           <div className="mt-4 pt-4 border-t border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
             <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
               <Tag className="w-3 h-3" />
-              <span>标签:</span>
+              <span>{t('plaza.tags')}</span>
             </div>
 
             <button
@@ -491,7 +480,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/40'
               }`}
             >
-              全部标签
+              {t('plaza.allTags')}
             </button>
 
             {allTags.map((tag) => (
@@ -514,7 +503,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
           <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
             <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
               <Palette className="w-3 h-3" />
-              <span>色系:</span>
+              <span>{t('plaza.colorTone')}</span>
             </div>
 
             {COLOR_FILTERS.map((c) => (
@@ -532,7 +521,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: c.color }}
                 />
-                <span>{c.label}</span>
+                <span>{t(`plaza.${c.key}`)}</span>
               </button>
             ))}
 
@@ -542,7 +531,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                 className="ml-auto text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>重置筛选</span>
+                <span>{t('plaza.resetFilters')}</span>
               </button>
             )}
           </div>
@@ -551,25 +540,25 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
         {/* Results Counter Sub-header */}
         <div className="flex items-center justify-between px-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2 font-medium flex-wrap">
-            <span>SHOWING {plazaImages.length} OF {images.length} ASSETS</span>
+            <span>{t('plaza.showingCounter', { shown: plazaImages.length, total: images.length })}</span>
             {selectedTag !== 'all' && (
               <Badge variant="subtle" className="text-[10px]">
-                标签: #{selectedTag}
+                {t('plaza.tags')} #{selectedTag}
               </Badge>
             )}
             {selectedColor !== 'all' && (
               <Badge variant="subtle" className="text-[10px]">
-                色调: {COLOR_FILTERS.find((c) => c.value === selectedColor)?.label}
+                {t('plaza.colorTone')} {t(`plaza.${COLOR_FILTERS.find((c) => c.value === selectedColor)?.key}`)}
               </Badge>
             )}
             {(minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
               <Badge variant="subtle" className="text-[10px] bg-primary/10 text-primary border border-primary/20">
-                尺寸: {minWidth ? `≥${minWidth}w ` : ''}{minHeight ? `≥${minHeight}h ` : ''}{aspectRatioFilter !== 'all' ? (aspectRatioFilter === 'landscape' ? '横屏' : aspectRatioFilter === 'portrait' ? '竖屏' : '1:1') : ''}
+                {t('dimension.activeLabel')}: {minWidth ? `≥${minWidth}w ` : ''}{minHeight ? `≥${minHeight}h ` : ''}
               </Badge>
             )}
           </div>
           <span className="hidden sm:inline text-[11px]">
-            点击卡片可查看高清大图与完整外链语法
+            {t('plaza.cardHint')}
           </span>
         </div>
 
@@ -580,24 +569,24 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
               <Compass className="w-8 h-8 opacity-60" />
             </div>
             <h3 className="text-base font-semibold text-foreground">
-              广场暂无匹配的图片资产
+              {t('plaza.emptyTitle')}
             </h3>
             <p className="text-xs mt-1.5 max-w-sm text-muted-foreground">
-              当前筛选条件（标签、色调或关键词）未匹配到结果，您可以尝试重置筛选或上传新图片。
+              {t('plaza.emptyDesc')}
             </p>
             <div className="flex items-center gap-3 mt-6">
               <Button
                 variant="outline"
                 onClick={handleResetFilters}
-                className="rounded-full text-xs font-medium"
+                className="rounded-full text-xs font-medium cursor-pointer"
               >
-                清空所有筛选
+                {t('plaza.resetFilters')}
               </Button>
               <Button
                 onClick={onOpenUpload}
-                className="rounded-full text-xs font-semibold shadow-md"
+                className="rounded-full text-xs font-semibold shadow-md cursor-pointer"
               >
-                立即上传新照片
+                {t('plaza.uploadToPlaza')}
               </Button>
             </div>
           </div>
@@ -660,7 +649,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                             ? 'bg-rose-500 text-white border-rose-400 shadow-md'
                             : 'bg-black/40 hover:bg-black/60 text-white/80 hover:text-white border-white/20'
                         }`}
-                        title={img.favorite ? '取消收藏' : '加入收藏'}
+                        title={img.favorite ? t('card.unfavorite') : t('card.favorite')}
                       >
                         <Heart
                           className={`w-3.5 h-3.5 ${img.favorite ? 'fill-current' : ''}`}
@@ -679,17 +668,17 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                             size="sm"
                             onClick={(e) => handleCopyLink(img, e)}
                             className="h-7 px-3 rounded-full text-xs font-bold uppercase gap-1 shadow-md cursor-pointer"
-                            title="复制直链"
+                            title={t('card.copyUrl')}
                           >
                             {isCopied ? (
                               <>
                                 <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
-                                <span>已复制</span>
+                                <span>{t('common.copied')}</span>
                               </>
                             ) : (
                               <>
                                 <Copy className="w-3 h-3" />
-                                <span>直链</span>
+                                <span>{t('card.copyUrl')}</span>
                               </>
                             )}
                           </Button>
@@ -699,10 +688,10 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                             size="sm"
                             onClick={(e) => handleCopyMarkdown(img, e)}
                             className="h-7 px-2.5 rounded-full text-xs font-medium gap-1 bg-black/70 text-white hover:bg-black border-white/20 backdrop-blur-sm cursor-pointer"
-                            title="复制 Markdown"
+                            title={t('card.copyMarkdown')}
                           >
                             <FileCode className="w-3 h-3" />
-                            <span>MD</span>
+                            <span>{t('card.copyMarkdown')}</span>
                           </Button>
                         </div>
 
@@ -712,7 +701,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                             size="icon"
                             onClick={(e) => handleDownload(img, e)}
                             className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/80 hover:text-white hover:bg-black/80 cursor-pointer"
-                            title="下载原图"
+                            title={t('card.download')}
                           >
                             <Download className="w-3.5 h-3.5" />
                           </Button>
@@ -722,7 +711,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                             size="icon"
                             onClick={() => onPreview(img)}
                             className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/80 hover:text-white hover:bg-black/80 cursor-pointer"
-                            title="全屏检视"
+                            title={t('lightbox.previewTitle')}
                           >
                             <Maximize2 className="w-3.5 h-3.5" />
                           </Button>

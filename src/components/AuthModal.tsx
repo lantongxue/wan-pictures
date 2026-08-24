@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -14,10 +15,8 @@ import {
   FieldGroup,
   FieldLabel,
   FieldDescription,
-  FieldError,
   FieldSeparator,
 } from './ui/field';
-import { Badge } from './ui/badge';
 import {
   User as UserIcon,
   Lock,
@@ -26,7 +25,6 @@ import {
   EyeOff,
   Sparkles,
   Server,
-  CheckCircle2,
   AlertCircle,
   LogIn,
   UserPlus,
@@ -47,7 +45,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onShowToast,
 }) => {
-  const { login, register, backendOnline, checkBackend } = useAuth();
+  const { t } = useTranslation();
+  const { login, register } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
@@ -72,7 +71,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginAccount.trim() || !loginPassword) {
-      setErrorMsg('请填写账号与密码');
+      setErrorMsg(t('auth.fillAccountPassword'));
       return;
     }
 
@@ -88,25 +87,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (res.success) {
       onShowToast(
-        '欢迎回来！',
-        '登录成功，已载入个人图库配置',
+        t('auth.loginSuccess'),
+        t('auth.loginSuccessDesc'),
         'success'
       );
       onClose();
     } else {
-      setErrorMsg(res.message || '登录失败，请检查账号密码');
+      setErrorMsg(res.message || t('auth.loginFailed'));
     }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regUsername.trim() || !regEmail.trim() || !regPassword) {
-      setErrorMsg('请完整填写必填字段');
+      setErrorMsg(t('auth.fillRequired'));
       return;
     }
 
     if (regPassword.length < 6) {
-      setErrorMsg('密码长度不能少于 6 位');
+      setErrorMsg(t('auth.passwordLength'));
       return;
     }
 
@@ -129,13 +128,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (res.success) {
       onShowToast(
-        '注册成功！',
-        '新用户已创建并自动登录',
+        t('auth.registerSuccess'),
+        t('auth.registerSuccessDesc'),
         'success'
       );
       onClose();
     } else {
-      setErrorMsg(res.message || '注册失败，请更换用户名或邮箱');
+      setErrorMsg(res.message || t('auth.registerFailed'));
     }
   };
 
@@ -153,7 +152,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border border-border/80 bg-card">
-        {/* Header Header Pattern */}
+        {/* Header Pattern */}
         <div className="bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-transparent p-6 border-b border-border/60">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -162,10 +161,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold">
-                  {mode === 'login' ? '用户登录' : '创建新账号'}
+                  {mode === 'login' ? t('auth.userLogin') : t('auth.createNewAccount')}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  安全账户认证与个人图库同步
+                  {t('auth.authSubtitle')}
                 </DialogDescription>
               </div>
             </div>
@@ -184,7 +183,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               }`}
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>登录已有账号</span>
+              <span>{t('auth.loginTab')}</span>
             </button>
             <button
               id="auth-tab-register"
@@ -197,7 +196,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span>注册新账号</span>
+              <span>{t('auth.registerTab')}</span>
             </button>
           </div>
         </div>
@@ -218,7 +217,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="login-account">
-                      用户名 / 注册邮箱
+                      {t('auth.accountLabel')}
                     </FieldLabel>
                     <div className="relative">
                       <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -228,7 +227,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         required
                         value={loginAccount}
                         onChange={(e) => setLoginAccount(e.target.value)}
-                        placeholder="输入用户名或邮箱 (如 admin)"
+                        placeholder={t('auth.accountPlaceholder')}
                         className="pl-9 text-xs h-9"
                       />
                     </div>
@@ -236,7 +235,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                   <Field>
                     <FieldLabel htmlFor="login-password">
-                      账户密码
+                      {t('auth.passwordLabel')}
                     </FieldLabel>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -246,14 +245,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="输入密码"
+                        placeholder={t('auth.passwordPlaceholder')}
                         className="pl-9 pr-9 text-xs h-9"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                       >
                         {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
@@ -270,10 +269,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {loading ? (
                     <span className="flex items-center gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      验证并登录中...
+                      {t('auth.loggingIn')}
                     </span>
                   ) : (
-                    '立即登录'
+                    t('auth.login')
                   )}
                 </Button>
 
@@ -281,8 +280,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <FieldSeparator />
                 <div>
                   <p className="text-[11px] text-muted-foreground mb-2 flex items-center justify-between">
-                    <span>快速填充体验账号:</span>
-                    <span className="text-[10px] font-mono opacity-70">密码: password123</span>
+                    <span>{t('auth.quickDemo')}</span>
+                    <span className="text-[10px] font-mono opacity-70">pwd: password123</span>
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -292,7 +291,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onClick={() => fillQuickDemo('admin')}
                       className="flex-1 text-[11px] h-7 cursor-pointer"
                     >
-                      填入 Admin (管理员)
+                      Admin
                     </Button>
                     <Button
                       type="button"
@@ -301,7 +300,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onClick={() => fillQuickDemo('designer')}
                       className="flex-1 text-[11px] h-7 cursor-pointer"
                     >
-                      填入 Designer (创作者)
+                      Designer
                     </Button>
                   </div>
                 </div>
@@ -315,7 +314,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <Field>
                       <FieldLabel htmlFor="reg-username" required>
-                        用户名
+                        {t('auth.usernameLabel')}
                       </FieldLabel>
                       <div className="relative">
                         <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -328,7 +327,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                             setRegUsername(e.target.value);
                             setAvatarSeed(e.target.value || 'wan');
                           }}
-                          placeholder="字母/数字 (≥3位)"
+                          placeholder={t('auth.usernamePlaceholder')}
                           className="pl-9 text-xs h-9"
                         />
                       </div>
@@ -336,14 +335,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                     <Field>
                       <FieldLabel htmlFor="reg-nickname">
-                        昵称 / 显示名
+                        {t('auth.nicknameLabel')}
                       </FieldLabel>
                       <Input
                         id="reg-nickname"
                         type="text"
                         value={regNickname}
                         onChange={(e) => setRegNickname(e.target.value)}
-                        placeholder="如: 摄影师小陈"
+                        placeholder={t('auth.nicknamePlaceholder')}
                         className="text-xs h-9"
                       />
                     </Field>
@@ -351,7 +350,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                   <Field>
                     <FieldLabel htmlFor="reg-email" required>
-                      电子邮箱
+                      {t('auth.emailLabel')}
                     </FieldLabel>
                     <div className="relative">
                       <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -369,7 +368,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                   <Field>
                     <FieldLabel htmlFor="reg-password" required>
-                      登录密码
+                      {t('auth.passwordLabel')}
                     </FieldLabel>
                     <div className="relative">
                       <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -379,20 +378,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         required
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="不少于 6 个字符"
+                        placeholder={t('auth.passwordMinPlaceholder')}
                         className="pl-9 pr-9 text-xs h-9"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                       >
                         {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                     <FieldDescription>
-                      用于保护您的图库与外链配置安全
+                      {t('auth.passwordDesc')}
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
@@ -407,9 +406,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="w-10 h-10 rounded-full border border-border/80 bg-background shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-foreground">自动生成的矢量头像</p>
+                    <p className="text-[11px] font-medium text-foreground">{t('auth.avatarTitle')}</p>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      根据用户名自动哈希生成独一无二的专属标识
+                      {t('auth.avatarDesc')}
                     </p>
                   </div>
                 </div>
@@ -423,10 +422,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {loading ? (
                     <span className="flex items-center gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      正在注册并创建账户...
+                      {t('auth.registering')}
                     </span>
                   ) : (
-                    '立即注册并登录'
+                    t('auth.register')
                   )}
                 </Button>
               </FieldSet>
@@ -437,9 +436,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Server className="w-3 h-3 text-blue-500" />
-              数据安全加密存储
+              {t('auth.encryptedStorage')}
             </span>
-            <span>多端图库实时同步</span>
+            <span>{t('auth.multiSync')}</span>
           </div>
         </div>
       </DialogContent>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Sparkles,
   Search,
   Upload,
   FolderKanban,
@@ -15,21 +15,20 @@ import {
   Sun,
   Moon,
   Compass,
-  Layers,
   User as UserIcon,
   LogIn,
   Shield,
-  Server,
-  Lock,
   ChevronDown,
   ChevronRight,
   LogOut,
   Menu,
+  Languages,
 } from 'lucide-react';
 import { Album, ViewMode, FilterOptions } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { changeLanguage } from '../i18n';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -81,11 +80,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
   onShowToast,
 }) => {
+  const { t, i18n } = useTranslation();
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, backendOnline, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const currentLang = i18n.language?.startsWith('en') ? 'en' : 'zh';
 
   // Focus mobile search input when opened
   useEffect(() => {
@@ -110,7 +112,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     logout();
     setIsMobileMenuOpen(false);
     if (onShowToast) {
-      onShowToast('已退出登录', '欢迎下次使用万图 (Wan Pictures)', 'info');
+      onShowToast(t('common.info'), t('nav.logout'), 'info');
+    }
+  };
+
+  const handleToggleLanguage = () => {
+    const nextLang = currentLang === 'zh' ? 'en' : 'zh';
+    changeLanguage(nextLang);
+    if (onShowToast) {
+      onShowToast(
+        t('toast.langSwitched', { lang: nextLang === 'zh' ? '简体中文' : 'English' }),
+        nextLang === 'zh' ? '已更新界面显示语言' : 'Language updated',
+        'success'
+      );
     }
   };
 
@@ -141,11 +155,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     WAN PICTURES<span className="text-primary text-2xl sm:text-3xl leading-none">.</span>
                   </span>
                   <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                    万图
+                    {t('common.appName')}
                   </span>
                 </div>
                 <Badge variant="subtle" className="hidden xl:inline-flex text-[10px]">
-                  PRO VISION
+                  {t('common.proVision')}
                 </Badge>
               </div>
 
@@ -161,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 >
                   <Compass className="w-3.5 h-3.5 text-blue-500" />
-                  <span>图片广场</span>
+                  <span>{t('nav.plaza')}</span>
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
@@ -178,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 >
                   <Upload className="w-3.5 h-3.5 text-primary" />
-                  <span>上传</span>
+                  <span>{t('nav.workspace')}</span>
                 </button>
               </div>
             </div>
@@ -192,7 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="text"
                   value={filters.searchQuery}
                   onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
-                  placeholder={currentTab === 'plaza' ? '搜索广场资产、标签或格式...' : '搜索资产名称 / 格式 / 标签...'}
+                  placeholder={currentTab === 'plaza' ? t('nav.searchPlaceholderPlaza') : t('nav.searchPlaceholderWorkspace')}
                   className="pl-9 pr-8 rounded-full border-border/80 bg-muted/40 focus-visible:bg-background tracking-wide h-9 text-xs"
                 />
                 {filters.searchQuery && (
@@ -218,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className={`md:hidden rounded-full h-8 w-8 sm:h-9 sm:w-9 relative cursor-pointer ${
                   filters.searchQuery && !isMobileSearchOpen ? 'text-primary border-primary/50' : ''
                 }`}
-                aria-label="搜索"
+                aria-label={t('common.search')}
               >
                 <Search className="w-3.5 h-3.5" />
                 {filters.searchQuery && !isMobileSearchOpen && (
@@ -272,7 +286,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               variant={user.role === 'admin' ? 'default' : 'secondary'}
                               className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium"
                             >
-                              {user.role === 'admin' ? '管理员' : '标准用户'}
+                              {user.role === 'admin' ? t('nav.systemRoleAdmin') : t('nav.systemRoleUser')}
                             </Badge>
                           </div>
                           <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
@@ -283,11 +297,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                               }`}
                             />
                             <span
-                              className={`text-[10px] font-medium ${
-                                backendOnline ? 'text-emerald-500' : 'text-emerald-500'
-                              }`}
+                              className="text-[10px] font-medium text-emerald-500"
                             >
-                              {backendOnline ? '云端服务在线' : '本地存储模式'}
+                              {backendOnline ? 'Online' : 'Local Persistence'}
                             </span>
                           </div>
                         </div>
@@ -298,10 +310,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                             <HardDrive className="w-3.5 h-3.5 text-primary" />
-                            <span>存储空间情况</span>
+                            <span>{t('nav.storageUsed')}</span>
                           </div>
                           <Badge variant="subtle" className="text-[10px] font-mono px-1.5 py-0">
-                            {totalImagesCount} 张图片
+                            {totalImagesCount} {t('common.items')}
                           </Badge>
                         </div>
 
@@ -323,11 +335,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                             }}
                           />
                         </div>
-
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                          <span>已用 {storagePercentage.toFixed(1)}%</span>
-                          <span>可用 {formatFileSize(Math.max(0, 50 * 1024 * 1024 * 1024 - totalStorageBytes))}</span>
-                        </div>
                       </div>
 
                       <DropdownMenuSeparator className="my-1" />
@@ -341,8 +348,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <UserIcon className="w-4 h-4 text-primary shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <span className="text-foreground">个人资料 (Profile)</span>
-                            <p className="text-[10px] text-muted-foreground font-normal">修改昵称、简介与查看账号权限</p>
+                            <span className="text-foreground">{t('nav.userProfile')}</span>
                           </div>
                         </DropdownMenuItem>
 
@@ -353,8 +359,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <FolderKanban className="w-4 h-4 text-indigo-500 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <span className="text-foreground">相册分类管理</span>
-                            <p className="text-[10px] text-muted-foreground font-normal">当前拥有 {albums.length} 个相册</p>
+                            <span className="text-foreground">{t('nav.albumManager')}</span>
                           </div>
                         </DropdownMenuItem>
 
@@ -365,8 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <span className="text-foreground">偏好与存储配置</span>
-                            <p className="text-[10px] text-muted-foreground font-normal">格式转换、水印与备份重置</p>
+                            <span className="text-foreground">{t('nav.preferences')}</span>
                           </div>
                         </DropdownMenuItem>
 
@@ -378,14 +382,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <Shield className="w-4 h-4 text-primary shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-semibold">后台管理中心 (Admin)</span>
+                              <span className="font-semibold">{t('nav.adminCenter')}</span>
                               <Badge variant="default" className="text-[8px] px-1 py-0 h-3.5">
-                                管理员
+                                {t('nav.systemRoleAdmin')}
                               </Badge>
                             </div>
-                            <p className="text-[10px] text-muted-foreground font-normal">
-                              全量资产管理 / 标签合并 / S3 / WebDAV 调度
-                            </p>
                           </div>
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
@@ -399,7 +400,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 focus:text-rose-600 focus:bg-rose-500/10 cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 shrink-0" />
-                        <span>退出登录 (Logout)</span>
+                        <span>{t('nav.logout')}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -412,12 +413,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="rounded-full gap-1.5 text-xs h-9 px-3.5 cursor-pointer"
                   >
                     <LogIn className="w-3.5 h-3.5 text-primary" />
-                    <span>登录</span>
+                    <span>{t('nav.login')}</span>
                   </Button>
                 )}
               </div>
 
-              {/* Theme Toggle Button (Light / Dark) - Placed after User/Login */}
+              {/* Quick Language Toggle Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    id="quick-lang-toggle-btn"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleToggleLanguage}
+                    className="rounded-full shadow-none cursor-pointer h-8 w-8 sm:h-9 sm:w-9 font-semibold text-[11px]"
+                    aria-label="Toggle Language"
+                  >
+                    {currentLang === 'zh' ? 'EN' : '中'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {currentLang === 'zh' ? 'Switch to English' : '切换为简体中文'}
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Theme Toggle Button (Light / Dark) */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -426,7 +446,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     size="icon"
                     onClick={toggleTheme}
                     className="rounded-full shadow-none cursor-pointer h-8 w-8 sm:h-9 sm:w-9"
-                    aria-label="切换明暗主题"
+                    aria-label={t('nav.toggleTheme')}
                   >
                     {isDark ? (
                       <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
@@ -436,30 +456,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {isDark ? '切换至亮色模式' : '切换至深色模式'}
+                  {isDark ? t('nav.lightMode') : t('nav.darkMode')}
                 </TooltipContent>
               </Tooltip>
 
-              {/* Mobile Hamburger / Sheet Menu Trigger Button */}
+              {/* Mobile Hamburger Menu Trigger Button */}
               <Button
                 id="mobile-menu-toggle-btn"
                 variant={isMobileMenuOpen ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                 className="sm:hidden rounded-full h-8 w-8 relative cursor-pointer"
-                aria-label="打开移动端导航菜单"
+                aria-label="Navigation Menu"
               >
                 {isMobileMenuOpen ? (
                   <X className="w-4 h-4" />
                 ) : (
                   <Menu className="w-4 h-4" />
-                )}
-                {isAuthenticated && !isMobileMenuOpen && (
-                  <span
-                    className={`absolute top-1 right-1 w-2 h-2 rounded-full ring-2 ring-background ${
-                      backendOnline ? 'bg-emerald-500' : 'bg-amber-500'
-                    }`}
-                  />
                 )}
               </Button>
             </div>
@@ -484,7 +497,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       type="text"
                       value={filters.searchQuery}
                       onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
-                      placeholder={currentTab === 'plaza' ? '搜索广场资产、标签或格式...' : '搜索资产名称 / 格式 / 标签...'}
+                      placeholder={currentTab === 'plaza' ? t('nav.searchPlaceholderPlaza') : t('nav.searchPlaceholderWorkspace')}
                       className="pl-8.5 pr-8 rounded-full border-border/80 bg-muted/40 focus-visible:bg-background h-9 text-xs w-full"
                     />
                     {filters.searchQuery && (
@@ -492,7 +505,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         id="mobile-clear-search-btn"
                         onClick={() => onFilterChange({ searchQuery: '' })}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                        aria-label="清空搜索"
+                        aria-label="Clear Search"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -507,16 +520,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onFilterChange({ searchQuery: '' });
                       }
                     }}
-                    className="rounded-full text-xs h-9 px-2.5 shrink-0 text-muted-foreground"
+                    className="rounded-full text-xs h-9 px-2.5 shrink-0 text-muted-foreground cursor-pointer"
                   >
-                    取消
+                    {t('common.cancel')}
                   </Button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Mobile Main Tab Switcher (Visible on small screens) */}
+          {/* Mobile Main Tab Switcher */}
           <div className="sm:hidden grid grid-cols-2 gap-1.5 pb-2.5 pt-0.5">
             <button
               id="mobile-nav-tab-plaza"
@@ -531,11 +544,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Compass className="w-3.5 h-3.5 text-blue-500" />
-              <span>图片广场</span>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
-              </span>
+              <span>{t('nav.plaza')}</span>
             </button>
 
             <button
@@ -551,15 +560,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Upload className="w-3.5 h-3.5 text-primary" />
-              <span>上传与工作台</span>
+              <span>{t('nav.workspace')}</span>
             </button>
           </div>
 
           {/* Sub-bar for Workspace Mode (Album Filters & View Switcher) */}
           {currentTab === 'workspace' && isAuthenticated && (
             <div className="py-2 flex items-center justify-between gap-2 border-t border-border/40">
-              {/* Quick Album Filter Pills (Horizontally scrollable with touch) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0 mask-fade-edges">
+              {/* Quick Album Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0">
                 <button
                   id="album-filter-all"
                   onClick={() => onFilterChange({ albumId: 'all' })}
@@ -569,7 +578,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       : 'bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/50'
                   }`}
                 >
-                  全部 ({totalImagesCount})
+                  {t('common.all')} ({totalImagesCount})
                 </button>
 
                 {albums.map((alb) => (
@@ -605,11 +614,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       filters.favoritesOnly ? 'fill-rose-500 text-rose-500' : ''
                     }`}
                   />
-                  <span>精选</span>
+                  <span>{t('gallery.favorites')}</span>
                 </button>
               </div>
 
-              {/* View Mode Switcher (Compact on mobile) */}
+              {/* View Mode Switcher */}
               <div className="flex items-center gap-0.5 shrink-0 p-0.5 rounded-full border border-border/80 bg-muted/40">
                 <button
                   id="view-mode-masonry"
@@ -619,7 +628,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
-                  aria-label="瀑布流视图"
+                  aria-label={t('gallery.viewMasonry')}
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
@@ -632,7 +641,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
-                  aria-label="网格视图"
+                  aria-label={t('gallery.viewGrid')}
                 >
                   <Grid2X2 className="w-3.5 h-3.5" />
                 </button>
@@ -645,7 +654,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
-                  aria-label="列表视图"
+                  aria-label={t('gallery.viewList')}
                 >
                   <List className="w-3.5 h-3.5" />
                 </button>
@@ -693,36 +702,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                           variant={user.role === 'admin' ? 'default' : 'secondary'}
                           className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium"
                         >
-                          {user.role === 'admin' ? '管理员' : '标准用户'}
+                          {user.role === 'admin' ? t('nav.systemRoleAdmin') : t('nav.systemRoleUser')}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
-                          }`}
-                        />
-                        <span
-                          className={`text-[10px] font-medium ${
-                            backendOnline ? 'text-emerald-500' : 'text-emerald-500'
-                          }`}
-                        >
-                          {backendOnline ? '服务已连接' : '本地存储'}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-primary/5 border border-primary/20">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground">未登录账号</p>
-                        <p className="text-[10px] text-muted-foreground">登录后解锁多端同步与相册归档</p>
-                      </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">{t('guard.title')}</p>
+                      <p className="text-[10px] text-muted-foreground">{t('guard.desc')}</p>
                     </div>
                     <Button
                       size="sm"
@@ -733,20 +723,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="rounded-full text-xs h-8 px-3 cursor-pointer"
                     >
                       <LogIn className="w-3.5 h-3.5 mr-1" />
-                      登录
+                      {t('nav.login')}
                     </Button>
                   </div>
                 )}
 
-                {/* Storage Meter (Available for logged-in or demo) */}
+                {/* Storage Meter */}
                 <div className="p-3 rounded-2xl bg-muted/30 border border-border/50 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                       <HardDrive className="w-3.5 h-3.5 text-primary" />
-                      <span>存储空间概览</span>
+                      <span>{t('nav.storageUsed')}</span>
                     </div>
                     <Badge variant="subtle" className="text-[10px] font-mono px-1.5 py-0">
-                      {totalImagesCount} 张图片
+                      {totalImagesCount} {t('common.items')}
                     </Badge>
                   </div>
 
@@ -768,11 +758,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                     />
                   </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>已用 {storagePercentage.toFixed(1)}%</span>
-                    <span>可用 {formatFileSize(Math.max(0, 50 * 1024 * 1024 * 1024 - totalStorageBytes))}</span>
-                  </div>
                 </div>
 
                 {/* Navigation & Action Links */}
@@ -786,7 +771,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <FolderKanban className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span className="text-foreground">相册分类管理</span>
+                      <span className="text-foreground">{t('nav.albumManager')}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Badge variant="subtle" className="text-[10px] px-1.5 py-0">
@@ -805,7 +790,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="text-foreground">偏好设置与数据中心</span>
+                      <span className="text-foreground">{t('nav.preferences')}</span>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
@@ -820,7 +805,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <div className="flex items-center gap-2.5">
                         <UserIcon className="w-4 h-4 text-primary shrink-0" />
-                        <span className="text-foreground">个人资料与账户</span>
+                        <span className="text-foreground">{t('nav.userProfile')}</span>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
@@ -835,19 +820,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <Shield className="w-4 h-4 text-primary shrink-0" />
-                      <span className="font-semibold">后台管理中心 (Admin)</span>
+                      <span className="font-semibold">{t('nav.adminCenter')}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="default" className="text-[9px] px-1 py-0">
-                        管理
-                      </Badge>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </div>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {/* Theme & Logout Footer */}
+                {/* Theme, Language & Logout Footer */}
                 <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleLanguage}
+                    className="rounded-xl flex-1 justify-center gap-1.5 text-xs h-9 cursor-pointer"
+                  >
+                    <Languages className="w-3.5 h-3.5 text-primary" />
+                    <span>{currentLang === 'zh' ? 'English' : '简体中文'}</span>
+                  </Button>
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -857,12 +847,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {isDark ? (
                       <>
                         <Sun className="w-3.5 h-3.5 text-amber-400" />
-                        <span>亮色模式</span>
+                        <span>{t('nav.lightMode')}</span>
                       </>
                     ) : (
                       <>
                         <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>深色模式</span>
+                        <span>{t('nav.darkMode')}</span>
                       </>
                     )}
                   </Button>
@@ -875,7 +865,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="rounded-xl flex-1 justify-center gap-1.5 text-xs h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-rose-500/30 cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
-                      <span>退出登录</span>
+                      <span>{t('nav.logout')}</span>
                     </Button>
                   ) : (
                     <Button
@@ -888,7 +878,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="rounded-xl flex-1 justify-center gap-1.5 text-xs h-9 cursor-pointer"
                     >
                       <LogIn className="w-3.5 h-3.5" />
-                      <span>立即登录</span>
+                      <span>{t('nav.login')}</span>
                     </Button>
                   )}
                 </div>

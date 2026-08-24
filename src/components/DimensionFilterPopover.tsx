@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Maximize2,
-  X,
-  SlidersHorizontal,
   RotateCcw,
-  Sparkles,
-  Smartphone,
-  Monitor,
+  RectangleHorizontal,
+  RectangleVertical,
   Square,
-  Check,
+  LayoutGrid,
 } from 'lucide-react';
 import { AspectRatioFilter } from '../types';
 import { Button } from './ui/button';
@@ -25,7 +23,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from './ui/popover';
-import { Badge } from './ui/badge';
 
 interface DimensionFilterPopoverProps {
   minWidth?: number;
@@ -45,14 +42,6 @@ interface DimensionFilterPopoverProps {
   triggerSize?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-const PRESET_RESOLUTIONS = [
-  { label: '4K 超清', desc: '≥ 3840×2160', minW: 3840, minH: 2160 },
-  { label: '2K 高清', desc: '≥ 2560×1440', minW: 2560, minH: 1440 },
-  { label: '1080P 全高清', desc: '≥ 1920×1080', minW: 1920, minH: 1080 },
-  { label: '720P 标清', desc: '≥ 1280×720', minW: 1280, minH: 720 },
-  { label: '正方形图标/头像', desc: '1:1 比例', aspect: 'square' as AspectRatioFilter },
-];
-
 export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
   minWidth,
   maxWidth,
@@ -64,12 +53,21 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
   triggerVariant = 'ghost',
   triggerSize = 'sm',
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [localMinW, setLocalMinW] = useState<string>(minWidth ? String(minWidth) : '');
   const [localMaxW, setLocalMaxW] = useState<string>(maxWidth ? String(maxWidth) : '');
   const [localMinH, setLocalMinH] = useState<string>(minHeight ? String(minHeight) : '');
   const [localMaxH, setLocalMaxH] = useState<string>(maxHeight ? String(maxHeight) : '');
   const [localAspect, setLocalAspect] = useState<AspectRatioFilter>(aspectRatioFilter || 'all');
+
+  const PRESET_RESOLUTIONS = [
+    { label: t('dimension.preset4k'), desc: '≥ 3840×2160', minW: 3840, minH: 2160 },
+    { label: t('dimension.preset2k'), desc: '≥ 2560×1440', minW: 2560, minH: 1440 },
+    { label: t('dimension.preset1080p'), desc: '≥ 1920×1080', minW: 1920, minH: 1080 },
+    { label: t('dimension.preset720p'), desc: '≥ 1280×720', minW: 1280, minH: 720 },
+    { label: t('dimension.presetSquare'), desc: '1:1', aspect: 'square' as AspectRatioFilter },
+  ];
 
   // Keep local state synced when props change
   useEffect(() => {
@@ -156,15 +154,15 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
       parts.push(`≥ ${minWidth}×${minHeight}`);
     } else {
       if (minWidth || maxWidth) {
-        parts.push(`宽 ${minWidth || 0}-${maxWidth || '∞'}`);
+        parts.push(`W:${minWidth || 0}-${maxWidth || '∞'}`);
       }
       if (minHeight || maxHeight) {
-        parts.push(`高 ${minHeight || 0}-${maxHeight || '∞'}`);
+        parts.push(`H:${minHeight || 0}-${maxHeight || '∞'}`);
       }
     }
-    if (aspectRatioFilter === 'landscape') parts.push('横屏');
-    if (aspectRatioFilter === 'portrait') parts.push('竖屏');
-    if (aspectRatioFilter === 'square') parts.push('1:1方形');
+    if (aspectRatioFilter === 'landscape') parts.push(t('dimension.landscape'));
+    if (aspectRatioFilter === 'portrait') parts.push(t('dimension.portrait'));
+    if (aspectRatioFilter === 'square') parts.push('1:1');
 
     return parts.join(', ');
   };
@@ -183,7 +181,7 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
           } ${className}`}
         >
           <Maximize2 className="w-3.5 h-3.5" />
-          <span>宽高尺寸</span>
+          <span>{t('dimension.activeLabel')}</span>
           {hasActiveDimensionFilters && (
             <span className="max-w-[120px] truncate text-[10px] bg-primary-foreground/20 text-primary-foreground px-1.5 py-0.2 rounded-full">
               {getActiveFilterLabel()}
@@ -193,13 +191,13 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-80 p-4 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-xl space-y-4 text-xs"
+        className="w-[360px] sm:w-[380px] p-4 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-xl space-y-4 text-xs"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
           <div className="flex items-center gap-1.5 font-semibold text-foreground text-sm">
-            <SlidersHorizontal className="w-4 h-4 text-primary" />
-            <span>图片分辨率与宽高筛选</span>
+            <Maximize2 className="w-4 h-4 text-primary" />
+            <span>{t('dimension.title')}</span>
           </div>
           {hasActiveDimensionFilters && (
             <button
@@ -208,7 +206,7 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
               className="text-[11px] text-muted-foreground hover:text-rose-500 flex items-center gap-0.5 cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>重置</span>
+              <span>{t('dimension.reset')}</span>
             </button>
           )}
         </div>
@@ -219,55 +217,56 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
             {/* Aspect Ratio Selector */}
             <Field className="gap-1.5">
               <FieldLabel className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
-                画面比例倾向
+                {t('dimension.aspectRatio')}
               </FieldLabel>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/50">
                 <button
                   type="button"
                   onClick={() => setLocalAspect('all')}
-                  className={`py-1.5 px-2 rounded-xl text-center text-xs transition-all cursor-pointer ${
+                  className={`flex-1 py-1.5 px-1.5 rounded-lg text-center text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     localAspect === 'all'
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  全部
+                  <LayoutGrid className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                  <span>{t('dimension.allAspects')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setLocalAspect('landscape')}
-                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  className={`flex-[1.25] py-1.5 px-2 rounded-lg text-center text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     localAspect === 'landscape'
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Monitor className="w-3 h-3" />
-                  <span>横屏</span>
+                  <RectangleHorizontal className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                  <span>{t('dimension.landscape')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setLocalAspect('portrait')}
-                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  className={`flex-[1.1] py-1.5 px-1.5 rounded-lg text-center text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     localAspect === 'portrait'
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Smartphone className="w-3 h-3" />
-                  <span>竖屏</span>
+                  <RectangleVertical className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                  <span>{t('dimension.portrait')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setLocalAspect('square')}
-                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  className={`flex-1 py-1.5 px-1.5 rounded-lg text-center text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     localAspect === 'square'
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Square className="w-3 h-3" />
-                  <span>1:1</span>
+                  <Square className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                  <span>{t('dimension.square')}</span>
                 </button>
               </div>
             </Field>
@@ -275,13 +274,13 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
             {/* Width Range Field */}
             <Field className="gap-1.5">
               <FieldLabel htmlFor="dim-filter-min-w" className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
-                宽度区间 (Width px)
+                {t('dimension.widthRange')}
               </FieldLabel>
               <div className="flex items-center gap-2">
                 <Input
                   id="dim-filter-min-w"
                   type="number"
-                  placeholder="最小宽"
+                  placeholder={t('dimension.minWidth')}
                   value={localMinW}
                   onChange={(e) => setLocalMinW(e.target.value)}
                   className="h-8 text-xs rounded-xl bg-background/80"
@@ -291,7 +290,7 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
                 <Input
                   id="dim-filter-max-w"
                   type="number"
-                  placeholder="最大宽"
+                  placeholder={t('dimension.maxWidth')}
                   value={localMaxW}
                   onChange={(e) => setLocalMaxW(e.target.value)}
                   className="h-8 text-xs rounded-xl bg-background/80"
@@ -303,13 +302,13 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
             {/* Height Range Field */}
             <Field className="gap-1.5">
               <FieldLabel htmlFor="dim-filter-min-h" className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
-                高度区间 (Height px)
+                {t('dimension.heightRange')}
               </FieldLabel>
               <div className="flex items-center gap-2">
                 <Input
                   id="dim-filter-min-h"
                   type="number"
-                  placeholder="最小高"
+                  placeholder={t('dimension.minHeight')}
                   value={localMinH}
                   onChange={(e) => setLocalMinH(e.target.value)}
                   className="h-8 text-xs rounded-xl bg-background/80"
@@ -319,7 +318,7 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
                 <Input
                   id="dim-filter-max-h"
                   type="number"
-                  placeholder="最大高"
+                  placeholder={t('dimension.maxHeight')}
                   value={localMaxH}
                   onChange={(e) => setLocalMaxH(e.target.value)}
                   className="h-8 text-xs rounded-xl bg-background/80"
@@ -333,7 +332,7 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
           <FieldSeparator />
           <Field className="gap-1.5">
             <FieldLabel className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
-              快速预设分辨率
+              {t('dimension.presets')}
             </FieldLabel>
             <div className="flex flex-wrap gap-1.5">
               {PRESET_RESOLUTIONS.map((preset) => (
@@ -358,17 +357,17 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleClear}
-            className="rounded-full text-xs h-8 px-3 text-muted-foreground"
+            className="rounded-full text-xs h-8 px-3 text-muted-foreground cursor-pointer"
           >
-            清空条件
+            {t('dimension.clearConditions')}
           </Button>
           <Button
             type="button"
             size="sm"
             onClick={handleApply}
-            className="rounded-full text-xs h-8 px-4 font-semibold shadow-xs"
+            className="rounded-full text-xs h-8 px-4 font-semibold shadow-xs cursor-pointer"
           >
-            应用筛选
+            {t('dimension.applyFilters')}
           </Button>
         </div>
       </PopoverContent>

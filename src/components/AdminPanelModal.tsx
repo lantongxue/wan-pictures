@@ -41,6 +41,7 @@ import {
   StorageDriverType,
   AdminOverviewStats,
   StorageTestResult,
+  LocalStorageConfig,
   S3Config,
   WebDAVConfig,
 } from '../types';
@@ -127,6 +128,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [testingDriver, setTestingDriver] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, StorageTestResult>>({});
 
+  // Local Form state
+  const [localConfig, setLocalConfig] = useState<LocalStorageConfig>({
+    storagePath: './uploads/images',
+    publicUrlPrefix: '/uploads/',
+    subfolderFormat: 'YYYY/MM',
+    maxSizeMB: 10240,
+    autoCleanEnabled: false,
+    retentionDays: 0,
+  });
+
   // S3 Form state
   const [s3Config, setS3Config] = useState<S3Config>({
     endpoint: 'https://s3.us-east-1.amazonaws.com',
@@ -191,6 +202,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           const active = res.data.find((c) => c.isActive);
           if (active) {
             setActiveDriver(active.driver);
+          }
+          const local = res.data.find((c) => c.driver === 'local');
+          if (local && local.config) {
+            setLocalConfig((prev) => ({ ...prev, ...(local.config as LocalStorageConfig) }));
           }
           const s3 = res.data.find((c) => c.driver === 's3');
           if (s3 && s3.config) {
@@ -416,6 +431,24 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // -------------------------------------------------------------
   // Storage Handlers
   // -------------------------------------------------------------
+  const handleSaveLocalConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const item: StorageConfigItem = {
+        id: 1,
+        driver: 'local',
+        name: '本地文件系统与磁盘存储 (Local Storage)',
+        isActive: activeDriver === 'local',
+        config: localConfig,
+      };
+      await adminApi.saveStorageConfig(item);
+      onShowToast('本地存储配置已保存', `存储路径已更新为: ${localConfig.storagePath}`, 'success');
+      loadTabData('storage');
+    } catch (err: any) {
+      onShowToast('保存本地存储配置失败', err.message, 'error');
+    }
+  };
+
   const handleSaveS3Config = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -467,7 +500,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const handleTestStorage = async (driver: StorageDriverType) => {
     setTestingDriver(driver);
     try {
-      const config = driver === 's3' ? s3Config : driver === 'webdav' ? webdavConfig : {};
+      const config =
+        driver === 's3'
+          ? s3Config
+          : driver === 'webdav'
+          ? webdavConfig
+          : localConfig;
       const res = await adminApi.testStorageConnection(driver, config);
       setTestResults((prev) => ({ ...prev, [driver]: res }));
       if (res.success) {
@@ -1500,7 +1538,157 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
 
                 {/* Storage Modules Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {/* Local Storage Config Form */}
+                  <form
+                    onSubmit={handleSaveLocalConfig}
+                    className="p-5 rounded-2xl border border-border/80 bg-card space-y-4 flex flex-col justify-between"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="w-4 h-4 text-blue-500" />
+                          <h3 className="text-sm font-bold text-foreground">
+                            本地磁盘与存储路径 (Local FS)
+                          </h3>
+                        </div>
+                        <Badge
+                          variant={activeDriver === 'local' ? 'default' : 'outline'}
+                          className="text-[10px]"
+                        >
+                          {activeDriver === 'local' ? '当前使用中' : '备用存储'}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+                            <span>本地存储路径 (Storage Path)</span>
+                            <span className="text-[10px] text-primary/80 font-normal">支持绝对/相对路径</span>
+                          </label>
+                          <Input
+                            type="text"
+                            required
+                            placeholder="./uploads/images"
+                            value={localConfig.storagePath || ''}
+                            onChange={(e) =>
+                              setLocalConfig({ ...localConfig, storagePath: e.target.value })
+                            }
+                            className="text-xs h-8 rounded-xl font-mono mt-1"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                            示例: 相对路径 <code className="text-foreground">./uploads/images</code> 或绝对路径 <code className="text-foreground">/var/data/wanpictures</code>
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground">
+                            公开 HTTP 访问 URL 前缀
+                          </label>
+                          <Input
+                            type="text"
+                            placeholder="/uploads/"
+                            value={localConfig.publicUrlPrefix || ''}
+                            onChange={(e) =>
+                              setLocalConfig({ ...localConfig, publicUrlPrefix: e.target.value })
+                            }
+                            className="text-xs h-8 rounded-xl font-mono mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground">
+                            子目录按日期组织格式
+                          </label>
+                          <Select
+                            value={localConfig.subfolderFormat || 'YYYY/MM'}
+                            onValueChange={(val) =>
+                              setLocalConfig({ ...localConfig, subfolderFormat: val })
+                            }
+                          >
+                            <SelectTrigger className="text-xs h-8 rounded-xl font-mono mt-1">
+                              <SelectValue placeholder="子目录格式" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="YYYY/MM">YYYY/MM (例如: 2026/08)</SelectItem>
+                              <SelectItem value="YYYY/MM/DD">YYYY/MM/DD (按日归档)</SelectItem>
+                              <SelectItem value="flat">Flat (不分层子目录)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-muted-foreground">
+                            最大配额与容量上限 (MB)
+                          </label>
+                          <Input
+                            type="number"
+                            placeholder="10240"
+                            value={localConfig.maxSizeMB || ''}
+                            onChange={(e) =>
+                              setLocalConfig({
+                                ...localConfig,
+                                maxSizeMB: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            className="text-xs h-8 rounded-xl font-mono mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Test Result Box */}
+                      {testResults['local'] && (
+                        <div
+                          className={`p-3 rounded-xl border text-xs ${
+                            testResults['local'].success
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 font-bold">
+                            {testResults['local'].success ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4" />
+                            )}
+                            <span>{testResults['local'].message}</span>
+                          </div>
+                          {testResults['local'].storagePath && (
+                            <p className="text-[10px] mt-0.5 opacity-80 font-mono">
+                              目录路径: {testResults['local'].storagePath}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-border/50 flex items-center justify-between gap-2 mt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={testingDriver === 'local'}
+                        onClick={() => handleTestStorage('local')}
+                        className="rounded-xl text-xs h-8 gap-1.5 cursor-pointer"
+                      >
+                        <RefreshCw
+                          className={`w-3.5 h-3.5 ${
+                            testingDriver === 'local' ? 'animate-spin' : ''
+                          }`}
+                        />
+                        <span>测试读写</span>
+                      </Button>
+
+                      <Button
+                        type="submit"
+                        size="sm"
+                        className="rounded-xl text-xs h-8 px-4 cursor-pointer"
+                      >
+                        保存本地配置
+                      </Button>
+                    </div>
+                  </form>
+
                   {/* S3 Storage Config Form */}
                   <form
                     onSubmit={handleSaveS3Config}

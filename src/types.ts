@@ -58,6 +58,16 @@ export interface TagItem {
 
 export type StorageDriverType = 'local' | 'webdav' | 's3';
 
+export interface LocalStorageConfig {
+  storagePath: string;
+  pathPrefix?: string;
+  subfolderFormat?: string;
+  maxSizeMB?: number;
+  retentionDays?: number;
+  autoCleanEnabled?: boolean;
+  publicUrlPrefix?: string;
+}
+
 export interface S3Config {
   endpoint: string;
   region: string;
@@ -83,7 +93,7 @@ export interface StorageConfigItem {
   driver: StorageDriverType;
   name: string;
   isActive: boolean;
-  config: S3Config | WebDAVConfig | Record<string, any>;
+  config: LocalStorageConfig | S3Config | WebDAVConfig | Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -99,6 +109,8 @@ export interface StorageTestResult {
   region?: string;
   serverUrl?: string;
   rootPath?: string;
+  storagePath?: string;
+  previewSamplePath?: string;
 }
 
 export interface AdminOverviewStats {

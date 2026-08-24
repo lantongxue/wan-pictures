@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import {
   Archive,
@@ -28,7 +29,7 @@ interface BatchActionBarProps {
   onOpenBatchLinks: () => void;
   onBatchMoveToAlbum: (albumId: string) => void;
   onBatchDelete: () => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
 export const BatchActionBar: React.FC<BatchActionBarProps> = ({
@@ -40,6 +41,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   onBatchDelete,
   onShowToast,
 }) => {
+  const { t } = useTranslation();
   const [isZipping, setIsZipping] = useState(false);
 
   if (selectedImages.length === 0) return null;
@@ -47,7 +49,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   const handleDownloadZip = async () => {
     try {
       setIsZipping(true);
-      onShowToast('正在打包压缩包...', `共 ${selectedImages.length} 张图片`, 'info');
+      onShowToast(t('batch.zipping'), t('batch.zipItems', { count: selectedImages.length }), 'info');
 
       const zip = new JSZip();
 
@@ -76,10 +78,10 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      onShowToast('打包下载成功', 'ZIP 文件已生成并开始下载', 'success');
+      onShowToast(t('batch.zipSuccess'), t('batch.zipSuccessDesc'), 'success');
     } catch (err) {
       console.error(err);
-      onShowToast('打包失败', '部分远程图片无法跨域下载', 'error' as any);
+      onShowToast(t('batch.zipFailed'), t('batch.zipFailedDesc'), 'error');
     } finally {
       setIsZipping(false);
     }
@@ -97,9 +99,12 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
         className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-full border border-border/80 bg-background/95 text-foreground shadow-2xl backdrop-blur-2xl text-xs"
       >
         {/* Count pill */}
-        <Badge variant="subtle" className="gap-1.5 px-3 py-1 text-xs">
-          <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-          <span>{selectedImages.length} SELECTED</span>
+        <Badge
+          variant="subtle"
+          className="gap-1.5 px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 tracking-normal normal-case h-8 flex items-center bg-muted/80 text-foreground border-border/70"
+        >
+          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span>{t('batch.selectedCount', { count: selectedImages.length })}</span>
         </Badge>
 
         {/* Batch Copy Links */}
@@ -107,10 +112,10 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           id="batch-copy-links-btn"
           size="sm"
           onClick={onOpenBatchLinks}
-          className="rounded-full gap-1.5 px-4 uppercase tracking-wider font-bold shadow-md"
+          className="rounded-full gap-1.5 px-3.5 tracking-normal font-semibold shadow-md shrink-0 whitespace-nowrap cursor-pointer h-8"
         >
           <FileCode className="w-3.5 h-3.5" />
-          <span>生成外链</span>
+          <span>{t('batch.batchLinks')}</span>
         </Button>
 
         {/* Move to Album Dropdown */}
@@ -120,23 +125,23 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
               id="batch-move-album-btn"
               variant="outline"
               size="sm"
-              className="rounded-full gap-1.5"
+              className="rounded-full gap-1.5 shrink-0 whitespace-nowrap cursor-pointer h-8"
             >
               <FolderInput className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">移至相册</span>
+              <span>{t('batch.moveToAlbum')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>选择目标相册</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('batch.selectTargetAlbum')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {albums.map((alb) => (
               <DropdownMenuItem
                 key={alb.id}
                 onClick={() => {
                   onBatchMoveToAlbum(alb.id);
-                  onShowToast('相册转移成功', `已移入 "${alb.name}"`, 'success');
+                  onShowToast(t('batch.movedSuccess'), `${alb.name}`, 'success');
                 }}
-                className="gap-2"
+                className="gap-2 cursor-pointer"
               >
                 <span
                   className="w-2 h-2 rounded-full shrink-0"
@@ -155,11 +160,11 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           size="sm"
           disabled={isZipping}
           onClick={handleDownloadZip}
-          className="rounded-full gap-1.5"
+          className="rounded-full gap-1.5 shrink-0 whitespace-nowrap cursor-pointer h-8"
         >
           <Archive className="w-3.5 h-3.5 text-emerald-500" />
-          <span className="hidden sm:inline">
-            {isZipping ? '打包中...' : '打包 ZIP'}
+          <span>
+            {isZipping ? t('batch.zipping') : t('batch.downloadZip')}
           </span>
         </Button>
 
@@ -169,10 +174,10 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           variant="destructive"
           size="sm"
           onClick={onBatchDelete}
-          className="rounded-full gap-1.5 bg-destructive/15 text-destructive hover:bg-destructive/25 shadow-none border border-destructive/30"
+          className="rounded-full gap-1.5 bg-destructive/15 text-destructive hover:bg-destructive/25 shadow-none border border-destructive/30 shrink-0 whitespace-nowrap cursor-pointer h-8"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">删除</span>
+          <span>{t('batch.deleteSelected')}</span>
         </Button>
 
         {/* Clear Selection */}
@@ -181,7 +186,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           variant="ghost"
           size="icon"
           onClick={onClearSelection}
-          className="rounded-full h-8 w-8 ml-auto text-muted-foreground hover:text-foreground"
+          className="rounded-full h-8 w-8 ml-auto text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
         >
           <X className="w-4 h-4" />
         </Button>

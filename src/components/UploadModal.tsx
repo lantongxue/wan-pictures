@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   UploadCloud,
@@ -38,6 +39,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   onViewLinks,
   onRemoveItem,
 }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   const totalCount = queue.length;
@@ -59,10 +62,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
             <div>
               <DialogTitle>
-                {isAllDone ? '图片上传与处理完成' : '正在上传与处理图片...'}
+                {isAllDone ? t('uploadModal.completedTitle') : t('uploadModal.uploadingTitle')}
               </DialogTitle>
               <DialogDescription className="mt-0.5 uppercase tracking-wide text-[11px]">
-                已完成 {doneCount} / {totalCount} 张图片
+                {t('uploadModal.counter', { done: doneCount, total: totalCount })}
               </DialogDescription>
             </div>
           </div>
@@ -118,16 +121,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       {item.status === 'processing' && (
                         <span className="flex items-center gap-1 text-[11px] text-primary">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          正在处理与压缩...
+                          {t('uploadModal.processing')}
                         </span>
                       )}
                       {item.status === 'done' && (
                         <span className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
                           <CheckCircle2 className="w-3 h-3" />
-                          解析成功
+                          {t('uploadModal.parseSuccess')}
                           {item.resultItem?.compressed && (
                             <Badge variant="subtle" className="text-[9px] text-emerald-600 ml-1">
-                              已压缩减重
+                              {t('uploadModal.compressedBadge')}
                             </Badge>
                           )}
                         </span>
@@ -135,7 +138,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       {item.status === 'error' && (
                         <span className="flex items-center gap-1 text-[11px] text-destructive">
                           <AlertCircle className="w-3 h-3" />
-                          {item.error || '上传失败'}
+                          {item.error || t('uploadModal.uploadFailed')}
                         </span>
                       )}
                     </div>
@@ -147,7 +150,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       variant="ghost"
                       size="icon"
                       onClick={() => onRemoveItem(item.id)}
-                      className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                      className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -161,7 +164,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         {/* Footer actions */}
         <DialogFooter className="p-4 px-6 border-t border-border/80 bg-muted/20 flex flex-row items-center justify-between gap-3 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {isAllDone ? '所有图片已就绪，可一键复制外链' : '请稍候，系统正在极速处理中...'}
+            {isAllDone ? t('uploadModal.allDonePrompt') : t('uploadModal.waitingPrompt')}
           </span>
 
           <div className="flex items-center gap-2">
@@ -170,9 +173,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="rounded-full px-5 text-xs font-mono"
+              className="rounded-full px-5 text-xs font-mono cursor-pointer"
             >
-              {isAllDone ? '完成' : '后台运行'}
+              {isAllDone ? t('common.done') : t('uploadModal.backgroundBtn')}
             </Button>
 
             {isAllDone && (
@@ -180,10 +183,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 id="view-generated-links-btn"
                 size="sm"
                 onClick={onViewLinks}
-                className="rounded-full gap-1.5 px-6 text-xs font-bold uppercase tracking-wider shadow-md"
+                className="rounded-full gap-1.5 px-6 text-xs font-bold uppercase tracking-wider shadow-md cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>查看与复制外链</span>
+                <span>{t('uploadModal.viewLinksBtn')}</span>
               </Button>
             )}
           </div>

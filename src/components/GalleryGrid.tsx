@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowUpDown,
   Images,
@@ -7,7 +8,6 @@ import { ImageItem, Album, FilterOptions, SortOption } from '../types';
 import { ImageCard } from './ImageCard';
 import { DimensionFilterPopover } from './DimensionFilterPopover';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import {
   Select,
@@ -29,7 +29,7 @@ interface GalleryGridProps {
   onPreview: (image: ImageItem) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onOpenUpload: () => void;
 }
 
@@ -48,23 +48,24 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
   onShowToast,
   onOpenUpload,
 }) => {
+  const { t } = useTranslation();
   const albumMap = new Map(albums.map((a) => [a.id, a]));
 
   const formatFilters = [
-    { label: '全部格式', value: 'all' },
+    { label: t('gallery.allFormats'), value: 'all' },
     { label: 'PNG', value: 'png' },
     { label: 'JPG/JPEG', value: 'jpg' },
     { label: 'WEBP', value: 'webp' },
-    { label: 'GIF 动图', value: 'gif' },
-    { label: 'SVG 矢量', value: 'svg' },
+    { label: 'GIF', value: 'gif' },
+    { label: 'SVG', value: 'svg' },
   ];
 
   const sortOptions: { label: string; value: SortOption }[] = [
-    { label: '上传时间 (最新优先)', value: 'date-desc' },
-    { label: '上传时间 (最早优先)', value: 'date-asc' },
-    { label: '文件大小 (从大到小)', value: 'size-desc' },
-    { label: '文件大小 (从小到大)', value: 'size-asc' },
-    { label: '名称排序 (A - Z)', value: 'name-asc' },
+    { label: t('gallery.sortDateDesc'), value: 'date-desc' },
+    { label: t('gallery.sortDateAsc'), value: 'date-asc' },
+    { label: t('gallery.sortSizeDesc'), value: 'size-desc' },
+    { label: t('gallery.sortSizeAsc'), value: 'size-asc' },
+    { label: t('gallery.sortNameAsc'), value: 'name-asc' },
   ];
 
   const isAllSelected = images.length > 0 && images.every((img) => selectedIds.has(img.id));
@@ -77,7 +78,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         {/* Format Pills & Dimension Filter */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <span className="mr-1 text-[10px] uppercase tracking-widest font-medium hidden sm:inline text-muted-foreground">
-            FORMAT:
+            {t('gallery.format')}:
           </span>
           {formatFilters.map((f) => (
             <Button
@@ -86,7 +87,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
               variant={filters.formatFilter === f.value ? 'default' : 'ghost'}
               size="sm"
               onClick={() => onFilterChange({ formatFilter: f.value })}
-              className="px-3 py-1 h-7 rounded-full font-medium text-[11px] uppercase tracking-wider"
+              className="px-3 py-1 h-7 rounded-full font-medium text-[11px] uppercase tracking-wider cursor-pointer"
             >
               {f.label}
             </Button>
@@ -128,7 +129,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                     onClearSelection();
                   }
                 }}
-                aria-label={isAllSelected ? '取消全选图片' : '全选当前图片'}
+                aria-label={isAllSelected ? t('gallery.deselectAll') : t('gallery.selectAll')}
                 className="w-4 h-4 rounded-md cursor-pointer"
               />
               <label
@@ -136,10 +137,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground font-medium cursor-pointer py-0.5"
               >
                 {isAllSelected
-                  ? '取消全选'
+                  ? t('gallery.deselectAll')
                   : selectedVisibleCount > 0
-                  ? `全选 (${selectedVisibleCount}/${images.length})`
-                  : '全选'}
+                  ? `${t('gallery.selectAll')} (${selectedVisibleCount}/${images.length})`
+                  : t('gallery.selectAll')}
               </label>
             </div>
           )}
@@ -174,16 +175,16 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
             <Images className="w-8 h-8" />
           </div>
           <h3 className="text-base font-light tracking-wide uppercase text-foreground">
-            No Assets Found
+            {t('gallery.emptyTitle')}
           </h3>
           <p className="text-xs mt-1 max-w-sm text-muted-foreground">
-            Try adjusting your search criteria, album categories, or drag-and-drop to upload new media.
+            {t('gallery.emptyDesc')}
           </p>
           <Button
             onClick={onOpenUpload}
-            className="mt-6 px-6 rounded-full text-xs font-bold uppercase tracking-widest shadow-md"
+            className="mt-6 px-6 rounded-full text-xs font-bold uppercase tracking-widest shadow-md cursor-pointer"
           >
-            Upload Now
+            {t('gallery.uploadNow')}
           </Button>
         </div>
       )}

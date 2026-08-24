@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Copy,
   Check,
@@ -22,7 +23,7 @@ interface ImageCardProps {
   onPreview: (image: ImageItem) => void;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   viewMode: 'masonry' | 'grid' | 'list';
 }
 
@@ -37,6 +38,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   onShowToast,
   viewMode,
 }) => {
+  const { t } = useTranslation();
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
   const handleCopyLink = async (e: React.MouseEvent, type: 'url' | 'markdown') => {
@@ -46,8 +48,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     if (ok) {
       setCopiedFormat(type);
       onShowToast(
-        '复制成功',
-        `${type === 'markdown' ? 'Markdown 语法' : '图片直链'}已写入剪贴板`,
+        type === 'markdown' ? t('card.copyMarkdownSuccess') : t('card.copyUrlSuccess'),
+        image.name,
         'success'
       );
       setTimeout(() => setCopiedFormat(null), 1800);
@@ -62,7 +64,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    onShowToast('下载原图', image.name, 'info');
+    onShowToast(t('common.downloading'), image.name, 'info');
   };
 
   // List View Rendering
@@ -88,7 +90,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             onCheckedChange={(_checked) => {
               onSelect(image.id, { stopPropagation: () => {} } as any);
             }}
-            aria-label={isSelected ? '取消选中' : '勾选此图片'}
+            aria-label={isSelected ? t('gallery.deselectAll') : t('gallery.selectAll')}
             className="w-5 h-5 rounded-md border-border/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
         </div>
@@ -112,7 +114,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             </h4>
             {image.compressed && (
               <Badge variant="subtle" className="text-[9px] text-emerald-600 bg-emerald-500/10">
-                OPTIMIZED
+                {t('card.optimized')}
               </Badge>
             )}
           </div>
@@ -147,12 +149,12 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onToggleFavorite(image.id)}
-            className={`h-8 w-8 rounded-full ${
+            className={`h-8 w-8 rounded-full cursor-pointer ${
               image.favorite
                 ? 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
-            title="收藏"
+            title={image.favorite ? t('card.unfavorite') : t('card.favorite')}
           >
             <Heart className={`w-3.5 h-3.5 ${image.favorite ? 'fill-rose-500' : ''}`} />
           </Button>
@@ -161,8 +163,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             variant="outline"
             size="sm"
             onClick={(e) => handleCopyLink(e, 'markdown')}
-            className="h-8 rounded-full gap-1 text-xs font-mono"
-            title="复制 Markdown 语法"
+            className="h-8 rounded-full gap-1 text-xs font-mono cursor-pointer"
+            title={t('card.copyMarkdown')}
           >
             {copiedFormat === 'markdown' ? (
               <Check className="w-3 h-3 text-emerald-500" />
@@ -175,8 +177,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
           <Button
             size="sm"
             onClick={(e) => handleCopyLink(e, 'url')}
-            className="h-8 rounded-full gap-1 text-xs font-mono font-bold shadow-xs"
-            title="复制直链"
+            className="h-8 rounded-full gap-1 text-xs font-mono font-bold shadow-xs cursor-pointer"
+            title={t('card.copyUrl')}
           >
             {copiedFormat === 'url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
             <span className="hidden sm:inline">URL</span>
@@ -186,8 +188,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             variant="ghost"
             size="icon"
             onClick={handleDownload}
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
-            title="下载原图"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+            title={t('card.download')}
           >
             <Download className="w-3.5 h-3.5" />
           </Button>
@@ -196,8 +198,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onDelete(image.id)}
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            title="删除"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+            title={t('card.delete')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -243,7 +245,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
               onCheckedChange={(_checked) => {
                 onSelect(image.id, { stopPropagation: () => {} } as any);
               }}
-              aria-label={isSelected ? '取消选中' : '勾选此图片'}
+              aria-label={isSelected ? t('gallery.deselectAll') : t('gallery.selectAll')}
               className={`w-6 h-6 rounded-md backdrop-blur-md transition-all shadow-xs ${
                 isSelected
                   ? 'bg-primary text-primary-foreground border-primary'
@@ -280,23 +282,23 @@ export const ImageCard: React.FC<ImageCardProps> = ({
               <Button
                 size="sm"
                 onClick={(e) => handleCopyLink(e, 'url')}
-                className="h-7 px-3 rounded-full text-xs font-bold uppercase gap-1 shadow-md"
-                title="复制直链"
+                className="h-7 px-3 rounded-full text-xs font-bold uppercase gap-1 shadow-md cursor-pointer"
+                title={t('card.copyUrl')}
               >
                 {copiedFormat === 'url' ? (
                   <Check className="w-3 h-3 text-emerald-400" />
                 ) : (
                   <Copy className="w-3 h-3" />
                 )}
-                <span>直链</span>
+                <span>{t('card.copyUrl')}</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={(e) => handleCopyLink(e, 'markdown')}
-                className="h-7 px-3 rounded-full text-xs font-medium gap-1 bg-black/70 text-white hover:bg-black border-white/20 backdrop-blur-sm"
-                title="复制 Markdown"
+                className="h-7 px-3 rounded-full text-xs font-medium gap-1 bg-black/70 text-white hover:bg-black border-white/20 backdrop-blur-sm cursor-pointer"
+                title={t('card.copyMarkdown')}
               >
                 {copiedFormat === 'markdown' ? (
                   <Check className="w-3 h-3 text-emerald-400" />
@@ -312,10 +314,10 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => onToggleFavorite(image.id)}
-                className={`h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 hover:bg-black/80 ${
+                className={`h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 hover:bg-black/80 cursor-pointer ${
                   image.favorite ? 'text-rose-400' : 'text-white/70 hover:text-white'
                 }`}
-                title="收藏"
+                title={image.favorite ? t('card.unfavorite') : t('card.favorite')}
               >
                 <Heart className={`w-3.5 h-3.5 ${image.favorite ? 'fill-rose-400' : ''}`} />
               </Button>
@@ -324,8 +326,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                 variant="ghost"
                 size="icon"
                 onClick={handleDownload}
-                className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80"
-                title="下载原图"
+                className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 cursor-pointer"
+                title={t('card.download')}
               >
                 <Download className="w-3.5 h-3.5" />
               </Button>
@@ -334,8 +336,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => onDelete(image.id)}
-                className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/60 hover:text-destructive hover:bg-black/80"
-                title="删除图片"
+                className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/60 hover:text-destructive hover:bg-black/80 cursor-pointer"
+                title={t('card.delete')}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>

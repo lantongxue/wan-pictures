@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Copy,
   Check,
@@ -38,7 +39,7 @@ interface LinkGeneratorModalProps {
   isOpen: boolean;
   images: ImageItem[];
   onClose: () => void;
-  onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
 export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
@@ -47,6 +48,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
   onClose,
   onShowToast,
 }) => {
+  const { t } = useTranslation();
   const [selectedFormat, setSelectedFormat] = useState<LinkFormatType>('markdown');
   const [batchSeparator, setBatchSeparator] = useState<'\n' | '\n\n' | 'markdown_list'>('\n');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
     const ok = await copyToClipboard(text);
     if (ok) {
       setCopiedId(`${img.id}-${format}`);
-      onShowToast('复制成功', `${img.name} 的 ${format.toUpperCase()} 链接已写入剪贴板`, 'success');
+      onShowToast(t('common.copied'), `${img.name} (${format.toUpperCase()})`, 'success');
       setTimeout(() => setCopiedId(null), 2000);
     }
   };
@@ -72,7 +74,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
     const ok = await copyToClipboard(text);
     if (ok) {
       setCopiedId('batch');
-      onShowToast('批量复制成功', `共 ${images.length} 张图片的 ${selectedFormat.toUpperCase()} 链接已复制`, 'success');
+      onShowToast(t('linkGen.copyAllSuccess'), t('linkGen.copyAllDesc', { count: images.length, format: selectedFormat.toUpperCase() }), 'success');
       setTimeout(() => setCopiedId(null), 2000);
     }
   };
@@ -90,13 +92,13 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
             </div>
             <div>
               <DialogTitle className="flex items-center gap-2">
-                <span>外链生成器与提取中心</span>
+                <span>{t('linkGen.title')}</span>
                 <Badge variant="subtle" className="text-[10px]">
-                  {images.length} ASSETS
+                  {images.length} {t('common.items')}
                 </Badge>
               </DialogTitle>
               <DialogDescription className="mt-0.5 uppercase tracking-wide text-[11px]">
-                Instant format compiler for Markdown, Raw URL, HTML & BBCode
+                {t('linkGen.subtitle')}
               </DialogDescription>
             </div>
           </div>
@@ -112,7 +114,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                 variant={selectedFormat === opt.type ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedFormat(opt.type)}
-                className="rounded-full h-8 font-medium text-xs gap-1.5 whitespace-nowrap"
+                className="rounded-full h-8 font-medium text-xs gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <FileCode2 className="w-3.5 h-3.5" />
                 <span>{opt.label}</span>
@@ -128,7 +130,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
             <div className="border border-border/80 rounded-2xl p-5 space-y-3 bg-muted/20">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-                  Code Preview ({images.length === 1 ? 'Single' : 'Batch Merge'})
+                  {t('linkGen.codePreview')} ({images.length === 1 ? t('linkGen.single') : t('linkGen.batchMerge')})
                 </span>
                 <div className="flex items-center gap-2">
                   {images.length > 1 && (
@@ -143,9 +145,9 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="\n">单换行分隔</SelectItem>
-                          <SelectItem value="\n\n">双换行分隔</SelectItem>
-                          <SelectItem value="markdown_list">Markdown 列表</SelectItem>
+                          <SelectItem value="\n">{t('linkGen.sepSingleLine')}</SelectItem>
+                          <SelectItem value="\n\n">{t('linkGen.sepDoubleLine')}</SelectItem>
+                          <SelectItem value="markdown_list">{t('linkGen.sepMdList')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -154,17 +156,17 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                     id="batch-copy-main-btn"
                     size="sm"
                     onClick={handleCopyBatch}
-                    className="rounded-full gap-1.5 px-4 font-bold shadow-md"
+                    className="rounded-full gap-1.5 px-4 font-bold shadow-md cursor-pointer"
                   >
                     {copiedId === 'batch' ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>已复制全部</span>
+                        <span>{t('linkGen.copiedAll')}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3.5 h-3.5" />
-                        <span>复制全部代码</span>
+                        <span>{t('linkGen.copyAll')}</span>
                       </>
                     )}
                   </Button>
@@ -179,7 +181,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
             {/* Individual Image Cards with Quick Copy per Row */}
             <div>
               <h4 className="text-[10px] font-mono uppercase tracking-[0.25em] mb-3 text-muted-foreground font-semibold">
-                INDIVIDUAL ASSET LINKS
+                {t('linkGen.individualLinks')}
               </h4>
 
               <div className="space-y-2.5">
@@ -231,17 +233,17 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => handleCopySingle(img, selectedFormat)}
-                          className="rounded-full gap-1.5 h-8 font-mono text-xs"
+                          className="rounded-full gap-1.5 h-8 font-mono text-xs cursor-pointer"
                         >
                           {copiedId === `${img.id}-${selectedFormat}` ? (
                             <>
                               <Check className="w-3.5 h-3.5 text-emerald-500" />
-                              <span>已复制</span>
+                              <span>{t('common.copied')}</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3.5 h-3.5" />
-                              <span>复制</span>
+                              <span>{t('common.copy')}</span>
                             </>
                           )}
                         </Button>
@@ -253,8 +255,8 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                             setSelectedImageIndex(idx);
                             setShowQrCode(true);
                           }}
-                          className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="查看手机二维码"
+                          className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                          title={t('linkGen.qrTitle')}
                         >
                           <QrCode className="w-4 h-4" />
                         </Button>
@@ -271,13 +273,13 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                 <div className="flex items-center justify-between w-full mb-3">
                   <span className="text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 text-foreground font-semibold">
                     <QrCode className="w-4 h-4 text-primary" />
-                    <span>Mobile Sync QR Code</span>
+                    <span>{t('linkGen.qrTitle')}</span>
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowQrCode(false)}
-                    className="rounded-full h-6 w-6 text-muted-foreground"
+                    className="rounded-full h-6 w-6 text-muted-foreground cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -306,9 +308,9 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
             id="close-link-modal-footer-btn"
             variant="outline"
             onClick={onClose}
-            className="rounded-full px-6 uppercase tracking-wider text-xs font-bold"
+            className="rounded-full px-6 uppercase tracking-wider text-xs font-bold cursor-pointer"
           >
-            Close
+            {t('common.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,14 +1,13 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Lock,
   HardDrive,
   FolderKanban,
-  Sparkles,
   LogIn,
   UserPlus,
   ShieldCheck,
   Zap,
-  Layers,
   ArrowRight,
   Compass,
 } from 'lucide-react';
@@ -27,22 +26,23 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
   onGoToPlaza,
   onShowToast,
 }) => {
+  const { t } = useTranslation();
   const { login } = useAuth();
 
   const handleQuickDemoLogin = async (role: 'admin' | 'designer') => {
-    onShowToast('正在快速登录...', `以 ${role === 'admin' ? '管理员' : '创作者'} 身份登录`, 'info');
+    onShowToast(t('guard.loggingIn'), role === 'admin' ? 'Admin' : 'Designer', 'info');
     const res = await login({
       account: role === 'admin' ? 'admin' : 'designer',
       password: 'password123',
     });
     if (res.success) {
       onShowToast(
-        '登录成功！',
-        `已解锁个人存储空间与相册管理功能 (${role === 'admin' ? '管理员账号' : '创作者账号'})`,
+        t('auth.loginSuccess'),
+        role === 'admin' ? 'Admin Account' : 'Designer Account',
         'success'
       );
     } else {
-      onShowToast('登录失败', res.message || '请手动登录', 'error');
+      onShowToast(t('auth.loginFailed'), res.message || '', 'error');
     }
   };
 
@@ -57,19 +57,19 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           {/* Badge */}
           <Badge variant="subtle" className="gap-1.5 py-1 px-3.5 mb-5 text-xs text-amber-500 bg-amber-500/10 border-amber-500/20">
             <Lock className="w-3.5 h-3.5" />
-            <span>私有存储空间与相册已受权限保护</span>
+            <span>{t('guard.badge')}</span>
           </Badge>
 
           {/* Heading */}
           <h1 className="text-2xl sm:text-4xl font-light tracking-tight text-foreground mb-3">
-            登录后查看并操作{' '}
+            {t('guard.title')}{' '}
             <span className="font-semibold text-foreground underline decoration-primary/40 underline-offset-8">
-              Storage 存储与相册
+              Storage & Albums
             </span>
           </h1>
 
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-8 max-w-xl">
-            万图 (Wan Pictures) 提供个人独立的云端/本地存储空间、高分辨率资产归档与相册分类体系。为了保障您的资产安全与隐私，请先登录账户以解锁上传与个人存储全部功能。
+            {t('guard.desc')}
           </p>
 
           {/* Main Action Buttons */}
@@ -80,7 +80,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
               className="flex-1 rounded-full py-5 text-xs font-semibold uppercase tracking-wider gap-2 shadow-md hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
-              <span>立即登录账号</span>
+              <span>{t('guard.loginBtn')}</span>
             </Button>
 
             <Button
@@ -90,7 +90,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
               className="flex-1 rounded-full py-5 text-xs font-semibold uppercase tracking-wider gap-2 hover:bg-muted transition-all cursor-pointer"
             >
               <UserPlus className="w-4 h-4 text-primary" />
-              <span>注册新用户</span>
+              <span>{t('guard.registerBtn')}</span>
             </Button>
           </div>
 
@@ -98,7 +98,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           <div className="mt-8 pt-6 border-t border-border/60 w-full max-w-md">
             <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-3 flex items-center justify-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>快速一键体验 (无需手动输入)</span>
+              <span>{t('guard.quickDemoTitle')}</span>
             </p>
             <div className="flex gap-2.5">
               <Button
@@ -109,7 +109,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
                 onClick={() => handleQuickDemoLogin('admin')}
                 className="flex-1 rounded-xl text-xs font-medium py-4 border-dashed hover:border-primary/60 transition-all cursor-pointer"
               >
-                体验 Admin (管理员)
+                {t('guard.quickAdmin')}
               </Button>
               <Button
                 id="guard-quick-designer-btn"
@@ -119,7 +119,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
                 onClick={() => handleQuickDemoLogin('designer')}
                 className="flex-1 rounded-xl text-xs font-medium py-4 border-dashed hover:border-primary/60 transition-all cursor-pointer"
               >
-                体验 Designer (创作者)
+                {t('guard.quickDesigner')}
               </Button>
             </div>
           </div>
@@ -132,9 +132,9 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           <div className="w-10 h-10 rounded-2xl border border-border bg-primary/10 flex items-center justify-center text-primary">
             <HardDrive className="w-5 h-5" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">50GB 个人存储空间</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('guard.feat1Title')}</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            支持拖拽上传、剪贴板快速粘贴、PNG/WebP/SVG等多格式解析，实时监控存储用量与容量分配。
+            {t('guard.feat1Desc')}
           </p>
         </div>
 
@@ -142,9 +142,9 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           <div className="w-10 h-10 rounded-2xl border border-border bg-indigo-500/10 flex items-center justify-center text-indigo-500">
             <FolderKanban className="w-5 h-5" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">自定义相册与分类归档</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('guard.feat2Title')}</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            按项目创建个性化相册空间、自定义色标与描述，支持批量转移、分类导出与相册权限管理。
+            {t('guard.feat2Desc')}
           </p>
         </div>
 
@@ -152,9 +152,9 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           <div className="w-10 h-10 rounded-2xl border border-border bg-emerald-500/10 flex items-center justify-center text-emerald-500">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">账号数据安全保护</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('guard.feat3Title')}</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            提供严格的用户鉴权与数据隔离机制，保障个人图片资产私密性与外链分发效率。
+            {t('guard.feat3Desc')}
           </p>
         </div>
       </div>
@@ -166,8 +166,8 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
             <Compass className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-semibold text-foreground">想先浏览精选公开图片？</p>
-            <p className="text-muted-foreground text-[11px]">图片广场支持无需登录即可浏览瀑布流画廊与公开外链语法</p>
+            <p className="font-semibold text-foreground">{t('guard.plazaPromptTitle')}</p>
+            <p className="text-muted-foreground text-[11px]">{t('guard.plazaPromptDesc')}</p>
           </div>
         </div>
 
@@ -178,7 +178,7 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           onClick={onGoToPlaza}
           className="rounded-full gap-1.5 font-medium shrink-0 cursor-pointer"
         >
-          <span>进入图片广场</span>
+          <span>{t('guard.enterPlaza')}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       </div>
