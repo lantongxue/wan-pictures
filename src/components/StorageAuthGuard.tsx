@@ -152,9 +152,9 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
           <div className="w-10 h-10 rounded-2xl border border-border bg-emerald-500/10 flex items-center justify-center text-emerald-500">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">JWT 后端安全鉴权</h3>
+          <h3 className="text-sm font-semibold text-foreground">账号数据安全保护</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            内置 Golang 1.22 + Gin + GORM 后端认证与 Bcrypt 密码哈希，保障数据私密性与外链分发效率。
+            提供严格的用户鉴权与数据隔离机制，保障个人图片资产私密性与外链分发效率。
           </p>
         </div>
       </div>

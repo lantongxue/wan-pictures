@@ -830,7 +830,7 @@ function WanPicturesApp() {
         }}
       />
 
-      {/* User Login & Register Modal (Golang + Gin + GORM Auth) */}
+      {/* User Login & Register Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         initialMode={authModalMode}

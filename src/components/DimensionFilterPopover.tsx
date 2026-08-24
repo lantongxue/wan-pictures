@@ -13,7 +13,13 @@ import {
 import { AspectRatioFilter } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from './ui/field';
 import {
   Popover,
   PopoverContent,
@@ -207,134 +213,143 @@ export const DimensionFilterPopover: React.FC<DimensionFilterPopoverProps> = ({
           )}
         </div>
 
-        {/* Aspect Ratio Selector */}
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
-            画面比例倾向
-          </Label>
-          <div className="grid grid-cols-4 gap-1">
-            <button
-              type="button"
-              onClick={() => setLocalAspect('all')}
-              className={`py-1.5 px-2 rounded-xl text-center text-xs transition-all cursor-pointer ${
-                localAspect === 'all'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              全部
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocalAspect('landscape')}
-              className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                localAspect === 'landscape'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Monitor className="w-3 h-3" />
-              <span>横屏</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocalAspect('portrait')}
-              className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                localAspect === 'portrait'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Smartphone className="w-3 h-3" />
-              <span>竖屏</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocalAspect('square')}
-              className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                localAspect === 'square'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Square className="w-3 h-3" />
-              <span>1:1</span>
-            </button>
-          </div>
-        </div>
+        {/* Form Body with Field components */}
+        <FieldSet className="gap-3.5">
+          <FieldGroup className="gap-3">
+            {/* Aspect Ratio Selector */}
+            <Field className="gap-1.5">
+              <FieldLabel className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
+                画面比例倾向
+              </FieldLabel>
+              <div className="grid grid-cols-4 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setLocalAspect('all')}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs transition-all cursor-pointer ${
+                    localAspect === 'all'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  全部
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocalAspect('landscape')}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    localAspect === 'landscape'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  <Monitor className="w-3 h-3" />
+                  <span>横屏</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocalAspect('portrait')}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    localAspect === 'portrait'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  <Smartphone className="w-3 h-3" />
+                  <span>竖屏</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocalAspect('square')}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    localAspect === 'square'
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  <Square className="w-3 h-3" />
+                  <span>1:1</span>
+                </button>
+              </div>
+            </Field>
 
-        {/* Width & Height Inputs */}
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider flex items-center justify-between">
-              <span>宽度区间 (Width px)</span>
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="最小宽"
-                value={localMinW}
-                onChange={(e) => setLocalMinW(e.target.value)}
-                className="h-8 text-xs rounded-xl bg-background/80"
-                min={0}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                placeholder="最大宽"
-                value={localMaxW}
-                onChange={(e) => setLocalMaxW(e.target.value)}
-                className="h-8 text-xs rounded-xl bg-background/80"
-                min={0}
-              />
+            {/* Width Range Field */}
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="dim-filter-min-w" className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
+                宽度区间 (Width px)
+              </FieldLabel>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="dim-filter-min-w"
+                  type="number"
+                  placeholder="最小宽"
+                  value={localMinW}
+                  onChange={(e) => setLocalMinW(e.target.value)}
+                  className="h-8 text-xs rounded-xl bg-background/80"
+                  min={0}
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  id="dim-filter-max-w"
+                  type="number"
+                  placeholder="最大宽"
+                  value={localMaxW}
+                  onChange={(e) => setLocalMaxW(e.target.value)}
+                  className="h-8 text-xs rounded-xl bg-background/80"
+                  min={0}
+                />
+              </div>
+            </Field>
+
+            {/* Height Range Field */}
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="dim-filter-min-h" className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider">
+                高度区间 (Height px)
+              </FieldLabel>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="dim-filter-min-h"
+                  type="number"
+                  placeholder="最小高"
+                  value={localMinH}
+                  onChange={(e) => setLocalMinH(e.target.value)}
+                  className="h-8 text-xs rounded-xl bg-background/80"
+                  min={0}
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  id="dim-filter-max-h"
+                  type="number"
+                  placeholder="最大高"
+                  value={localMaxH}
+                  onChange={(e) => setLocalMaxH(e.target.value)}
+                  className="h-8 text-xs rounded-xl bg-background/80"
+                  min={0}
+                />
+              </div>
+            </Field>
+          </FieldGroup>
+
+          {/* Presets Field */}
+          <FieldSeparator />
+          <Field className="gap-1.5">
+            <FieldLabel className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+              快速预设分辨率
+            </FieldLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_RESOLUTIONS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => handlePresetSelect(preset)}
+                  className="px-2 py-1 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted hover:border-primary/50 text-[11px] text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <span>{preset.label}</span>
+                  <span className="text-[9px] text-muted-foreground font-mono">({preset.desc})</span>
+                </button>
+              ))}
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground uppercase font-medium tracking-wider flex items-center justify-between">
-              <span>高度区间 (Height px)</span>
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="最小高"
-                value={localMinH}
-                onChange={(e) => setLocalMinH(e.target.value)}
-                className="h-8 text-xs rounded-xl bg-background/80"
-                min={0}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                placeholder="最大高"
-                value={localMaxH}
-                onChange={(e) => setLocalMaxH(e.target.value)}
-                className="h-8 text-xs rounded-xl bg-background/80"
-                min={0}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Presets */}
-        <div className="space-y-1.5 pt-1 border-t border-border/50">
-          <Label className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
-            快速预设分辨率
-          </Label>
-          <div className="flex flex-wrap gap-1.5">
-            {PRESET_RESOLUTIONS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => handlePresetSelect(preset)}
-                className="px-2 py-1 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted hover:border-primary/50 text-[11px] text-foreground transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <span>{preset.label}</span>
-                <span className="text-[9px] text-muted-foreground font-mono">({preset.desc})</span>
-              </button>
-            ))}
-          </div>
-        </div>
+          </Field>
+        </FieldSet>
 
         {/* Footer Actions */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">

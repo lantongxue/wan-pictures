@@ -279,15 +279,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <div className="flex items-center gap-1 mt-1">
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
-                                backendOnline ? 'bg-emerald-500' : 'bg-amber-500'
+                                backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
                               }`}
                             />
                             <span
                               className={`text-[10px] font-medium ${
-                                backendOnline ? 'text-emerald-500' : 'text-amber-500'
+                                backendOnline ? 'text-emerald-500' : 'text-emerald-500'
                               }`}
                             >
-                              {backendOnline ? 'Golang 后端在线' : '本地演示模式'}
+                              {backendOnline ? '云端服务在线' : '本地存储模式'}
                             </span>
                           </div>
                         </div>
@@ -700,15 +700,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="flex items-center gap-1 mt-1">
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            backendOnline ? 'bg-emerald-500' : 'bg-amber-500'
+                            backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
                           }`}
                         />
                         <span
                           className={`text-[10px] font-medium ${
-                            backendOnline ? 'text-emerald-500' : 'text-amber-500'
+                            backendOnline ? 'text-emerald-500' : 'text-emerald-500'
                           }`}
                         >
-                          {backendOnline ? 'Golang 服务在线' : '演示模式'}
+                          {backendOnline ? '服务已连接' : '本地存储'}
                         </span>
                       </div>
                     </div>

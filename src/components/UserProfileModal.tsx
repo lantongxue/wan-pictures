@@ -130,13 +130,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
           <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-1.5 text-[11px] text-muted-foreground">
             <div className="flex justify-between items-center">
-              <span>后端服务:</span>
-              <span className="font-mono text-foreground font-medium">Golang + Gin + GORM</span>
+              <span>数据存储模式:</span>
+              <span className="font-medium text-foreground">
+                {backendOnline ? '云端数据库同步' : '本地安全存储'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
-              <span>运行状态:</span>
-              <span className={backendOnline ? 'text-emerald-500 font-medium' : 'text-amber-500'}>
-                {backendOnline ? '🟢 已直连 Go 服务' : '🟡 本地离线/演示模式'}
+              <span>服务连接状态:</span>
+              <span className={backendOnline ? 'text-emerald-500 font-medium' : 'text-emerald-500 font-medium'}>
+                {backendOnline ? '🟢 云端服务正常' : '🟢 本地环境已就绪'}
               </span>
             </div>
           </div>

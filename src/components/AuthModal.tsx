@@ -8,7 +8,15 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+  FieldSeparator,
+} from './ui/field';
 import { Badge } from './ui/badge';
 import {
   User as UserIcon,
@@ -81,9 +89,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (res.success) {
       onShowToast(
         '欢迎回来！',
-        res.isLocalFallback
-          ? '登录成功 (本地演示模式)'
-          : 'Golang + Gin 后端验证成功，已签发 JWT Token',
+        '登录成功，已载入个人图库配置',
         'success'
       );
       onClose();
@@ -124,9 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (res.success) {
       onShowToast(
         '注册成功！',
-        res.isLocalFallback
-          ? '新用户已创建并自动登录'
-          : '用户已写入 GORM 数据库并完成密码 Bcrypt 加密',
+        '新用户已创建并自动登录',
         'success'
       );
       onClose();
@@ -161,21 +165,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {mode === 'login' ? '用户登录' : '创建新账号'}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Golang + Gin + GORM 后端认证体系
+                  安全账户认证与个人图库同步
                 </DialogDescription>
               </div>
-            </div>
-
-            {/* Backend status badge */}
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  backendOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                }`}
-              />
-              <span className="text-[11px] font-mono text-muted-foreground">
-                {backendOnline ? 'Go API :8080' : 'Local Fallback'}
-              </span>
             </div>
           </div>
 
@@ -222,218 +214,232 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {mode === 'login' ? (
             /* Login Form */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="login-account" className="text-xs font-medium text-foreground">
-                  用户名 / 注册邮箱
-                </Label>
-                <div className="relative">
-                  <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="login-account"
-                    type="text"
-                    required
-                    value={loginAccount}
-                    onChange={(e) => setLoginAccount(e.target.value)}
-                    placeholder="输入用户名或邮箱 (如 admin)"
-                    className="pl-9 text-xs h-9"
-                  />
-                </div>
-              </div>
+              <FieldSet>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="login-account">
+                      用户名 / 注册邮箱
+                    </FieldLabel>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="login-account"
+                        type="text"
+                        required
+                        value={loginAccount}
+                        onChange={(e) => setLoginAccount(e.target.value)}
+                        placeholder="输入用户名或邮箱 (如 admin)"
+                        className="pl-9 text-xs h-9"
+                      />
+                    </div>
+                  </Field>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="login-password" className="text-xs font-medium text-foreground">
-                  账户密码
-                </Label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="输入密码"
-                    className="pl-9 pr-9 text-xs h-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="login-password">
+                      账户密码
+                    </FieldLabel>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="输入密码"
+                        className="pl-9 pr-9 text-xs h-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </Field>
+                </FieldGroup>
 
-              <Button
-                id="submit-login-btn"
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 h-9 text-xs font-medium cursor-pointer"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    验证并登录中...
-                  </span>
-                ) : (
-                  '立即登录'
-                )}
-              </Button>
+                <Button
+                  id="submit-login-btn"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-9 text-xs font-medium cursor-pointer"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      验证并登录中...
+                    </span>
+                  ) : (
+                    '立即登录'
+                  )}
+                </Button>
 
-              {/* Quick test accounts */}
-              <div className="mt-4 pt-3 border-t border-border/50">
-                <p className="text-[11px] text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>快速填充体验账号:</span>
-                  <span className="text-[10px] font-mono opacity-70">密码: password123</span>
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fillQuickDemo('admin')}
-                    className="flex-1 text-[11px] h-7 cursor-pointer"
-                  >
-                    填入 Admin (管理员)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fillQuickDemo('designer')}
-                    className="flex-1 text-[11px] h-7 cursor-pointer"
-                  >
-                    填入 Designer (创作者)
-                  </Button>
+                {/* Quick test accounts */}
+                <FieldSeparator />
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-2 flex items-center justify-between">
+                    <span>快速填充体验账号:</span>
+                    <span className="text-[10px] font-mono opacity-70">密码: password123</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fillQuickDemo('admin')}
+                      className="flex-1 text-[11px] h-7 cursor-pointer"
+                    >
+                      填入 Admin (管理员)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fillQuickDemo('designer')}
+                      className="flex-1 text-[11px] h-7 cursor-pointer"
+                    >
+                      填入 Designer (创作者)
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </FieldSet>
             </form>
           ) : (
             /* Register Form */
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-username" className="text-xs font-medium text-foreground">
-                    用户名 <span className="text-rose-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="reg-username"
-                      type="text"
-                      required
-                      value={regUsername}
-                      onChange={(e) => {
-                        setRegUsername(e.target.value);
-                        setAvatarSeed(e.target.value || 'wan');
-                      }}
-                      placeholder="字母/数字 (≥3位)"
-                      className="pl-9 text-xs h-9"
-                    />
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <FieldSet>
+                <FieldGroup>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field>
+                      <FieldLabel htmlFor="reg-username" required>
+                        用户名
+                      </FieldLabel>
+                      <div className="relative">
+                        <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="reg-username"
+                          type="text"
+                          required
+                          value={regUsername}
+                          onChange={(e) => {
+                            setRegUsername(e.target.value);
+                            setAvatarSeed(e.target.value || 'wan');
+                          }}
+                          placeholder="字母/数字 (≥3位)"
+                          className="pl-9 text-xs h-9"
+                        />
+                      </div>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="reg-nickname">
+                        昵称 / 显示名
+                      </FieldLabel>
+                      <Input
+                        id="reg-nickname"
+                        type="text"
+                        value={regNickname}
+                        onChange={(e) => setRegNickname(e.target.value)}
+                        placeholder="如: 摄影师小陈"
+                        className="text-xs h-9"
+                      />
+                    </Field>
+                  </div>
+
+                  <Field>
+                    <FieldLabel htmlFor="reg-email" required>
+                      电子邮箱
+                    </FieldLabel>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        className="pl-9 text-xs h-9"
+                      />
+                    </div>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="reg-password" required>
+                      登录密码
+                    </FieldLabel>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="reg-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        placeholder="不少于 6 个字符"
+                        className="pl-9 pr-9 text-xs h-9"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <FieldDescription>
+                      用于保护您的图库与外链配置安全
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
+
+                {/* Avatar Preview */}
+                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                  <img
+                    src={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
+                      avatarSeed || 'wan'
+                    )}`}
+                    alt="Avatar preview"
+                    className="w-10 h-10 rounded-full border border-border/80 bg-background shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-foreground">自动生成的矢量头像</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      根据用户名自动哈希生成独一无二的专属标识
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-nickname" className="text-xs font-medium text-foreground">
-                    昵称 / 显示名
-                  </Label>
-                  <Input
-                    id="reg-nickname"
-                    type="text"
-                    value={regNickname}
-                    onChange={(e) => setRegNickname(e.target.value)}
-                    placeholder="如: 摄影师小陈"
-                    className="text-xs h-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="reg-email" className="text-xs font-medium text-foreground">
-                  电子邮箱 <span className="text-rose-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    required
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="pl-9 text-xs h-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="reg-password" className="text-xs font-medium text-foreground">
-                  登录密码 <span className="text-rose-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="reg-password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="不少于 6 个字符 (Bcrypt加密)"
-                    className="pl-9 pr-9 text-xs h-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Avatar Preview */}
-              <div className="flex items-center gap-3 p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                <img
-                  src={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
-                    avatarSeed || 'wan'
-                  )}`}
-                  alt="Avatar preview"
-                  className="w-10 h-10 rounded-full border border-border/80 bg-background shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-foreground">自动生成的矢量头像</p>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    根据用户名自动哈希生成独一无二的专属标识
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                id="submit-register-btn"
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 h-9 text-xs font-medium cursor-pointer"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    正在注册并创建账户...
-                  </span>
-                ) : (
-                  '立即注册并登录'
-                )}
-              </Button>
+                <Button
+                  id="submit-register-btn"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-9 text-xs font-medium cursor-pointer"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      正在注册并创建账户...
+                    </span>
+                  ) : (
+                    '立即注册并登录'
+                  )}
+                </Button>
+              </FieldSet>
             </form>
           )}
 
-          {/* Go Backend Stack Info Footer */}
+          {/* Security & Sync Info Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Server className="w-3 h-3 text-blue-500" />
-              Golang 1.22 + Gin + GORM
+              数据安全加密存储
             </span>
-            <span>JWT Token 72h 有效</span>
+            <span>多端图库实时同步</span>
           </div>
         </div>
       </DialogContent>

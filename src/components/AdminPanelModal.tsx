@@ -516,15 +516,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <span className="text-muted-foreground/40">•</span>
                   <span
                     className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                      backendOnline ? 'text-emerald-500' : 'text-amber-500'
+                      backendOnline ? 'text-emerald-500' : 'text-emerald-500'
                     }`}
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${
-                        backendOnline ? 'bg-emerald-500' : 'bg-amber-500'
+                        backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
                       }`}
                     />
-                    {backendOnline ? 'Go API 在线' : '本地 IndexedDB 模式'}
+                    {backendOnline ? '云端服务在线' : '本地数据模式'}
                   </span>
                 </div>
               </div>
