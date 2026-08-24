@@ -1,0 +1,249 @@
+export type ImageFormat =
+  | 'image/jpeg'
+  | 'image/png'
+  | 'image/webp'
+  | 'image/gif'
+  | 'image/svg+xml'
+  | 'image/avif'
+  | 'image/bmp'
+  | 'image/x-icon'
+  | string;
+
+export type LinkFormatType = 'raw' | 'markdown' | 'html' | 'bbcode' | 'markdown_link' | 'data_uri';
+
+export interface ImageItem {
+  id: string;
+  name: string;
+  originalName: string;
+  size: number; // in bytes
+  type: string; // mime type
+  extension: string;
+  width: number;
+  height: number;
+  aspectRatio: number;
+  dataUrl: string; // Base64 or Blob URL for rendering
+  url?: string; // Public external URL
+  createdAt: number;
+  updatedAt: number;
+  albumId: string;
+  tags: string[];
+  favorite?: boolean;
+  colorPalette?: string[];
+  compressed?: boolean;
+  originalSize?: number;
+  storageDriver?: 'local' | 'webdav' | 's3' | string;
+}
+
+export interface Album {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  coverImageId?: string;
+  coverImageUrl?: string;
+  createdAt: number;
+  isDefault?: boolean;
+  imageCount?: number;
+  totalSize?: number;
+}
+
+export interface TagItem {
+  id: number | string;
+  name: string;
+  color: string;
+  description?: string;
+  imageCount: number;
+  createdAt?: string | number;
+}
+
+export type StorageDriverType = 'local' | 'webdav' | 's3';
+
+export interface S3Config {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  customDomain?: string;
+  pathPrefix?: string;
+  forcePathStyle?: boolean;
+  acl?: string;
+}
+
+export interface WebDAVConfig {
+  serverUrl: string;
+  username: string;
+  password: string;
+  rootPath: string;
+  publicProxy?: string;
+}
+
+export interface StorageConfigItem {
+  id: number;
+  driver: StorageDriverType;
+  name: string;
+  isActive: boolean;
+  config: S3Config | WebDAVConfig | Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StorageTestResult {
+  success: boolean;
+  driver: StorageDriverType;
+  latencyMs?: number;
+  statusCode?: number;
+  message: string;
+  diagnostics?: string;
+  bucket?: string;
+  region?: string;
+  serverUrl?: string;
+  rootPath?: string;
+}
+
+export interface AdminOverviewStats {
+  totalImages: number;
+  totalAlbums: number;
+  totalTags: number;
+  totalUsers: number;
+  totalSize: number;
+  activeStorage: StorageDriverType;
+  storageUsage: {
+    local: number;
+    s3: number;
+    webdav: number;
+    [key: string]: number;
+  };
+  formatStats: Record<string, number>;
+  recentActivity: ImageItem[];
+}
+
+export interface UploadQueueItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  name: string;
+  size: number;
+  type: string;
+  progress: number;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  error?: string;
+  resultItem?: ImageItem;
+  width?: number;
+  height?: number;
+}
+
+export interface UploadSettings {
+  autoCompress: boolean;
+  compressQuality: number; // 0.1 to 1.0
+  maxWidth: number;
+  convertToWebP: boolean;
+  defaultAlbumId: string;
+  namingRule: 'original' | 'timestamp' | 'random' | 'custom';
+  customPrefix?: string;
+  theme?: 'dark' | 'light';
+}
+
+export type ViewMode = 'masonry' | 'grid' | 'list';
+
+export type SortOption =
+  | 'date-desc'
+  | 'date-asc'
+  | 'size-desc'
+  | 'size-asc'
+  | 'name-asc'
+  | 'name-desc'
+  | 'dimension-desc';
+
+export type AspectRatioFilter = 'all' | 'landscape' | 'portrait' | 'square';
+
+export interface FilterOptions {
+  albumId: string; // 'all' | 'unassigned' | albumId
+  searchQuery: string;
+  formatFilter: string; // 'all' | 'png' | 'jpeg' | 'webp' | 'svg' | 'gif'
+  favoritesOnly: boolean;
+  sortBy: SortOption;
+  viewMode: ViewMode;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+  aspectRatioFilter?: AspectRatioFilter;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  title: string;
+  description?: string;
+  duration?: number;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  nickname: string;
+  avatar: string;
+  role: 'user' | 'admin' | string;
+  bio?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  imageCount?: number;
+  albumCount?: number;
+}
+
+export interface AdminUserItem extends User {
+  imageCount?: number;
+  albumCount?: number;
+}
+
+export interface CreateUserPayload {
+  username: string;
+  email: string;
+  password: string;
+  nickname?: string;
+  avatar?: string;
+  role?: 'user' | 'admin';
+  bio?: string;
+}
+
+export interface UpdateUserPayload {
+  email?: string;
+  nickname?: string;
+  avatar?: string;
+  role?: 'user' | 'admin';
+  bio?: string;
+  password?: string;
+}
+
+export interface ResetUserPasswordPayload {
+  newPassword: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+  nickname?: string;
+  avatar?: string;
+}
+
+export interface LoginPayload {
+  account: string;
+  password: string;
+}
+
+export interface UpdateProfilePayload {
+  nickname?: string;
+  avatar?: string;
+  bio?: string;
+}
+

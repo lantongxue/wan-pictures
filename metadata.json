@@ -1,0 +1,6 @@
+{
+  "name": "万图 Wan Pictures 极简图床与相册",
+  "description": "现代化极简大气 Web 图床与媒体资产管理系统，包含完整的 Golang+Gin+GORM 后端与后台管理模块（支持全量图片资产、标签、相册与用户角色权限 CRUD，多云 S3 与 WebDAV 存储引擎动态配置及连通性测试）。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

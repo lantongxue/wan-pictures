@@ -1,0 +1,794 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Sparkles,
+  Compass,
+  Search,
+  Filter,
+  Heart,
+  Eye,
+  Copy,
+  FileCode,
+  Download,
+  Share2,
+  Maximize2,
+  Layers,
+  ArrowUpDown,
+  Check,
+  Grid2X2,
+  LayoutGrid,
+  Columns,
+  Palette,
+  Tag,
+  Upload,
+  RefreshCw,
+  Flame,
+  Camera,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ImageItem, Album, SortOption, AspectRatioFilter } from '../types';
+import { formatFileSize } from '../utils/imageProcessing';
+import { copyToClipboard } from '../utils/linkFormatter';
+import { DimensionFilterPopover } from './DimensionFilterPopover';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
+
+interface ImagePlazaProps {
+  images: ImageItem[];
+  albums: Album[];
+  onPreview: (image: ImageItem) => void;
+  onToggleFavorite: (id: string) => void;
+  onOpenBatchLinks?: (images: ImageItem[]) => void;
+  onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
+  onOpenUpload: () => void;
+}
+
+type ColorToneFilter = 'all' | 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'neutral';
+
+interface ColorFilterOption {
+  label: string;
+  value: ColorToneFilter;
+  color: string;
+  bgClass: string;
+}
+
+const COLOR_FILTERS: ColorFilterOption[] = [
+  { label: '全部色系', value: 'all', color: '#94a3b8', bgClass: 'bg-muted-foreground/30' },
+  { label: '暖阳金黄', value: 'yellow', color: '#eab308', bgClass: 'bg-amber-400' },
+  { label: '落日赤红', value: 'red', color: '#ef4444', bgClass: 'bg-rose-500' },
+  { label: '静谧蔚蓝', value: 'blue', color: '#3b82f6', bgClass: 'bg-blue-500' },
+  { label: '翡翠森绿', value: 'green', color: '#10b981', bgClass: 'bg-emerald-500' },
+  { label: '霓虹冷紫', value: 'purple', color: '#a855f7', bgClass: 'bg-purple-500' },
+  { label: '极简黑白', value: 'neutral', color: '#64748b', bgClass: 'bg-slate-500' },
+];
+
+export const ImagePlaza: React.FC<ImagePlazaProps> = ({
+  images,
+  albums,
+  onPreview,
+  onToggleFavorite,
+  onOpenBatchLinks,
+  onShowToast,
+  onOpenUpload,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string>('all');
+  const [selectedColor, setSelectedColor] = useState<ColorToneFilter>('all');
+  const [minWidth, setMinWidth] = useState<number | undefined>(undefined);
+  const [maxWidth, setMaxWidth] = useState<number | undefined>(undefined);
+  const [minHeight, setMinHeight] = useState<number | undefined>(undefined);
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
+  const [aspectRatioFilter, setAspectRatioFilter] = useState<AspectRatioFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [columnCount, setColumnCount] = useState<3 | 4 | 5 | 2>(4);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const albumMap = useMemo(() => new Map(albums.map((a) => [a.id, a])), [albums]);
+
+  // Aggregate all unique tags from all images
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    images.forEach((img) => {
+      if (img.tags && Array.isArray(img.tags)) {
+        img.tags.forEach((t) => {
+          if (t && t.trim()) tagSet.add(t.trim());
+        });
+      }
+    });
+    return Array.from(tagSet);
+  }, [images]);
+
+  // Helper to test if hex matches color tone
+  const matchesColorTone = (hexColors: string[] | undefined, tone: ColorToneFilter): boolean => {
+    if (tone === 'all' || !hexColors || hexColors.length === 0) return true;
+
+    for (const hex of hexColors) {
+      const cleanHex = hex.replace('#', '');
+      if (cleanHex.length !== 6) continue;
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+
+      if (tone === 'neutral') {
+        const diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+        if (diff < 25) return true; // Greyscale / desaturated
+      } else if (tone === 'red') {
+        if (r > 130 && r > g * 1.2 && r > b * 1.2) return true;
+      } else if (tone === 'yellow' || tone === 'orange') {
+        if (r > 120 && g > 90 && b < r * 0.8) return true;
+      } else if (tone === 'green') {
+        if (g > 100 && g > r * 0.9 && g > b * 0.9) return true;
+      } else if (tone === 'blue' || tone === 'cyan') {
+        if (b > 110 && (b > r * 1.1 || g > 110)) return true;
+      } else if (tone === 'purple') {
+        if (r > 80 && b > 100 && g < Math.max(r, b) * 0.8) return true;
+      }
+    }
+    return false;
+  };
+
+  // Filtered & Sorted Images for Plaza
+  const plazaImages = useMemo(() => {
+    let result = [...images];
+
+    // Filter by Album
+    if (selectedAlbumId !== 'all') {
+      result = result.filter((img) => img.albumId === selectedAlbumId);
+    }
+
+    // Filter by Tag
+    if (selectedTag !== 'all') {
+      result = result.filter(
+        (img) => img.tags && img.tags.some((t) => t.toLowerCase() === selectedTag.toLowerCase())
+      );
+    }
+
+    // Filter by Color Tone
+    if (selectedColor !== 'all') {
+      result = result.filter((img) => matchesColorTone(img.colorPalette, selectedColor));
+    }
+
+    // Filter by Dimension: Width
+    if (minWidth && minWidth > 0) {
+      result = result.filter((img) => (img.width || 0) >= (minWidth || 0));
+    }
+    if (maxWidth && maxWidth > 0) {
+      result = result.filter((img) => (img.width || 0) <= (maxWidth || 0));
+    }
+
+    // Filter by Dimension: Height
+    if (minHeight && minHeight > 0) {
+      result = result.filter((img) => (img.height || 0) >= (minHeight || 0));
+    }
+    if (maxHeight && maxHeight > 0) {
+      result = result.filter((img) => (img.height || 0) <= (maxHeight || 0));
+    }
+
+    // Filter by Aspect Ratio
+    if (aspectRatioFilter && aspectRatioFilter !== 'all') {
+      result = result.filter((img) => {
+        const w = img.width || 1;
+        const h = img.height || 1;
+        const ratio = w / h;
+        if (aspectRatioFilter === 'landscape') {
+          return ratio > 1.08;
+        } else if (aspectRatioFilter === 'portrait') {
+          return ratio < 0.92;
+        } else if (aspectRatioFilter === 'square') {
+          return ratio >= 0.92 && ratio <= 1.08;
+        }
+        return true;
+      });
+    }
+
+    // Filter by Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (img) =>
+          img.name.toLowerCase().includes(q) ||
+          img.extension.toLowerCase().includes(q) ||
+          (img.tags && img.tags.some((t) => t.toLowerCase().includes(q)))
+      );
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-asc':
+          return a.createdAt - b.createdAt;
+        case 'size-desc':
+          return b.size - a.size;
+        case 'size-asc':
+          return a.size - b.size;
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'dimension-desc':
+          return (b.width * b.height) - (a.width * a.height);
+        case 'date-desc':
+        default:
+          return b.createdAt - a.createdAt;
+      }
+    });
+
+    return result;
+  }, [images, selectedAlbumId, selectedTag, selectedColor, minWidth, maxWidth, minHeight, maxHeight, aspectRatioFilter, searchQuery, sortBy]);
+
+  const handleCopyLink = async (img: ImageItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const success = await copyToClipboard(img.dataUrl);
+    if (success) {
+      setCopiedId(img.id);
+      onShowToast('直链复制成功', img.name, 'success');
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
+
+  const handleCopyMarkdown = async (img: ImageItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const md = `![${img.name}](${img.dataUrl})`;
+    const success = await copyToClipboard(md);
+    if (success) {
+      setCopiedId(img.id);
+      onShowToast('Markdown 外链复制成功', md, 'success');
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
+
+  const handleDownload = (img: ImageItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = img.dataUrl;
+    a.download = img.name || `image_${img.id}.${img.extension || 'png'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    onShowToast('正在下载原始图片', img.name, 'info');
+  };
+
+  // Reset all plaza filters
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedTag('all');
+    setSelectedAlbumId('all');
+    setSelectedColor('all');
+    setMinWidth(undefined);
+    setMaxWidth(undefined);
+    setMinHeight(undefined);
+    setMaxHeight(undefined);
+    setAspectRatioFilter('all');
+    setSortBy('date-desc');
+  };
+
+  // Determine CSS column classes based on selected columnCount
+  const getColumnClasses = () => {
+    switch (columnCount) {
+      case 2:
+        return 'columns-1 sm:columns-2 gap-5 sm:gap-6';
+      case 3:
+        return 'columns-1 sm:columns-2 md:columns-3 gap-4 sm:gap-5';
+      case 5:
+        return 'columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3.5 sm:gap-4';
+      case 4:
+      default:
+        return 'columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-5';
+    }
+  };
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <div id="image-plaza-page" className="w-full space-y-8 animate-in fade-in duration-300">
+        {/* Plaza Header Banner */}
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card/90 to-muted/40 p-6 sm:p-10 shadow-xs">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                  <Compass className="w-5 h-5" />
+                </span>
+                <Badge variant="subtle" className="text-[11px] font-mono tracking-wider">
+                  DISCOVERY PLAZA · 瀑布流画廊
+                </Badge>
+              </div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
+                图片广场 · 视觉灵感探索
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                全景瀑布流自适应布局，支持高分辨率图片浏览、智能色系筛选、标签聚合与一键获取各种 Markdown/HTML 外链代码。
+              </p>
+            </div>
+
+            {/* Quick Actions in Header */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Button
+                id="plaza-upload-btn"
+                onClick={onOpenUpload}
+                className="rounded-full gap-2 px-5 font-semibold text-xs shadow-md active:scale-95 transition-all"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>上传至广场</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Plaza Interactive Control Bar */}
+          <div className="mt-8 pt-6 border-t border-border/60 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                id="plaza-search-input"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索广场资产名称、标签或格式..."
+                className="pl-9 pr-8 rounded-full border-border/80 bg-background/60 focus-visible:bg-background h-9 text-xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Right Controls: Sort & Column Density */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Album Category Selector */}
+              <div className="w-36 sm:w-40">
+                <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
+                  <SelectTrigger className="h-8 rounded-full text-xs font-normal">
+                    <SelectValue placeholder="分类相册" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部分类 ({images.length})</SelectItem>
+                    {albums.map((alb) => (
+                      <SelectItem key={alb.id} value={alb.id}>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: alb.color }}
+                          />
+                          <span>{alb.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Dimension Filter Popover */}
+              <DimensionFilterPopover
+                minWidth={minWidth}
+                maxWidth={maxWidth}
+                minHeight={minHeight}
+                maxHeight={maxHeight}
+                aspectRatioFilter={aspectRatioFilter}
+                onChange={(dim) => {
+                  setMinWidth(dim.minWidth);
+                  setMaxWidth(dim.maxWidth);
+                  setMinHeight(dim.minHeight);
+                  setMaxHeight(dim.maxHeight);
+                  setAspectRatioFilter(dim.aspectRatioFilter || 'all');
+                }}
+                triggerVariant="outline"
+                className="h-8"
+              />
+
+              {/* Sort Order Selector */}
+              <div className="w-40 sm:w-44">
+                <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                  <SelectTrigger className="h-8 rounded-full text-xs font-normal">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date-desc">最新发布优先</SelectItem>
+                    <SelectItem value="date-asc">最早发布优先</SelectItem>
+                    <SelectItem value="dimension-desc">超清分辨率优先</SelectItem>
+                    <SelectItem value="size-desc">文件体积最大</SelectItem>
+                    <SelectItem value="name-asc">名称拼音 (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Column Density Controls */}
+              <div className="hidden sm:flex items-center gap-1 p-1 rounded-full border border-border/80 bg-background/70">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      id="plaza-col-2"
+                      onClick={() => setColumnCount(2)}
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                        columnCount === 2 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      2列
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>大画幅海报流</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      id="plaza-col-3"
+                      onClick={() => setColumnCount(3)}
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                        columnCount === 3 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      3列
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>标准探索视图</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      id="plaza-col-4"
+                      onClick={() => setColumnCount(4)}
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                        columnCount === 4 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      4列
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>高密瀑布流</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      id="plaza-col-5"
+                      onClick={() => setColumnCount(5)}
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                        columnCount === 5 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      5列
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>超密全景视图</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Tag Pills Row */}
+          <div className="mt-4 pt-4 border-t border-border/40 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
+              <Tag className="w-3 h-3" />
+              <span>标签:</span>
+            </div>
+
+            <button
+              id="tag-filter-all"
+              onClick={() => setSelectedTag('all')}
+              className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer ${
+                selectedTag === 'all'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/40'
+              }`}
+            >
+              全部标签
+            </button>
+
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                id={`tag-filter-${tag}`}
+                onClick={() => setSelectedTag(selectedTag === tag ? 'all' : tag)}
+                className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer ${
+                  selectedTag === tag
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/40'
+                }`}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Color Tone Filter Pills Row */}
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
+              <Palette className="w-3 h-3" />
+              <span>色系:</span>
+            </div>
+
+            {COLOR_FILTERS.map((c) => (
+              <button
+                key={c.value}
+                id={`color-filter-${c.value}`}
+                onClick={() => setSelectedColor(selectedColor === c.value ? 'all' : c.value)}
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer ${
+                  selectedColor === c.value
+                    ? 'ring-2 ring-primary bg-background text-foreground font-semibold shadow-xs'
+                    : 'bg-muted/50 text-muted-foreground hover:text-foreground border border-border/40'
+                }`}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: c.color }}
+                />
+                <span>{c.label}</span>
+              </button>
+            ))}
+
+            {(selectedTag !== 'all' || selectedColor !== 'all' || selectedAlbumId !== 'all' || searchQuery || minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
+              <button
+                onClick={handleResetFilters}
+                className="ml-auto text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>重置筛选</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Results Counter Sub-header */}
+        <div className="flex items-center justify-between px-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 font-medium flex-wrap">
+            <span>SHOWING {plazaImages.length} OF {images.length} ASSETS</span>
+            {selectedTag !== 'all' && (
+              <Badge variant="subtle" className="text-[10px]">
+                标签: #{selectedTag}
+              </Badge>
+            )}
+            {selectedColor !== 'all' && (
+              <Badge variant="subtle" className="text-[10px]">
+                色调: {COLOR_FILTERS.find((c) => c.value === selectedColor)?.label}
+              </Badge>
+            )}
+            {(minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
+              <Badge variant="subtle" className="text-[10px] bg-primary/10 text-primary border border-primary/20">
+                尺寸: {minWidth ? `≥${minWidth}w ` : ''}{minHeight ? `≥${minHeight}h ` : ''}{aspectRatioFilter !== 'all' ? (aspectRatioFilter === 'landscape' ? '横屏' : aspectRatioFilter === 'portrait' ? '竖屏' : '1:1') : ''}
+              </Badge>
+            )}
+          </div>
+          <span className="hidden sm:inline text-[11px]">
+            点击卡片可查看高清大图与完整外链语法
+          </span>
+        </div>
+
+        {/* Empty State */}
+        {plazaImages.length === 0 && (
+          <div className="text-center py-24 px-4 rounded-3xl border border-dashed border-border/80 flex flex-col items-center bg-card/30">
+            <div className="w-16 h-16 rounded-full border border-border bg-muted/40 flex items-center justify-center mb-4 text-muted-foreground">
+              <Compass className="w-8 h-8 opacity-60" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground">
+              广场暂无匹配的图片资产
+            </h3>
+            <p className="text-xs mt-1.5 max-w-sm text-muted-foreground">
+              当前筛选条件（标签、色调或关键词）未匹配到结果，您可以尝试重置筛选或上传新图片。
+            </p>
+            <div className="flex items-center gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={handleResetFilters}
+                className="rounded-full text-xs font-medium"
+              >
+                清空所有筛选
+              </Button>
+              <Button
+                onClick={onOpenUpload}
+                className="rounded-full text-xs font-semibold shadow-md"
+              >
+                立即上传新照片
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* True Masonry Waterfall Flow */}
+        {plazaImages.length > 0 && (
+          <div className={`${getColumnClasses()} space-y-4 sm:space-y-5`}>
+            {plazaImages.map((img) => {
+              const album = albumMap.get(img.albumId);
+              const isCopied = copiedId === img.id;
+              const isHighRes = (img.width >= 1920 && img.height >= 1080) || (img.width * img.height >= 2000000);
+
+              return (
+                <div
+                  key={img.id}
+                  id={`plaza-card-${img.id}`}
+                  onClick={() => onPreview(img)}
+                  className="break-inside-avoid group relative rounded-2xl overflow-hidden border border-border/60 bg-card hover:border-border/80 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer"
+                >
+                  {/* Image Container */}
+                  <div className="relative w-full overflow-hidden flex items-center justify-center bg-muted/40">
+                    <img
+                      src={img.dataUrl}
+                      alt={img.name}
+                      loading="lazy"
+                      className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+
+                    {/* Top Badges & Favorite Overlay */}
+                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-20 pointer-events-none">
+                      <div className="flex items-center gap-1.5 pointer-events-auto">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] font-mono uppercase bg-black/70 text-white/90 border-white/10 backdrop-blur-md"
+                        >
+                          {img.extension}
+                        </Badge>
+                        {isHighRes && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider bg-primary/90 backdrop-blur-md text-white">
+                            HD
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono backdrop-blur-md bg-black/60 text-white/80 border border-white/10 hidden sm:inline-block">
+                          {img.width}×{img.height}
+                        </span>
+                      </div>
+
+                      {/* Favorite Button */}
+                      <button
+                        id={`plaza-fav-${img.id}`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleFavorite(img.id);
+                        }}
+                        className={`w-7 h-7 rounded-full backdrop-blur-md flex items-center justify-center transition-all cursor-pointer pointer-events-auto shadow-xs border ${
+                          img.favorite
+                            ? 'bg-rose-500 text-white border-rose-400 shadow-md'
+                            : 'bg-black/40 hover:bg-black/60 text-white/80 hover:text-white border-white/20'
+                        }`}
+                        title={img.favorite ? '取消收藏' : '加入收藏'}
+                      >
+                        <Heart
+                          className={`w-3.5 h-3.5 ${img.favorite ? 'fill-current' : ''}`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Hover Quick Action Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3.5 z-10 pointer-events-none">
+                      <div
+                        className="flex items-center justify-between gap-1.5 pointer-events-auto"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleCopyLink(img, e)}
+                            className="h-7 px-3 rounded-full text-xs font-bold uppercase gap-1 shadow-md cursor-pointer"
+                            title="复制直链"
+                          >
+                            {isCopied ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                                <span>已复制</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>直链</span>
+                              </>
+                            )}
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleCopyMarkdown(img, e)}
+                            className="h-7 px-2.5 rounded-full text-xs font-medium gap-1 bg-black/70 text-white hover:bg-black border-white/20 backdrop-blur-sm cursor-pointer"
+                            title="复制 Markdown"
+                          >
+                            <FileCode className="w-3 h-3" />
+                            <span>MD</span>
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => handleDownload(img, e)}
+                            className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/80 hover:text-white hover:bg-black/80 cursor-pointer"
+                            title="下载原图"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onPreview(img)}
+                            className="h-7 w-7 rounded-full backdrop-blur-md bg-black/60 border border-white/10 text-white/80 hover:text-white hover:bg-black/80 cursor-pointer"
+                            title="全屏检视"
+                          >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Info Footer */}
+                  <div className="p-3.5 border-t border-border/60 bg-muted/20 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium truncate text-foreground group-hover:text-primary transition-colors flex-1" title={img.name}>
+                        {img.name}
+                      </p>
+                      {album && (
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 flex items-center gap-1 border border-border/60 bg-background/80"
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: album.color }}
+                          />
+                          <span className="text-muted-foreground">{album.name}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tags & Color Palette Strip */}
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      {/* Tags */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
+                        {img.tags && img.tags.slice(0, 3).map((tag, tagIdx) => (
+                          <span
+                            key={`plaza-card-${img.id}-tag-${tag}-${tagIdx}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTag(tag);
+                            }}
+                            className="text-[10px] font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Dominant Color Palette Pill */}
+                      {img.colorPalette && img.colorPalette.length > 0 && (
+                        <div className="flex items-center -space-x-1 shrink-0">
+                          {img.colorPalette.slice(0, 3).map((hex, i) => (
+                            <span
+                              key={`plaza-card-${img.id}-hex-${hex}-${i}`}
+                              className="w-2.5 h-2.5 rounded-full border border-background shadow-2xs"
+                              style={{ backgroundColor: hex }}
+                              title={hex}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
+  );
+};
