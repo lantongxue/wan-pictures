@@ -35,6 +35,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../../components/ui/field';
 
 const TAG_COLOR_PRESETS = [
   '#3B82F6', // Blue
@@ -249,56 +256,62 @@ export const AdminTagsPage: React.FC = () => {
             </div>
           </div>
 
-          <form onSubmit={handleCreateTag} className="space-y-4 pt-1">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">标签名称 *</label>
-              <Input
-                type="text"
-                required
-                placeholder="例如: 4K / WALLPAPER / 插画"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                className="text-xs h-9 rounded-xl mt-1 font-mono uppercase"
-              />
-            </div>
+          <form onSubmit={handleCreateTag} className="pt-1">
+            <FieldSet className="gap-4">
+              <FieldGroup className="gap-3.5">
+                <Field>
+                  <FieldLabel htmlFor="create-tag-name" required>标签名称</FieldLabel>
+                  <Input
+                    id="create-tag-name"
+                    type="text"
+                    required
+                    placeholder="例如: 4K / WALLPAPER / 插画"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    className="text-xs h-9 rounded-xl font-mono uppercase"
+                  />
+                </Field>
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">描述说明 (选填)</label>
-              <Input
-                type="text"
-                placeholder="简要说明此标签的归类语义"
-                value={newTagDesc}
-                onChange={(e) => setNewTagDesc(e.target.value)}
-                className="text-xs h-9 rounded-xl mt-1"
-              />
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="create-tag-desc">描述说明 (选填)</FieldLabel>
+                  <Input
+                    id="create-tag-desc"
+                    type="text"
+                    placeholder="简要说明此标签的归类语义"
+                    value={newTagDesc}
+                    onChange={(e) => setNewTagDesc(e.target.value)}
+                    className="text-xs h-9 rounded-xl"
+                  />
+                </Field>
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">标签视觉色标</label>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                {TAG_COLOR_PRESETS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setNewTagColor(color)}
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                      newTagColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  >
-                    {newTagColor === color && <Check className="w-3.5 h-3.5 text-white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <Field>
+                  <FieldLabel>标签视觉色标</FieldLabel>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {TAG_COLOR_PRESETS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setNewTagColor(color)}
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                          newTagColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      >
+                        {newTagColor === color && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              </FieldGroup>
 
-            <Button
-              type="submit"
-              className="w-full h-9 rounded-xl text-xs font-bold gap-1.5 bg-primary text-primary-foreground cursor-pointer shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>保存并添加到标签库</span>
-            </Button>
+              <Button
+                type="submit"
+                className="w-full h-9 rounded-xl text-xs font-bold gap-1.5 bg-primary text-primary-foreground cursor-pointer shadow-xs mt-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>保存并添加到标签库</span>
+              </Button>
+            </FieldSet>
           </form>
         </div>
 
@@ -420,49 +433,55 @@ export const AdminTagsPage: React.FC = () => {
           </DialogHeader>
 
           {editingTag && (
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">标签名称</label>
-                <Input
-                  type="text"
-                  value={editingTag.name}
-                  onChange={(e) =>
-                    setEditingTag({ ...editingTag, name: e.target.value.toUpperCase() })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono uppercase"
-                />
-              </div>
+            <div className="py-2">
+              <FieldSet className="gap-4">
+                <FieldGroup className="gap-3.5">
+                  <Field>
+                    <FieldLabel htmlFor="edit-tag-name" required>标签名称</FieldLabel>
+                    <Input
+                      id="edit-tag-name"
+                      type="text"
+                      value={editingTag.name}
+                      onChange={(e) =>
+                        setEditingTag({ ...editingTag, name: e.target.value.toUpperCase() })
+                      }
+                      className="text-xs h-9 rounded-xl font-mono uppercase"
+                    />
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">描述说明</label>
-                <Input
-                  type="text"
-                  value={editingTag.description || ''}
-                  onChange={(e) =>
-                    setEditingTag({ ...editingTag, description: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="edit-tag-desc">描述说明</FieldLabel>
+                    <Input
+                      id="edit-tag-desc"
+                      type="text"
+                      value={editingTag.description || ''}
+                      onChange={(e) =>
+                        setEditingTag({ ...editingTag, description: e.target.value })
+                      }
+                      className="text-xs h-9 rounded-xl"
+                    />
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">主题色标</label>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {TAG_COLOR_PRESETS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setEditingTag({ ...editingTag, color })}
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                        editingTag.color === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    >
-                      {editingTag.color === color && <Check className="w-3.5 h-3.5 text-white" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  <Field>
+                    <FieldLabel>主题色标</FieldLabel>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {TAG_COLOR_PRESETS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setEditingTag({ ...editingTag, color })}
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                            editingTag.color === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        >
+                          {editingTag.color === color && <Check className="w-3.5 h-3.5 text-white" />}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
             </div>
           )}
 
@@ -509,47 +528,47 @@ export const AdminTagsPage: React.FC = () => {
               </span>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">
-                选择源标签 (将被合并并删除)
-              </label>
-              <div className="mt-1">
-                <Select value={mergeSourceTag} onValueChange={setMergeSourceTag}>
-                  <SelectTrigger className="w-full text-xs h-9 rounded-xl font-mono uppercase">
-                    <SelectValue placeholder="选择源标签" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tags.map((t) => (
-                      <SelectItem key={t.id} value={t.name}>
-                        #{t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">
-                选择目标标签 (接收合并的主标签)
-              </label>
-              <div className="mt-1">
-                <Select value={mergeTargetTag} onValueChange={setMergeTargetTag}>
-                  <SelectTrigger className="w-full text-xs h-9 rounded-xl font-mono uppercase">
-                    <SelectValue placeholder="选择目标标签" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tags
-                      .filter((t) => t.name !== mergeSourceTag)
-                      .map((t) => (
+            <FieldSet className="gap-4">
+              <FieldGroup className="gap-3.5">
+                <Field>
+                  <FieldLabel htmlFor="merge-source-tag" required>
+                    选择源标签 (将被合并并删除)
+                  </FieldLabel>
+                  <Select value={mergeSourceTag} onValueChange={setMergeSourceTag}>
+                    <SelectTrigger id="merge-source-tag" className="w-full text-xs h-9 rounded-xl font-mono uppercase">
+                      <SelectValue placeholder="选择源标签" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tags.map((t) => (
                         <SelectItem key={t.id} value={t.name}>
                           #{t.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="merge-target-tag" required>
+                    选择目标标签 (接收合并的主标签)
+                  </FieldLabel>
+                  <Select value={mergeTargetTag} onValueChange={setMergeTargetTag}>
+                    <SelectTrigger id="merge-target-tag" className="w-full text-xs h-9 rounded-xl font-mono uppercase">
+                      <SelectValue placeholder="选择目标标签" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tags
+                        .filter((t) => t.name !== mergeSourceTag)
+                        .map((t) => (
+                          <SelectItem key={t.id} value={t.name}>
+                            #{t.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
           </div>
 
           <DialogFooter>

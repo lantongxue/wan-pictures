@@ -45,6 +45,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../ui/field';
 
 interface UserManagementTabProps {
   currentUser: User | null;
@@ -640,71 +647,72 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitCreate} className="space-y-4 py-2">
-            {/* Username & Email */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                  <span>用户名</span>
-                  <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="如: designer_alex"
-                  value={createForm.username}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, username: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">登录唯一账号，支持字母数字</p>
-              </div>
+          <form onSubmit={handleSubmitCreate} className="py-2">
+            <FieldSet className="gap-4">
+              {/* Username & Email */}
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field>
+                  <FieldLabel htmlFor="create-user-username" required>
+                    用户名
+                  </FieldLabel>
+                  <Input
+                    id="create-user-username"
+                    type="text"
+                    required
+                    placeholder="如: designer_alex"
+                    value={createForm.username}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, username: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                  <FieldDescription>登录唯一账号，支持字母数字</FieldDescription>
+                </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                  <span>电子邮箱</span>
-                  <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="email"
-                  required
-                  placeholder="alex@example.com"
-                  value={createForm.email}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, email: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">用于通知与找回凭证</p>
-              </div>
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="create-user-email" required>
+                    电子邮箱
+                  </FieldLabel>
+                  <Input
+                    id="create-user-email"
+                    type="email"
+                    required
+                    placeholder="alex@example.com"
+                    value={createForm.email}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, email: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl"
+                  />
+                  <FieldDescription>用于通知与找回凭证</FieldDescription>
+                </Field>
+              </FieldGroup>
 
-            {/* Nickname & Role */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">展示昵称</label>
-                <Input
-                  type="text"
-                  placeholder="如: 视觉设计师 Alex"
-                  value={createForm.nickname}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, nickname: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
+              {/* Nickname & Role */}
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field>
+                  <FieldLabel htmlFor="create-user-nickname">展示昵称</FieldLabel>
+                  <Input
+                    id="create-user-nickname"
+                    type="text"
+                    placeholder="如: 视觉设计师 Alex"
+                    value={createForm.nickname}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, nickname: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl"
+                  />
+                </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">分配角色权限</label>
-                <div className="mt-1">
+                <Field>
+                  <FieldLabel htmlFor="create-user-role">分配角色权限</FieldLabel>
                   <Select
                     value={createForm.role}
                     onValueChange={(val: 'user' | 'admin' | 'vip') =>
                       setCreateForm({ ...createForm, role: val })
                     }
                   >
-                    <SelectTrigger className="w-full text-xs h-9 rounded-xl">
+                    <SelectTrigger id="create-user-role" className="w-full text-xs h-9 rounded-xl">
                       <SelectValue placeholder="选择权限" />
                     </SelectTrigger>
                     <SelectContent>
@@ -713,139 +721,141 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       <SelectItem value="admin">管理员 (Admin)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-            </div>
+                </Field>
+              </FieldGroup>
 
-            {/* Password */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <span>初始登录密码</span>
-                  <span className="text-rose-500">*</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
-                    let pwd = '';
-                    for (let i = 0; i < 10; i++) {
-                      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-                    }
-                    setCreateForm((prev) => ({ ...prev, password: pwd }));
-                  }}
-                  className="text-[11px] text-primary hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>随机生成强密码</span>
-                </button>
-              </label>
-              <div className="relative mt-1">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  placeholder="至少 6 位字符"
-                  value={createForm.password}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, password: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl pr-9 font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Avatar Selector & Presets */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-muted-foreground">头像地址 URL</label>
-                <button
-                  type="button"
-                  onClick={() => handleRandomizeAvatar(true)}
-                  className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Dice5 className="w-3 h-3" />
-                  <span>随机生成 Bot 机器人头像</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <img
-                  src={createForm.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=new'}
-                  alt="Preview"
-                  className="w-9 h-9 rounded-xl object-cover border border-border shrink-0 bg-muted"
-                />
-                <Input
-                  type="url"
-                  placeholder="https://..."
-                  value={createForm.avatar}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, avatar: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl font-mono flex-1"
-                />
-              </div>
-
-              {/* Quick Avatar Presets */}
-              <div className="flex items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-muted-foreground">预设:</span>
-                {AVATAR_PRESETS.map((preset, idx) => (
+              {/* Password */}
+              <Field>
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="create-user-password" required>
+                    初始登录密码
+                  </FieldLabel>
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => setCreateForm((prev) => ({ ...prev, avatar: preset }))}
-                    className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                      createForm.avatar === preset
-                        ? 'ring-2 ring-primary border-primary'
-                        : 'border-border/60 hover:opacity-80'
-                    }`}
+                    onClick={() => {
+                      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
+                      let pwd = '';
+                      for (let i = 0; i < 10; i++) {
+                        pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                      }
+                      setCreateForm((prev) => ({ ...prev, password: pwd }));
+                    }}
+                    className="text-[11px] text-primary hover:underline cursor-pointer flex items-center gap-1"
                   >
-                    <img src={preset} alt="preset" className="w-full h-full object-cover" />
+                    <Sparkles className="w-3 h-3" />
+                    <span>随机生成强密码</span>
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="create-user-password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="至少 6 位字符"
+                    value={createForm.password}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, password: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl pr-9 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </Field>
 
-            {/* Bio */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">个人简介 / 备注</label>
-              <Input
-                type="text"
-                placeholder="填写用户在图床系统的角色说明或个性签名"
-                value={createForm.bio}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, bio: e.target.value })
-                }
-                className="text-xs h-9 rounded-xl mt-1"
-              />
-            </div>
+              {/* Avatar Selector & Presets */}
+              <Field>
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="create-user-avatar">头像地址 URL</FieldLabel>
+                  <button
+                    type="button"
+                    onClick={() => handleRandomizeAvatar(true)}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Dice5 className="w-3 h-3" />
+                    <span>随机生成 Bot 机器人头像</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <img
+                    src={createForm.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=new'}
+                    alt="Preview"
+                    className="w-9 h-9 rounded-xl object-cover border border-border shrink-0 bg-muted"
+                  />
+                  <Input
+                    id="create-user-avatar"
+                    type="url"
+                    placeholder="https://..."
+                    value={createForm.avatar}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, avatar: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono flex-1"
+                  />
+                </div>
 
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCreateOpen(false)}
-                className="text-xs h-9 rounded-xl"
-              >
-                取消
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={submitting}
-                className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
-              >
-                {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                <span>创建用户</span>
-              </Button>
-            </DialogFooter>
+                {/* Quick Avatar Presets */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-[11px] text-muted-foreground">预设:</span>
+                  {AVATAR_PRESETS.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCreateForm((prev) => ({ ...prev, avatar: preset }))}
+                      className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
+                        createForm.avatar === preset
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'border-border/60 hover:opacity-80'
+                      }`}
+                    >
+                      <img src={preset} alt="preset" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {/* Bio */}
+              <Field>
+                <FieldLabel htmlFor="create-user-bio">个人简介 / 备注</FieldLabel>
+                <Input
+                  id="create-user-bio"
+                  type="text"
+                  placeholder="填写用户在图床系统的角色说明或个性签名"
+                  value={createForm.bio}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, bio: e.target.value })
+                  }
+                  className="text-xs h-9 rounded-xl"
+                />
+              </Field>
+
+              <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="text-xs h-9 rounded-xl"
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={submitting}
+                  className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
+                >
+                  {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>创建用户</span>
+                </Button>
+              </DialogFooter>
+            </FieldSet>
           </form>
         </DialogContent>
       </Dialog>
@@ -868,47 +878,49 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
           </DialogHeader>
 
           {editingUser && (
-            <form onSubmit={handleSubmitEdit} className="space-y-4 py-2">
-              {/* Readonly Username & ID */}
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/20 border border-border/40">
-                <div>
-                  <span className="text-[11px] text-muted-foreground">系统 ID</span>
-                  <p className="text-xs font-mono font-bold text-foreground">#{editingUser.id}</p>
-                </div>
-                <div>
-                  <span className="text-[11px] text-muted-foreground">用户名 (不可更改)</span>
-                  <p className="text-xs font-mono font-bold text-foreground">@{editingUser.username}</p>
-                </div>
-              </div>
-
-              {/* Email & Nickname */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">电子邮箱</label>
-                  <Input
-                    type="email"
-                    required
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="text-xs h-9 rounded-xl mt-1"
-                  />
+            <form onSubmit={handleSubmitEdit} className="py-2">
+              <FieldSet className="gap-4">
+                {/* Readonly Username & ID */}
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/20 border border-border/40">
+                  <div>
+                    <span className="text-[11px] text-muted-foreground">系统 ID</span>
+                    <p className="text-xs font-mono font-bold text-foreground">#{editingUser.id}</p>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-muted-foreground">用户名 (不可更改)</span>
+                    <p className="text-xs font-mono font-bold text-foreground">@{editingUser.username}</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">展示昵称</label>
-                  <Input
-                    type="text"
-                    value={editForm.nickname}
-                    onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
-                    className="text-xs h-9 rounded-xl mt-1"
-                  />
-                </div>
-              </div>
+                {/* Email & Nickname */}
+                <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field>
+                    <FieldLabel htmlFor="edit-user-email" required>电子邮箱</FieldLabel>
+                    <Input
+                      id="edit-user-email"
+                      type="email"
+                      required
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      className="text-xs h-9 rounded-xl"
+                    />
+                  </Field>
 
-              {/* Role */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">系统角色权限</label>
-                <div className="mt-1">
+                  <Field>
+                    <FieldLabel htmlFor="edit-user-nickname">展示昵称</FieldLabel>
+                    <Input
+                      id="edit-user-nickname"
+                      type="text"
+                      value={editForm.nickname}
+                      onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
+                      className="text-xs h-9 rounded-xl"
+                    />
+                  </Field>
+                </FieldGroup>
+
+                {/* Role */}
+                <Field>
+                  <FieldLabel htmlFor="edit-user-role">系统角色权限</FieldLabel>
                   <Select
                     value={editForm.role}
                     disabled={Number(editingUser.id) === 1}
@@ -917,6 +929,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     }
                   >
                     <SelectTrigger
+                      id="edit-user-role"
                       className={`w-full text-xs h-9 rounded-xl ${
                         Number(editingUser.id) === 1 ? 'opacity-60 cursor-not-allowed' : ''
                       }`}
@@ -929,89 +942,93 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       <SelectItem value="admin">系统管理员 (Admin)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                {Number(editingUser.id) === 1 && (
-                  <p className="text-[10px] text-amber-500 mt-1">超级管理员 (Root) 拥有永久管理权限，不可更改角色</p>
-                )}
-              </div>
+                  {Number(editingUser.id) === 1 && (
+                    <FieldDescription className="text-amber-500 font-medium">
+                      超级管理员 (Root) 拥有永久管理权限，不可更改角色
+                    </FieldDescription>
+                  )}
+                </Field>
 
-              {/* Avatar Selector */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-muted-foreground">头像地址 URL</label>
-                  <button
-                    type="button"
-                    onClick={() => handleRandomizeAvatar(false)}
-                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Dice5 className="w-3 h-3" />
-                    <span>随机生成头像</span>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={editForm.avatar || editingUser.avatar || ''}
-                    alt="Preview"
-                    className="w-9 h-9 rounded-xl object-cover border border-border shrink-0 bg-muted"
-                  />
-                  <Input
-                    type="url"
-                    value={editForm.avatar}
-                    onChange={(e) => setEditForm({ ...editForm, avatar: e.target.value })}
-                    className="text-xs h-9 rounded-xl font-mono flex-1"
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-muted-foreground">预设:</span>
-                  {AVATAR_PRESETS.map((preset, idx) => (
+                {/* Avatar Selector */}
+                <Field>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor="edit-user-avatar">头像地址 URL</FieldLabel>
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => setEditForm((prev) => ({ ...prev, avatar: preset }))}
-                      className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                        editForm.avatar === preset
-                          ? 'ring-2 ring-primary border-primary'
-                          : 'border-border/60 hover:opacity-80'
-                      }`}
+                      onClick={() => handleRandomizeAvatar(false)}
+                      className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <img src={preset} alt="preset" className="w-full h-full object-cover" />
+                      <Dice5 className="w-3 h-3" />
+                      <span>随机生成头像</span>
                     </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={editForm.avatar || editingUser.avatar || ''}
+                      alt="Preview"
+                      className="w-9 h-9 rounded-xl object-cover border border-border shrink-0 bg-muted"
+                    />
+                    <Input
+                      id="edit-user-avatar"
+                      type="url"
+                      value={editForm.avatar}
+                      onChange={(e) => setEditForm({ ...editForm, avatar: e.target.value })}
+                      className="text-xs h-9 rounded-xl font-mono flex-1"
+                    />
+                  </div>
 
-              {/* Bio */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">简介签名</label>
-                <Input
-                  type="text"
-                  value={editForm.bio}
-                  onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-muted-foreground">预设:</span>
+                    {AVATAR_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setEditForm((prev) => ({ ...prev, avatar: preset }))}
+                        className={`w-6 h-6 rounded-lg overflow-hidden border transition-all cursor-pointer ${
+                          editForm.avatar === preset
+                            ? 'ring-2 ring-primary border-primary'
+                            : 'border-border/60 hover:opacity-80'
+                        }`}
+                      >
+                        <img src={preset} alt="preset" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </Field>
 
-              <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingUser(null)}
-                  className="text-xs h-9 rounded-xl"
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={submitting}
-                  className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
-                >
-                  {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  <span>保存修改</span>
-                </Button>
-              </DialogFooter>
+                {/* Bio */}
+                <Field>
+                  <FieldLabel htmlFor="edit-user-bio">简介签名</FieldLabel>
+                  <Input
+                    id="edit-user-bio"
+                    type="text"
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                    className="text-xs h-9 rounded-xl"
+                  />
+                </Field>
+
+                <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingUser(null)}
+                    className="text-xs h-9 rounded-xl"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={submitting}
+                    className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
+                  >
+                    {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>保存修改</span>
+                  </Button>
+                </DialogFooter>
+              </FieldSet>
             </form>
           )}
         </DialogContent>
@@ -1035,76 +1052,86 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
           </DialogHeader>
 
           {resetPwdUser && (
-            <form onSubmit={handleSubmitResetPwd} className="space-y-4 py-2">
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <p>重置后旧密码将立即失效，用户下次需要使用新密码登录系统。</p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-muted-foreground">新密码 (至少 6 位)</label>
-                  <button
-                    type="button"
-                    onClick={handleGenerateRandomPassword}
-                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>自动生成</span>
-                  </button>
+            <form onSubmit={handleSubmitResetPwd} className="py-2">
+              <FieldSet className="gap-4">
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>重置后旧密码将立即失效，用户下次需要使用新密码登录系统。</p>
                 </div>
-                <div className="relative mt-1">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="输入新登录密码"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="text-xs h-9 rounded-xl pr-9 font-mono"
-                  />
-                  <button
+
+                <FieldGroup className="gap-3.5">
+                  <Field>
+                    <div className="flex items-center justify-between">
+                      <FieldLabel htmlFor="reset-user-password" required>
+                        新密码 (至少 6 位)
+                      </FieldLabel>
+                      <button
+                        type="button"
+                        onClick={handleGenerateRandomPassword}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>自动生成</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="reset-user-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        placeholder="输入新登录密码"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="text-xs h-9 rounded-xl pr-9 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="reset-user-confirm-pwd" required>
+                      确认新密码
+                    </FieldLabel>
+                    <Input
+                      id="reset-user-confirm-pwd"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="再次输入以确认"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="text-xs h-9 rounded-xl font-mono"
+                    />
+                  </Field>
+                </FieldGroup>
+
+                <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                  <Button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setResetPwdUser(null)}
+                    className="text-xs h-9 rounded-xl"
                   >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">确认新密码</label>
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="再次输入以确认"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-
-              <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setResetPwdUser(null)}
-                  className="text-xs h-9 rounded-xl"
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={submitting}
-                  className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs"
-                >
-                  {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  <span>确认重置密码</span>
-                </Button>
-              </DialogFooter>
+                    取消
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={submitting}
+                    className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs"
+                  >
+                    {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>确认重置密码</span>
+                  </Button>
+                </DialogFooter>
+              </FieldSet>
             </form>
           )}
         </DialogContent>

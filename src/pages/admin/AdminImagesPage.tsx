@@ -45,6 +45,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../../components/ui/field';
 
 export const AdminImagesPage: React.FC = () => {
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -762,7 +769,7 @@ export const AdminImagesPage: React.FC = () => {
           </DialogHeader>
 
           {editingImage && (
-            <div className="space-y-4 py-2">
+            <div className="py-2 space-y-4">
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/40 border border-border/60">
                 <img
                   src={editingImage.dataUrl || editingImage.url}
@@ -776,46 +783,54 @@ export const AdminImagesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">图片文件名</label>
-                <Input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
+              <FieldSet className="gap-4">
+                <FieldGroup className="gap-3.5">
+                  <Field>
+                    <FieldLabel htmlFor="edit-img-name" required>图片文件名</FieldLabel>
+                    <Input
+                      id="edit-img-name"
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="text-xs h-9 rounded-xl font-mono"
+                    />
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">归属相册空间</label>
-                <div className="mt-1">
-                  <Select value={editAlbum} onValueChange={setEditAlbum}>
-                    <SelectTrigger className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="选择相册" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {albums.map((alb) => (
-                        <SelectItem key={alb.id} value={alb.id}>
-                          {alb.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="edit-img-album">归属相册空间</FieldLabel>
+                    <Select value={editAlbum} onValueChange={setEditAlbum}>
+                      <SelectTrigger id="edit-img-album" className="w-full text-xs h-9 rounded-xl">
+                        <SelectValue placeholder="选择相册" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {albums.map((alb) => (
+                          <SelectItem key={alb.id} value={alb.id}>
+                            {alb.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  分类标签 (以逗号分隔)
-                </label>
-                <Input
-                  type="text"
-                  value={editTags}
-                  onChange={(e) => setEditTags(e.target.value)}
-                  placeholder="例如: WALLPAPER, 4K, DESIGN"
-                  className="text-xs h-9 rounded-xl mt-1 font-mono uppercase"
-                />
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="edit-img-tags">
+                      分类标签
+                    </FieldLabel>
+                    <Input
+                      id="edit-img-tags"
+                      type="text"
+                      value={editTags}
+                      onChange={(e) => setEditTags(e.target.value)}
+                      placeholder="例如: WALLPAPER, 4K, DESIGN"
+                      className="text-xs h-9 rounded-xl font-mono uppercase"
+                    />
+                    <FieldDescription>
+                      多个标签请以逗号分隔，系统将自动大写归类
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
             </div>
           )}
 
@@ -852,18 +867,25 @@ export const AdminImagesPage: React.FC = () => {
           </DialogHeader>
 
           <div className="py-2">
-            <Select value={batchTargetAlbum} onValueChange={setBatchTargetAlbum}>
-              <SelectTrigger className="w-full text-xs h-9 rounded-xl">
-                <SelectValue placeholder="选择目标相册" />
-              </SelectTrigger>
-              <SelectContent>
-                {albums.map((alb) => (
-                  <SelectItem key={alb.id} value={alb.id}>
-                    {alb.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="batch-move-album">目标相册空间</FieldLabel>
+                  <Select value={batchTargetAlbum} onValueChange={setBatchTargetAlbum}>
+                    <SelectTrigger id="batch-move-album" className="w-full text-xs h-9 rounded-xl">
+                      <SelectValue placeholder="选择目标相册" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {albums.map((alb) => (
+                        <SelectItem key={alb.id} value={alb.id}>
+                          {alb.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
           </div>
 
           <DialogFooter>
@@ -899,13 +921,24 @@ export const AdminImagesPage: React.FC = () => {
           </DialogHeader>
 
           <div className="py-2">
-            <Input
-              type="text"
-              placeholder="输入标签名 (如 4K / DESIGN)"
-              value={batchNewTag}
-              onChange={(e) => setBatchNewTag(e.target.value)}
-              className="text-xs h-9 rounded-xl font-mono uppercase"
-            />
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="batch-new-tag" required>追加标签名称</FieldLabel>
+                  <Input
+                    id="batch-new-tag"
+                    type="text"
+                    placeholder="输入标签名 (如 4K / DESIGN)"
+                    value={batchNewTag}
+                    onChange={(e) => setBatchNewTag(e.target.value)}
+                    className="text-xs h-9 rounded-xl font-mono uppercase"
+                  />
+                  <FieldDescription>
+                    将自动同步追加至所有已选中的资产标签列表中
+                  </FieldDescription>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
           </div>
 
           <DialogFooter>

@@ -28,6 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../../components/ui/field';
 
 const COLOR_PRESETS = [
   '#6366F1', // Indigo
@@ -371,68 +378,74 @@ export const AdminAlbumsPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateAlbum} className="space-y-4 py-2">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">相册名称 *</label>
-              <Input
-                type="text"
-                required
-                placeholder="例如: 手机与桌面高清壁纸"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                className="text-xs h-9 rounded-xl mt-1"
-              />
-            </div>
+          <form onSubmit={handleCreateAlbum} className="py-2">
+            <FieldSet className="gap-4">
+              <FieldGroup className="gap-3.5">
+                <Field>
+                  <FieldLabel htmlFor="create-album-name" required>相册名称</FieldLabel>
+                  <Input
+                    id="create-album-name"
+                    type="text"
+                    required
+                    placeholder="例如: 手机与桌面高清壁纸"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    className="text-xs h-9 rounded-xl font-medium"
+                  />
+                </Field>
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">描述说明 (选填)</label>
-              <Input
-                type="text"
-                placeholder="简要说明此相册空间归纳的图片类型"
-                value={createDesc}
-                onChange={(e) => setCreateDesc(e.target.value)}
-                className="text-xs h-9 rounded-xl mt-1"
-              />
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="create-album-desc">描述说明 (选填)</FieldLabel>
+                  <Input
+                    id="create-album-desc"
+                    type="text"
+                    placeholder="简要说明此相册空间归纳的图片类型"
+                    value={createDesc}
+                    onChange={(e) => setCreateDesc(e.target.value)}
+                    className="text-xs h-9 rounded-xl"
+                  />
+                </Field>
 
-            {/* Color preset picker */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">相册主题色</label>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                {COLOR_PRESETS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setCreateColor(color)}
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                      createColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  >
-                    {createColor === color && <Check className="w-4 h-4 text-white drop-shadow-xs" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Color preset picker */}
+                <Field>
+                  <FieldLabel>相册主题色</FieldLabel>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {COLOR_PRESETS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setCreateColor(color)}
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                          createColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      >
+                        {createColor === color && <Check className="w-4 h-4 text-white drop-shadow-xs" />}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              </FieldGroup>
 
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCreateOpen(false)}
-                className="text-xs rounded-xl"
-              >
-                取消
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
-              >
-                立即创建
-              </Button>
-            </DialogFooter>
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="text-xs rounded-xl"
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
+                >
+                  立即创建
+                </Button>
+              </DialogFooter>
+            </FieldSet>
           </form>
         </DialogContent>
       </Dialog>
@@ -453,59 +466,70 @@ export const AdminAlbumsPage: React.FC = () => {
           </DialogHeader>
 
           {editingAlbum && (
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">相册名称</label>
-                <Input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
+            <div className="py-2">
+              <FieldSet className="gap-4">
+                <FieldGroup className="gap-3.5">
+                  <Field>
+                    <FieldLabel htmlFor="edit-album-name" required>相册名称</FieldLabel>
+                    <Input
+                      id="edit-album-name"
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="text-xs h-9 rounded-xl font-medium"
+                    />
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">相册描述</label>
-                <Input
-                  type="text"
-                  value={editDesc}
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="edit-album-desc">相册描述</FieldLabel>
+                    <Input
+                      id="edit-album-desc"
+                      type="text"
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      className="text-xs h-9 rounded-xl"
+                    />
+                  </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  封面图片地址 (URL / DataURI)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="https://... 或留空自动采用第一张图片"
-                  value={editCoverUrl}
-                  onChange={(e) => setEditCoverUrl(e.target.value)}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="edit-album-cover">
+                      封面图片地址 (URL / DataURI)
+                    </FieldLabel>
+                    <Input
+                      id="edit-album-cover"
+                      type="text"
+                      placeholder="https://... 或留空自动采用第一张图片"
+                      value={editCoverUrl}
+                      onChange={(e) => setEditCoverUrl(e.target.value)}
+                      className="text-xs h-9 rounded-xl font-mono"
+                    />
+                    <FieldDescription>
+                      留空将自动采用该空间内第一张图片作为封面
+                    </FieldDescription>
+                  </Field>
 
-              {/* Color picker */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">主题色标</label>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {COLOR_PRESETS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setEditColor(color)}
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                        editColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    >
-                      {editColor === color && <Check className="w-4 h-4 text-white drop-shadow-xs" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  {/* Color picker */}
+                  <Field>
+                    <FieldLabel>主题色标</FieldLabel>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {COLOR_PRESETS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setEditColor(color)}
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                            editColor === color ? 'ring-2 ring-foreground scale-110' : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        >
+                          {editColor === color && <Check className="w-4 h-4 text-white drop-shadow-xs" />}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
             </div>
           )}
 

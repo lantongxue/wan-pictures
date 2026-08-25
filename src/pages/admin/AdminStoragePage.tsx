@@ -33,6 +33,13 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Switch } from '../../components/ui/switch';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../../components/ui/field';
 
 export const AdminStoragePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -568,98 +575,104 @@ export const AdminStoragePage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  服务端存储根路径 (Storage Root Path)
-                </label>
-                <Input
-                  type="text"
-                  required
-                  value={localConfig.storagePath}
-                  onChange={(e) =>
-                    setLocalConfig({ ...localConfig, storagePath: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  图片在服务器文件系统的真实持久化目录，例如 ./uploads/images
-                </p>
-              </div>
+            <FieldSet className="gap-4">
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="local-storage-path" required>
+                    服务端存储根路径 (Storage Root Path)
+                  </FieldLabel>
+                  <Input
+                    id="local-storage-path"
+                    type="text"
+                    required
+                    value={localConfig.storagePath}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, storagePath: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                  <FieldDescription>
+                    图片在服务器文件系统的真实持久化目录，例如 ./uploads/images
+                  </FieldDescription>
+                </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  公网访问 URL 前缀 (Public URL Prefix)
-                </label>
-                <Input
-                  type="text"
-                  required
-                  value={localConfig.publicUrlPrefix}
-                  onChange={(e) =>
-                    setLocalConfig({ ...localConfig, publicUrlPrefix: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  静态资源路由映射前缀，例如 /uploads/
-                </p>
-              </div>
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="local-public-prefix" required>
+                    公网访问 URL 前缀 (Public URL Prefix)
+                  </FieldLabel>
+                  <Input
+                    id="local-public-prefix"
+                    type="text"
+                    required
+                    value={localConfig.publicUrlPrefix}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, publicUrlPrefix: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                  <FieldDescription>
+                    静态资源路由映射前缀，例如 /uploads/
+                  </FieldDescription>
+                </Field>
+              </FieldGroup>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  子目录日期划分规范 (Subfolder Format)
-                </label>
-                <Input
-                  type="text"
-                  value={localConfig.subfolderFormat || 'YYYY/MM'}
-                  onChange={(e) =>
-                    setLocalConfig({ ...localConfig, subfolderFormat: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  支持 YYYY/MM 或 YYYYMMDD 按年月自动创建子目录
-                </p>
-              </div>
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="local-subfolder-format">
+                    子目录日期划分规范 (Subfolder Format)
+                  </FieldLabel>
+                  <Input
+                    id="local-subfolder-format"
+                    type="text"
+                    value={localConfig.subfolderFormat || 'YYYY/MM'}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, subfolderFormat: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                  <FieldDescription>
+                    支持 YYYY/MM 或 YYYYMMDD 按年月自动创建子目录
+                  </FieldDescription>
+                </Field>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  最大存储配额容量 (MB)
-                </label>
-                <Input
-                  type="number"
-                  value={localConfig.maxSizeMB || 10240}
-                  onChange={(e) =>
-                    setLocalConfig({ ...localConfig, maxSizeMB: Number(e.target.value) })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  本地单磁盘最大允许占用的配额容量 (默认 10GB)
-                </p>
-              </div>
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="local-max-size">
+                    最大存储配额容量 (MB)
+                  </FieldLabel>
+                  <Input
+                    id="local-max-size"
+                    type="number"
+                    value={localConfig.maxSizeMB || 10240}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, maxSizeMB: Number(e.target.value) })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                  <FieldDescription>
+                    本地单磁盘最大允许占用的配额容量 (默认 10GB)
+                  </FieldDescription>
+                </Field>
+              </FieldGroup>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleTestStorage('local')}
-                className="text-xs rounded-xl cursor-pointer"
-              >
-                {testingDriver === 'local' ? '测试中...' : '测试磁盘连通性'}
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
-              >
-                保存本地配置
-              </Button>
-            </div>
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTestStorage('local')}
+                  className="text-xs rounded-xl cursor-pointer"
+                >
+                  {testingDriver === 'local' ? '测试中...' : '测试磁盘连通性'}
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
+                >
+                  保存本地配置
+                </Button>
+              </div>
+            </FieldSet>
           </form>
         )}
 
@@ -691,121 +704,129 @@ export const AdminStoragePage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  S3 Endpoint (端点地址) *
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="https://s3.us-east-1.amazonaws.com 或 https://xxx.r2.cloudflarestorage.com"
-                  value={s3Config.endpoint}
-                  onChange={(e) => setS3Config({ ...s3Config, endpoint: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  Bucket (存储桶名称) *
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="例如: wanpictures-assets"
-                  value={s3Config.bucket}
-                  onChange={(e) => setS3Config({ ...s3Config, bucket: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  Access Key ID (AK) *
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="AKIAIOSFODNN7EXAMPLE"
-                  value={s3Config.accessKeyId}
-                  onChange={(e) => setS3Config({ ...s3Config, accessKeyId: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  Secret Access Key (SK) *
-                </label>
-                <div className="relative mt-1">
+            <FieldSet className="gap-4">
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="s3-endpoint" required>
+                    S3 Endpoint (端点地址)
+                  </FieldLabel>
                   <Input
-                    type={showS3Secret ? 'text' : 'password'}
+                    id="s3-endpoint"
+                    type="text"
                     required
-                    placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                    value={s3Config.secretAccessKey}
-                    onChange={(e) =>
-                      setS3Config({ ...s3Config, secretAccessKey: e.target.value })
-                    }
-                    className="text-xs h-9 rounded-xl font-mono pr-9"
+                    placeholder="https://s3.us-east-1.amazonaws.com 或 https://xxx.r2.cloudflarestorage.com"
+                    value={s3Config.endpoint}
+                    onChange={(e) => setS3Config({ ...s3Config, endpoint: e.target.value })}
+                    className="text-xs h-9 rounded-xl font-mono"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowS3Secret(!showS3Secret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {showS3Secret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-            </div>
+                </Field>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  自定义 CDN 加速域名 (Custom Domain)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="https://cdn.yourdomain.com (留空则默认 S3 直链)"
-                  value={s3Config.customDomain}
-                  onChange={(e) => setS3Config({ ...s3Config, customDomain: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
+                <Field>
+                  <FieldLabel htmlFor="s3-bucket" required>
+                    Bucket (存储桶名称)
+                  </FieldLabel>
+                  <Input
+                    id="s3-bucket"
+                    type="text"
+                    required
+                    placeholder="例如: wanpictures-assets"
+                    value={s3Config.bucket}
+                    onChange={(e) => setS3Config({ ...s3Config, bucket: e.target.value })}
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                </Field>
+              </FieldGroup>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">Region (地域)</label>
-                <Input
-                  type="text"
-                  placeholder="例如: us-east-1 / auto / oss-cn-hangzhou"
-                  value={s3Config.region}
-                  onChange={(e) => setS3Config({ ...s3Config, region: e.target.value })}
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-            </div>
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="s3-ak" required>
+                    Access Key ID (AK)
+                  </FieldLabel>
+                  <Input
+                    id="s3-ak"
+                    type="text"
+                    required
+                    placeholder="AKIAIOSFODNN7EXAMPLE"
+                    value={s3Config.accessKeyId}
+                    onChange={(e) => setS3Config({ ...s3Config, accessKeyId: e.target.value })}
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                </Field>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleTestStorage('s3')}
-                className="text-xs rounded-xl cursor-pointer"
-              >
-                {testingDriver === 's3' ? '测试中...' : '测试 S3 连通性'}
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                className="text-xs rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer shadow-xs"
-              >
-                保存 S3 配置
-              </Button>
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="s3-sk" required>
+                    Secret Access Key (SK)
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      id="s3-sk"
+                      type={showS3Secret ? 'text' : 'password'}
+                      required
+                      placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                      value={s3Config.secretAccessKey}
+                      onChange={(e) =>
+                        setS3Config({ ...s3Config, secretAccessKey: e.target.value })
+                      }
+                      className="text-xs h-9 rounded-xl font-mono pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowS3Secret(!showS3Secret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showS3Secret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </Field>
+              </FieldGroup>
+
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="s3-domain">
+                    自定义 CDN 加速域名 (Custom Domain)
+                  </FieldLabel>
+                  <Input
+                    id="s3-domain"
+                    type="text"
+                    placeholder="https://cdn.yourdomain.com (留空则默认 S3 直链)"
+                    value={s3Config.customDomain}
+                    onChange={(e) => setS3Config({ ...s3Config, customDomain: e.target.value })}
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="s3-region">Region (地域)</FieldLabel>
+                  <Input
+                    id="s3-region"
+                    type="text"
+                    placeholder="例如: us-east-1 / auto / oss-cn-hangzhou"
+                    value={s3Config.region}
+                    onChange={(e) => setS3Config({ ...s3Config, region: e.target.value })}
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                </Field>
+              </FieldGroup>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTestStorage('s3')}
+                  className="text-xs rounded-xl cursor-pointer"
+                >
+                  {testingDriver === 's3' ? '测试中...' : '测试 S3 连通性'}
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="text-xs rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer shadow-xs"
+                >
+                  保存 S3 配置
+                </Button>
+              </div>
+            </FieldSet>
           </form>
         )}
 
@@ -837,100 +858,106 @@ export const AdminStoragePage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  WebDAV 服务器地址 (Server URL) *
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="https://dav.jianguoyun.com/dav/ 或 https://pan.example.com/dav"
-                  value={webdavConfig.serverUrl}
-                  onChange={(e) =>
-                    setWebdavConfig({ ...webdavConfig, serverUrl: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  网盘根目录路径 (Root Path)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="/wanpictures/uploads/"
-                  value={webdavConfig.rootPath}
-                  onChange={(e) =>
-                    setWebdavConfig({ ...webdavConfig, rootPath: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  WebDAV 账号 / 邮箱 (Username) *
-                </label>
-                <Input
-                  type="text"
-                  required
-                  placeholder="alex@example.com"
-                  value={webdavConfig.username}
-                  onChange={(e) =>
-                    setWebdavConfig({ ...webdavConfig, username: e.target.value })
-                  }
-                  className="text-xs h-9 rounded-xl mt-1"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">
-                  WebDAV 密码 / 应用授权码 (App Password) *
-                </label>
-                <div className="relative mt-1">
+            <FieldSet className="gap-4">
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="dav-server" required>
+                    WebDAV 服务器地址 (Server URL)
+                  </FieldLabel>
                   <Input
-                    type={showDavPassword ? 'text' : 'password'}
+                    id="dav-server"
+                    type="text"
                     required
-                    placeholder="坚果云生成的应用授权专用密码"
-                    value={webdavConfig.password}
+                    placeholder="https://dav.jianguoyun.com/dav/ 或 https://pan.example.com/dav"
+                    value={webdavConfig.serverUrl}
                     onChange={(e) =>
-                      setWebdavConfig({ ...webdavConfig, password: e.target.value })
+                      setWebdavConfig({ ...webdavConfig, serverUrl: e.target.value })
                     }
-                    className="text-xs h-9 rounded-xl font-mono pr-9"
+                    className="text-xs h-9 rounded-xl font-mono"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowDavPassword(!showDavPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {showDavPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-            </div>
+                </Field>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleTestStorage('webdav')}
-                className="text-xs rounded-xl cursor-pointer"
-              >
-                {testingDriver === 'webdav' ? '测试中...' : '测试 WebDAV 连通性'}
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer shadow-xs"
-              >
-                保存 WebDAV 配置
-              </Button>
-            </div>
+                <Field>
+                  <FieldLabel htmlFor="dav-root">
+                    网盘根目录路径 (Root Path)
+                  </FieldLabel>
+                  <Input
+                    id="dav-root"
+                    type="text"
+                    placeholder="/wanpictures/uploads/"
+                    value={webdavConfig.rootPath}
+                    onChange={(e) =>
+                      setWebdavConfig({ ...webdavConfig, rootPath: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl font-mono"
+                  />
+                </Field>
+              </FieldGroup>
+
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="dav-user" required>
+                    WebDAV 账号 / 邮箱 (Username)
+                  </FieldLabel>
+                  <Input
+                    id="dav-user"
+                    type="text"
+                    required
+                    placeholder="alex@example.com"
+                    value={webdavConfig.username}
+                    onChange={(e) =>
+                      setWebdavConfig({ ...webdavConfig, username: e.target.value })
+                    }
+                    className="text-xs h-9 rounded-xl"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="dav-pwd" required>
+                    WebDAV 密码 / 应用授权码 (App Password)
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      id="dav-pwd"
+                      type={showDavPassword ? 'text' : 'password'}
+                      required
+                      placeholder="坚果云生成的应用授权专用密码"
+                      value={webdavConfig.password}
+                      onChange={(e) =>
+                        setWebdavConfig({ ...webdavConfig, password: e.target.value })
+                      }
+                      className="text-xs h-9 rounded-xl font-mono pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDavPassword(!showDavPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      {showDavPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </Field>
+              </FieldGroup>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTestStorage('webdav')}
+                  className="text-xs rounded-xl cursor-pointer"
+                >
+                  {testingDriver === 'webdav' ? '测试中...' : '测试 WebDAV 连通性'}
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer shadow-xs"
+                >
+                  保存 WebDAV 配置
+                </Button>
+              </div>
+            </FieldSet>
           </form>
         )}
       </div>

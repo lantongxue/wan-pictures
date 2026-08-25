@@ -6,6 +6,14 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldError,
+} from '../../components/ui/field';
+
 export const AdminGuard: React.FC = () => {
   const { user, isAuthenticated, login, backendOnline } = useAuth();
   const navigate = useNavigate();
@@ -55,61 +63,67 @@ export const AdminGuard: React.FC = () => {
           {loginError && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{loginError}</span>
+              <FieldError className="mt-0 text-destructive">{loginError}</FieldError>
             </div>
           )}
 
-          <form onSubmit={handleQuickAdminLogin} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-primary" />
-                <span>管理员账号 / 邮箱</span>
-              </label>
-              <Input
-                type="text"
-                required
-                value={account}
-                onChange={(e) => setAccount(e.target.value)}
-                placeholder="例如: admin"
-                className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
-              />
-            </div>
+          <form onSubmit={handleQuickAdminLogin}>
+            <FieldSet className="gap-4">
+              <FieldGroup className="gap-3.5">
+                <Field>
+                  <FieldLabel htmlFor="admin-login-account" required className="gap-1.5">
+                    <UserIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>管理员账号 / 邮箱</span>
+                  </FieldLabel>
+                  <Input
+                    id="admin-login-account"
+                    type="text"
+                    required
+                    value={account}
+                    onChange={(e) => setAccount(e.target.value)}
+                    placeholder="例如: admin"
+                    className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
+                  />
+                </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-primary" />
-                  <span>管理密码</span>
-                </span>
-                <span className="text-[11px] text-muted-foreground/80">默认测试: password123</span>
-              </label>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
-              />
-            </div>
+                <Field>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor="admin-login-password" required className="gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-primary" />
+                      <span>管理密码</span>
+                    </FieldLabel>
+                    <span className="text-[11px] text-muted-foreground/80">默认测试: password123</span>
+                  </div>
+                  <Input
+                    id="admin-login-password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
+                  />
+                </Field>
+              </FieldGroup>
 
-            <Button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full h-10 rounded-xl text-xs font-bold gap-2 cursor-pointer shadow-md bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {loginLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>验证管理员凭证中...</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  <span>登录并进入管理控制台</span>
-                </>
-              )}
-            </Button>
+              <Button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full h-10 rounded-xl text-xs font-bold gap-2 cursor-pointer shadow-md bg-primary hover:bg-primary/90 text-primary-foreground mt-1"
+              >
+                {loginLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>验证管理员凭证中...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4" />
+                    <span>登录并进入管理控制台</span>
+                  </>
+                )}
+              </Button>
+            </FieldSet>
           </form>
 
           <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs">

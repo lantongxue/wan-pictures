@@ -34,6 +34,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import {
+  Field,
+  FieldSet,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from '../../components/ui/field';
 
 export const AdminSettingsPage: React.FC = () => {
   const { backendOnline } = useAuth();
@@ -279,191 +286,215 @@ export const AdminSettingsPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSaveSettings} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* 1. Anonymous Guests */}
-            <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-4 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs font-bold text-foreground">匿名未登录访客</span>
+          <FieldSet className="gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* 1. Anonymous Guests */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-bold text-foreground">匿名未登录访客</span>
+                    </div>
+                    <Badge variant="subtle" className="text-[9px] font-mono">
+                      IP-BASED
+                    </Badge>
                   </div>
-                  <Badge variant="subtle" className="text-[9px] font-mono">
-                    IP-BASED
-                  </Badge>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border/60">
+                    <span className="text-xs text-foreground font-medium">允许匿名访客上传</span>
+                    <Switch
+                      checked={quotaSettings.allow_anonymous}
+                      onCheckedChange={(checked) =>
+                        setQuotaSettings({ ...quotaSettings, allow_anonymous: checked })
+                      }
+                    />
+                  </div>
+
+                  <FieldGroup className="gap-2.5">
+                    <Field>
+                      <FieldLabel htmlFor="guest-daily-limit" className="text-[11px]">
+                        单日上传上限 (张/天)
+                      </FieldLabel>
+                      <Input
+                        id="guest-daily-limit"
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={quotaSettings.anonymous_daily_limit}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            anonymous_daily_limit: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="guest-max-size" className="text-[11px]">
+                        单张图片体积上限 (MB)
+                      </FieldLabel>
+                      <Input
+                        id="guest-max-size"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={quotaSettings.anonymous_max_size_mb}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            anonymous_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
+                  </FieldGroup>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border/60">
-                  <span className="text-xs text-foreground font-medium">允许匿名访客上传</span>
-                  <Switch
-                    checked={quotaSettings.allow_anonymous}
-                    onCheckedChange={(checked) =>
-                      setQuotaSettings({ ...quotaSettings, allow_anonymous: checked })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground">单日上传上限 (张/天)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={500}
-                    value={quotaSettings.anonymous_daily_limit}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        anonymous_daily_limit: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                    className="h-8 text-xs rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground">单张图片体积上限 (MB)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={quotaSettings.anonymous_max_size_mb}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        anonymous_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                    className="h-8 text-xs rounded-xl"
-                  />
-                </div>
+                <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
+                  按客户端 IP 统计每日上传次数，超出限制将提示登录或明日再试。
+                </p>
               </div>
 
-              <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                按客户端 IP 统计每日上传次数，超出限制将提示登录或明日再试。
-              </p>
-            </div>
-
-            {/* 2. Free Registered Users */}
-            <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-4 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
-                    <span className="text-xs font-bold text-foreground">普通注册用户 (Free)</span>
+              {/* 2. Free Registered Users */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs font-bold text-foreground">普通注册用户 (Free)</span>
+                    </div>
+                    <Badge variant="subtle" className="text-[9px] font-mono">
+                      USER-ID
+                    </Badge>
                   </div>
-                  <Badge variant="subtle" className="text-[9px] font-mono">
-                    USER-ID
-                  </Badge>
+
+                  <FieldGroup className="gap-2.5 pt-1">
+                    <Field>
+                      <FieldLabel htmlFor="user-daily-limit" className="text-[11px]">
+                        单日上传上限 (张/天)
+                      </FieldLabel>
+                      <Input
+                        id="user-daily-limit"
+                        type="number"
+                        min={1}
+                        max={2000}
+                        value={quotaSettings.free_user_daily_limit}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            free_user_daily_limit: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="user-max-size" className="text-[11px]">
+                        单张图片体积上限 (MB)
+                      </FieldLabel>
+                      <Input
+                        id="user-max-size"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={quotaSettings.free_user_max_size_mb}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            free_user_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
+                  </FieldGroup>
                 </div>
 
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">单日上传上限 (张/天)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={2000}
-                    value={quotaSettings.free_user_daily_limit}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        free_user_daily_limit: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                    className="h-8 text-xs rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground">单张图片体积上限 (MB)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={quotaSettings.free_user_max_size_mb}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        free_user_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                    className="h-8 text-xs rounded-xl"
-                  />
-                </div>
+                <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
+                  登录后按账号 ID 统计每日限额，提供更高并发与秒传去重保障。
+                </p>
               </div>
 
-              <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                登录后按账号 ID 统计每日限额，提供更高并发与秒传去重保障。
-              </p>
+              {/* 3. VIP Paid Users */}
+              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs font-bold text-foreground">付费 / VIP 用户 (VIP)</span>
+                    </div>
+                    <Badge variant="default" className="text-[9px] bg-amber-500 text-white font-mono">
+                      RESERVED
+                    </Badge>
+                  </div>
+
+                  <FieldGroup className="gap-2.5 pt-1">
+                    <Field>
+                      <FieldLabel htmlFor="vip-daily-limit" className="text-[11px]">
+                        单日上传上限 (张/天)
+                      </FieldLabel>
+                      <Input
+                        id="vip-daily-limit"
+                        type="number"
+                        min={0}
+                        max={10000}
+                        value={quotaSettings.vip_daily_limit}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            vip_daily_limit: Math.max(0, parseInt(e.target.value) || 0),
+                          })
+                        }
+                        placeholder="500 (0表示无限制)"
+                        className="h-8 text-xs rounded-xl bg-background"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="vip-max-size" className="text-[11px]">
+                        单张图片体积上限 (MB)
+                      </FieldLabel>
+                      <Input
+                        id="vip-max-size"
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={quotaSettings.vip_max_size_mb}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            vip_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl bg-background"
+                      />
+                    </Field>
+                  </FieldGroup>
+                </div>
+
+                <p className="text-[10px] text-amber-700 dark:text-amber-300 pt-2 border-t border-amber-500/20">
+                  已预留 VIP 账号标记与权限通道，管理员可在用户列表中直接指派。
+                </p>
+              </div>
             </div>
 
-            {/* 3. VIP Paid Users */}
-            <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-4 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs font-bold text-foreground">付费 / VIP 用户 (VIP)</span>
-                  </div>
-                  <Badge variant="default" className="text-[9px] bg-amber-500 text-white font-mono">
-                    RESERVED
-                  </Badge>
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">单日上传上限 (张/天)</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10000}
-                    value={quotaSettings.vip_daily_limit}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        vip_daily_limit: Math.max(0, parseInt(e.target.value) || 0),
-                      })
-                    }
-                    placeholder="500 (0表示无限制)"
-                    className="h-8 text-xs rounded-xl bg-background"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground">单张图片体积上限 (MB)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={500}
-                    value={quotaSettings.vip_max_size_mb}
-                    onChange={(e) =>
-                      setQuotaSettings({
-                        ...quotaSettings,
-                        vip_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
-                      })
-                    }
-                    className="h-8 text-xs rounded-xl bg-background"
-                  />
-                </div>
+            {/* System-Level Naming & Image Preprocessing Rules */}
+            <div className="pt-4 border-t border-border/60 space-y-4">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-primary" />
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  系统级重命名与图片处理全局策略 (System-Level Policy)
+                </h4>
               </div>
 
-              <p className="text-[10px] text-amber-700 dark:text-amber-300 pt-2 border-t border-amber-500/20">
-                已预留 VIP 账号标记与权限通道，管理员可在用户列表中直接指派。
-              </p>
-            </div>
-          </div>
-
-          {/* System-Level Naming & Image Preprocessing Rules */}
-          <div className="pt-4 border-t border-border/60 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-primary" />
-              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                系统级重命名与图片处理全局策略 (System-Level Policy)
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">系统重命名策略</label>
-                <div className="mt-1">
+              <FieldGroup className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="sys-naming-rule">系统重命名策略</FieldLabel>
                   <Select
                     value={quotaSettings.naming_rule || 'timestamp'}
                     onValueChange={(val: any) => {
@@ -471,7 +502,7 @@ export const AdminSettingsPage: React.FC = () => {
                       setSettings({ ...settings, namingRule: val });
                     }}
                   >
-                    <SelectTrigger className="w-full text-xs h-9 rounded-xl">
+                    <SelectTrigger id="sys-naming-rule" className="w-full text-xs h-9 rounded-xl">
                       <SelectValue placeholder="命名规则" />
                     </SelectTrigger>
                     <SelectContent>
@@ -481,14 +512,13 @@ export const AdminSettingsPage: React.FC = () => {
                       <SelectItem value="custom">自定义前缀格式 (Custom Prefix)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
+                </Field>
 
-              {quotaSettings.naming_rule === 'custom' && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">自定义前缀 (Custom Prefix)</label>
-                  <div className="mt-1">
+                {quotaSettings.naming_rule === 'custom' && (
+                  <Field>
+                    <FieldLabel htmlFor="sys-custom-prefix">自定义前缀 (Custom Prefix)</FieldLabel>
                     <Input
+                      id="sys-custom-prefix"
                       type="text"
                       placeholder="e.g. pic_"
                       value={quotaSettings.custom_prefix || ''}
@@ -497,18 +527,16 @@ export const AdminSettingsPage: React.FC = () => {
                       }
                       className="h-9 text-xs rounded-xl"
                     />
-                  </div>
-                </div>
-              )}
+                  </Field>
+                )}
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground">默认上传归属相册</label>
-                <div className="mt-1">
+                <Field>
+                  <FieldLabel htmlFor="sys-default-album">默认上传归属相册</FieldLabel>
                   <Select
                     value={settings.defaultAlbumId || 'default'}
                     onValueChange={(val) => setSettings({ ...settings, defaultAlbumId: val })}
                   >
-                    <SelectTrigger className="w-full text-xs h-9 rounded-xl">
+                    <SelectTrigger id="sys-default-album" className="w-full text-xs h-9 rounded-xl">
                       <SelectValue placeholder="选择相册" />
                     </SelectTrigger>
                     <SelectContent>
@@ -519,50 +547,50 @@ export const AdminSettingsPage: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </Field>
+              </FieldGroup>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground">自动压缩大图体积</p>
+                    <p className="text-[11px] text-muted-foreground">上传时自动无损压缩，优化外链速度</p>
+                  </div>
+                  <Switch
+                    checked={settings.autoCompress}
+                    onCheckedChange={(checked) => {
+                      setSettings({ ...settings, autoCompress: checked });
+                      setQuotaSettings({ ...quotaSettings, auto_compress: checked });
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground">自动转换为 WebP 格式</p>
+                    <p className="text-[11px] text-muted-foreground">大幅减小体积，兼顾透明通道与画质</p>
+                  </div>
+                  <Switch
+                    checked={settings.convertToWebP}
+                    onCheckedChange={(checked) => {
+                      setSettings({ ...settings, convertToWebP: checked });
+                      setQuotaSettings({ ...quotaSettings, convert_to_webp: checked });
+                    }}
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-foreground">自动压缩大图体积</p>
-                  <p className="text-[11px] text-muted-foreground">上传时自动无损压缩，优化外链速度</p>
-                </div>
-                <Switch
-                  checked={settings.autoCompress}
-                  onCheckedChange={(checked) => {
-                    setSettings({ ...settings, autoCompress: checked });
-                    setQuotaSettings({ ...quotaSettings, auto_compress: checked });
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-foreground">自动转换为 WebP 格式</p>
-                  <p className="text-[11px] text-muted-foreground">大幅减小体积，兼顾透明通道与画质</p>
-                </div>
-                <Switch
-                  checked={settings.convertToWebP}
-                  onCheckedChange={(checked) => {
-                    setSettings({ ...settings, convertToWebP: checked });
-                    setQuotaSettings({ ...quotaSettings, convert_to_webp: checked });
-                  }}
-                />
-              </div>
+            <div className="flex justify-end pt-3 border-t border-border/60">
+              <Button
+                type="submit"
+                size="sm"
+                className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
+              >
+                保存全局限制与策略
+              </Button>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-3 border-t border-border/60">
-            <Button
-              type="submit"
-              size="sm"
-              className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
-            >
-              保存全局限制与策略
-            </Button>
-          </div>
+          </FieldSet>
         </form>
       </div>
 
