@@ -688,11 +688,6 @@ function WanPicturesApp({ initialTab = 'workspace' }: WanPicturesAppProps) {
               albums={albums}
               selectedAlbumId={uploadTargetAlbumId}
               onAlbumChange={setUploadTargetAlbumId}
-              settings={settings}
-              onSettingsChange={(newSettings) => {
-                setSettings(newSettings);
-                dbService.saveSettings(newSettings);
-              }}
             />
 
             {/* Gallery Library Section */}

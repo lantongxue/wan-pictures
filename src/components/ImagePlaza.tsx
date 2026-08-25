@@ -75,7 +75,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string>('all');
   const [selectedColor, setSelectedColor] = useState<ColorToneFilter>('all');
   const [minWidth, setMinWidth] = useState<number | undefined>(undefined);
   const [maxWidth, setMaxWidth] = useState<number | undefined>(undefined);
@@ -133,11 +132,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   // Filtered & Sorted Images for Plaza
   const plazaImages = useMemo(() => {
     let result = [...images];
-
-    // Filter by Album
-    if (selectedAlbumId !== 'all') {
-      result = result.filter((img) => img.albumId === selectedAlbumId);
-    }
 
     // Filter by Tag
     if (selectedTag !== 'all') {
@@ -215,7 +209,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     });
 
     return result;
-  }, [images, selectedAlbumId, selectedTag, selectedColor, minWidth, maxWidth, minHeight, maxHeight, aspectRatioFilter, searchQuery, sortBy]);
+  }, [images, selectedTag, selectedColor, minWidth, maxWidth, minHeight, maxHeight, aspectRatioFilter, searchQuery, sortBy]);
 
   const handleCopyLink = async (img: ImageItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -253,7 +247,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedTag('all');
-    setSelectedAlbumId('all');
     setSelectedColor('all');
     setMinWidth(undefined);
     setMaxWidth(undefined);
@@ -318,51 +311,28 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
           </div>
 
           {/* Plaza Interactive Control Bar */}
-          <div className="mt-8 pt-6 border-t border-border/60 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <Input
-                id="plaza-search-input"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('plaza.searchPlaceholder')}
-                className="pl-9 pr-8 rounded-full border-border/80 bg-background/60 focus-visible:bg-background h-9 text-xs"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Right Controls: Sort & Column Density */}
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Album Category Selector */}
-              <div className="w-36 sm:w-40">
-                <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
-                  <SelectTrigger className="h-8 rounded-full text-xs font-normal">
-                    <SelectValue placeholder={t('common.all')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('plaza.allCategories', { count: images.length })}</SelectItem>
-                    {albums.map((alb) => (
-                      <SelectItem key={alb.id} value={alb.id}>
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{ backgroundColor: alb.color }}
-                          />
-                          <span>{alb.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="mt-8 pt-6 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Left Filter Controls */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search Input */}
+              <div className="relative w-full sm:w-72 md:w-80">
+                <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="plaza-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('plaza.searchPlaceholder')}
+                  className="pl-9 pr-8 rounded-full border-border/80 bg-background/60 focus-visible:bg-background h-8 text-xs"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {/* Dimension Filter Popover */}
@@ -384,7 +354,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
               />
 
               {/* Sort Order Selector */}
-              <div className="w-40 sm:w-44">
+              <div className="w-36 sm:w-40">
                 <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
                   <SelectTrigger className="h-8 rounded-full text-xs font-normal">
                     <SelectValue />
@@ -398,69 +368,69 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              {/* Column Density Controls */}
-              <div className="hidden sm:flex items-center gap-1 p-1 rounded-full border border-border/80 bg-background/70">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      id="plaza-col-2"
-                      onClick={() => setColumnCount(2)}
-                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
-                        columnCount === 2 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      2
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('plaza.col2')}</TooltipContent>
-                </Tooltip>
+            {/* Right Controls: Column Density */}
+            <div className="hidden sm:flex items-center gap-1 p-1 rounded-full border border-border/80 bg-background/70 shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    id="plaza-col-2"
+                    onClick={() => setColumnCount(2)}
+                    className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                      columnCount === 2 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    2
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('plaza.col2')}</TooltipContent>
+              </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      id="plaza-col-3"
-                      onClick={() => setColumnCount(3)}
-                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
-                        columnCount === 3 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      3
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('plaza.col3')}</TooltipContent>
-                </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    id="plaza-col-3"
+                    onClick={() => setColumnCount(3)}
+                    className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                      columnCount === 3 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    3
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('plaza.col3')}</TooltipContent>
+              </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      id="plaza-col-4"
-                      onClick={() => setColumnCount(4)}
-                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
-                        columnCount === 4 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      4
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('plaza.col4')}</TooltipContent>
-                </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    id="plaza-col-4"
+                    onClick={() => setColumnCount(4)}
+                    className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                      columnCount === 4 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    4
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('plaza.col4')}</TooltipContent>
+              </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      id="plaza-col-5"
-                      onClick={() => setColumnCount(5)}
-                      className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
-                        columnCount === 5 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      5
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('plaza.col5')}</TooltipContent>
-                </Tooltip>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    id="plaza-col-5"
+                    onClick={() => setColumnCount(5)}
+                    className={`px-2 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                      columnCount === 5 ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    5
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('plaza.col5')}</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
@@ -525,7 +495,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
               </button>
             ))}
 
-            {(selectedTag !== 'all' || selectedColor !== 'all' || selectedAlbumId !== 'all' || searchQuery || minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
+            {(selectedTag !== 'all' || selectedColor !== 'all' || searchQuery || minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
               <button
                 onClick={handleResetFilters}
                 className="ml-auto text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"

@@ -4,16 +4,13 @@ import {
   UploadCloud,
   Layers,
   Sparkles,
-  Sliders,
   Globe,
 } from 'lucide-react';
-import { Album, UploadSettings } from '../types';
+import { Album } from '../types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Switch } from './ui/switch';
-import { Slider } from './ui/slider';
 import {
   Select,
   SelectContent,
@@ -36,8 +33,6 @@ interface UploadHeroProps {
   albums: Album[];
   selectedAlbumId: string;
   onAlbumChange: (albumId: string) => void;
-  settings: UploadSettings;
-  onSettingsChange: (settings: UploadSettings) => void;
 }
 
 export const UploadHero: React.FC<UploadHeroProps> = ({
@@ -46,14 +41,11 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
   albums,
   selectedAlbumId,
   onAlbumChange,
-  settings,
-  onSettingsChange,
 }) => {
   const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState('');
-  const [showOptions, setShowOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -236,104 +228,8 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
               <Globe className="w-3.5 h-3.5 text-primary" />
               <span>{t('hero.importUrl')}</span>
             </Button>
-
-            <Button
-              id="toggle-upload-options-btn"
-              type="button"
-              variant={showOptions ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => setShowOptions(!showOptions)}
-              className="rounded-full gap-1.5 cursor-pointer"
-            >
-              <Sliders className="w-3.5 h-3.5 text-amber-500" />
-              <span>{t('hero.preprocessStrategy')}</span>
-            </Button>
           </div>
         </div>
-
-        {/* Collapsible Upload Pre-processing Options */}
-        {showOptions && (
-          <div className="w-full mt-4 p-5 rounded-2xl border border-border/80 bg-muted/30 text-left grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs animate-in fade-in-50 duration-200">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="opt-auto-compress" className="cursor-pointer font-medium">
-                  {t('hero.autoCompress')}
-                </Label>
-                <Switch
-                  id="opt-auto-compress"
-                  checked={settings.autoCompress}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, autoCompress: checked })
-                  }
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {t('hero.autoCompressDesc')}
-              </p>
-              {settings.autoCompress && (
-                <div className="pt-2 space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>{t('hero.compressQuality')}</span>
-                    <span className="text-foreground font-semibold">
-                      {Math.round(settings.compressQuality * 100)}%
-                    </span>
-                  </div>
-                  <Slider
-                    id="opt-compress-quality"
-                    min={0.4}
-                    max={0.95}
-                    step={0.05}
-                    value={[settings.compressQuality]}
-                    onValueChange={(val) =>
-                      onSettingsChange({ ...settings, compressQuality: val[0] })
-                    }
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="opt-convert-webp" className="cursor-pointer font-medium">
-                  {t('hero.convertToWebp')}
-                </Label>
-                <Switch
-                  id="opt-convert-webp"
-                  checked={settings.convertToWebP}
-                  onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, convertToWebP: checked })
-                  }
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {t('hero.convertToWebpDesc')}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="font-medium text-foreground">{t('hero.namingRule')}</Label>
-              <Select
-                value={settings.namingRule}
-                onValueChange={(val) =>
-                  onSettingsChange({
-                    ...settings,
-                    namingRule: val as UploadSettings['namingRule'],
-                  })
-                }
-              >
-                <SelectTrigger id="opt-naming-rule" className="h-8 rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="original">{t('hero.namingOriginal')}</SelectItem>
-                  <SelectItem value="timestamp">{t('hero.namingTimestamp')}</SelectItem>
-                  <SelectItem value="random">{t('hero.namingRandom')}</SelectItem>
-                  <SelectItem value="custom">{t('hero.namingCustom')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Remote URL Import Dialog */}
