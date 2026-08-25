@@ -36,6 +36,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-i18next": "^17.0.12",
+    "react-router-dom": "^7.18.2",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "vite": "^6.2.3"

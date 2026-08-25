@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
 import {
@@ -43,20 +44,56 @@ import { BatchActionBar } from './components/BatchActionBar';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { UserProfileModal } from './components/UserProfileModal';
-import { AdminPanelModal } from './components/AdminPanelModal';
 import { StorageAuthGuard } from './components/StorageAuthGuard';
 import { ToastContainer } from './components/Toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import { Badge } from './components/ui/badge';
 
-function WanPicturesApp() {
+// Admin System Layout & Sub-pages
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminGuard } from './pages/admin/AdminGuard';
+import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
+import { AdminImagesPage } from './pages/admin/AdminImagesPage';
+import { AdminAlbumsPage } from './pages/admin/AdminAlbumsPage';
+import { AdminTagsPage } from './pages/admin/AdminTagsPage';
+import { AdminStoragePage } from './pages/admin/AdminStoragePage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminLogsPage } from './pages/admin/AdminLogsPage';
+
+interface WanPicturesAppProps {
+  initialTab?: 'workspace' | 'plaza';
+}
+
+function WanPicturesApp({ initialTab = 'workspace' }: WanPicturesAppProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Navigation Tab State
-  const [currentTab, setCurrentTab] = useState<'workspace' | 'plaza'>('workspace');
+  // Navigation Tab State (synced with route)
+  const [currentTab, setCurrentTab] = useState<'workspace' | 'plaza'>(
+    location.pathname === '/plaza' ? 'plaza' : initialTab
+  );
+
+  useEffect(() => {
+    if (location.pathname === '/plaza') {
+      setCurrentTab('plaza');
+    } else if (location.pathname === '/' || location.pathname === '/workspace') {
+      setCurrentTab('workspace');
+    }
+  }, [location.pathname]);
+
+  const handleTabChange = (tab: 'workspace' | 'plaza') => {
+    setCurrentTab(tab);
+    if (tab === 'plaza') {
+      navigate('/plaza');
+    } else {
+      navigate('/');
+    }
+  };
 
   // Database States
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -74,7 +111,6 @@ function WanPicturesApp() {
   const [linkModalImages, setLinkModalImages] = useState<ImageItem[]>([]);
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -108,21 +144,6 @@ function WanPicturesApp() {
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const refreshAllData = useCallback(async () => {
-    try {
-      const [allAlbums, allImages, allSettings] = await Promise.all([
-        dbService.getAllAlbums(),
-        dbService.getAllImages(),
-        dbService.getSettings(),
-      ]);
-      setAlbums(allAlbums);
-      setImages(allImages);
-      setSettings(allSettings);
-    } catch (e) {
-      console.error('Failed to refresh data', e);
-    }
   }, []);
 
   // Initialize DB and load initial data
@@ -586,7 +607,7 @@ function WanPicturesApp() {
       {/* Main Navbar */}
       <Navbar
         currentTab={currentTab}
-        onTabChange={setCurrentTab}
+        onTabChange={handleTabChange}
         totalImagesCount={images.length}
         totalStorageBytes={totalStorageBytes}
         albums={albums}
@@ -617,7 +638,7 @@ function WanPicturesApp() {
           setIsAlbumModalOpen(true);
         }}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenAdmin={() => setIsAdminModalOpen(true)}
+        onOpenAdmin={() => navigate('/admin')}
         onOpenAuth={(mode = 'login') => {
           setAuthModalMode(mode);
           setIsAuthModalOpen(true);
@@ -654,7 +675,7 @@ function WanPicturesApp() {
               setAuthModalMode(mode);
               setIsAuthModalOpen(true);
             }}
-            onGoToPlaza={() => setCurrentTab('plaza')}
+            onGoToPlaza={() => handleTabChange('plaza')}
             onShowToast={showToast}
           />
         ) : (
@@ -732,7 +753,7 @@ function WanPicturesApp() {
             <span>— {t('common.appSubtitle')}</span>
           </div>
           <p className={isDark ? 'text-white/30' : 'text-neutral-400'}>
-            Drag & Drop Upload · Clipboard Paste · Auto Link Generator · Light/Dark Theme · High-speed Storage
+            Drag & Drop Upload · Clipboard Paste · Auto Link Generator · Light/Dark Theme · Multi-Cloud Storage
           </p>
         </div>
       </footer>
@@ -846,14 +867,6 @@ function WanPicturesApp() {
         onClose={() => setIsProfileModalOpen(false)}
         onShowToast={showToast}
       />
-
-      {/* Admin Management Center (CRUD Images, Tags, Albums, S3/WebDAV Storage Drivers) */}
-      <AdminPanelModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-        onShowToast={showToast}
-        onRefreshData={refreshAllData}
-      />
     </div>
   );
 }
@@ -862,7 +875,32 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <WanPicturesApp />
+        <BrowserRouter>
+          <Routes>
+            {/* Front-End Routes */}
+            <Route path="/" element={<WanPicturesApp initialTab="workspace" />} />
+            <Route path="/workspace" element={<WanPicturesApp initialTab="workspace" />} />
+            <Route path="/plaza" element={<WanPicturesApp initialTab="plaza" />} />
+
+            {/* Independent Admin Management System */}
+            <Route path="/admin" element={<AdminGuard />}>
+              <Route element={<AdminLayout />}>
+                <Route index element={<Navigate to="/admin/overview" replace />} />
+                <Route path="overview" element={<AdminOverviewPage />} />
+                <Route path="images" element={<AdminImagesPage />} />
+                <Route path="albums" element={<AdminAlbumsPage />} />
+                <Route path="tags" element={<AdminTagsPage />} />
+                <Route path="storage" element={<AdminStoragePage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="logs" element={<AdminLogsPage />} />
+              </Route>
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
   );

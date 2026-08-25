@@ -32,6 +32,7 @@ import {
   Palette,
   Zap,
   Users,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   ImageItem,
@@ -74,6 +75,8 @@ interface AdminPanelModalProps {
   onClose: () => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onRefreshData?: () => void;
+  /** 'modal' renders the admin panel as an overlay dialog; 'page' renders it as a full-screen route page */
+  variant?: 'modal' | 'page';
 }
 
 type AdminTab = 'overview' | 'images' | 'tags' | 'albums' | 'storage' | 'users';
@@ -83,7 +86,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onClose,
   onShowToast,
   onRefreshData,
+  variant = 'modal',
 }) => {
+  const isPageVariant = variant === 'page';
   const { user, backendOnline } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [loading, setLoading] = useState(false);
@@ -520,173 +525,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 12 }}
-          transition={{ duration: 0.2 }}
-          className="relative w-full max-w-6xl h-[92vh] max-h-[850px] bg-background border border-border/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-foreground"
-        >
-          {/* Top Header Bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 bg-muted/20 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-black tracking-tight text-foreground">
-                    万图管理中心 (Wan Pictures Admin)
-                  </h2>
-                  <Badge variant="default" className="text-[10px] px-2 py-0.5">
-                    CONTROL PLANE
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs text-muted-foreground">
-                    全量资产管理、标签相册与 S3 / WebDAV 多存储引擎调度
-                  </p>
-                  <span className="text-muted-foreground/40">•</span>
-                  <span
-                    className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                      backendOnline ? 'text-emerald-500' : 'text-emerald-500'
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
-                      }`}
-                    />
-                    {backendOnline ? '云端服务在线' : '本地数据模式'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadTabData(activeTab)}
-                disabled={loading}
-                className="rounded-full h-8 px-3 text-xs gap-1.5 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                <span>刷新</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="rounded-full h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Navigation Tabs Bar */}
-          <div className="flex items-center px-6 border-b border-border/80 bg-muted/40 overflow-x-auto no-scrollbar shrink-0 gap-1">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'overview'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>系统概览与指标</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('images')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'images'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4" />
-              <span>图片资产管理</span>
-              {stats && (
-                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
-                  {stats.totalImages}
-                </Badge>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('tags')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'tags'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <TagIcon className="w-4 h-4" />
-              <span>标签归类与合并</span>
-              {stats && (
-                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
-                  {stats.totalTags}
-                </Badge>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('albums')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'albums'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <FolderKanban className="w-4 h-4" />
-              <span>相册空间管理</span>
-              {stats && (
-                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
-                  {stats.totalAlbums}
-                </Badge>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('storage')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'storage'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <HardDrive className="w-4 h-4" />
-              <span>存储引擎配置 (S3 / WebDAV)</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'users'
-                  ? 'border-primary text-primary bg-background/50'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Users className="w-4 h-4 text-indigo-500" />
-              <span>用户权限管理</span>
-              <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono bg-indigo-500/10 text-indigo-500">
-                {userCount}
-              </Badge>
-            </button>
-          </div>
-
-          {/* Main Tab Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* TAB 1: OVERVIEW */}
+    const renderTabContent = () => (
+    <>
+      {/* TAB 1: OVERVIEW */}
             {activeTab === 'overview' && stats && (
               <div className="space-y-6">
                 {/* Metric Summary Cards */}
@@ -2021,9 +1862,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 onUserCountChange={(count) => setUserCount(count)}
               />
             )}
-          </div>
+    </>
+  );
 
-          {/* Edit Image Modal Sub-Dialog */}
+  const renderDialogs = () => (
+    <>
+      {/* Edit Image Modal Sub-Dialog */}
           <Dialog open={!!editingImage} onOpenChange={(open) => !open && setEditingImage(null)}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -2418,6 +2262,332 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+    </>
+  );
+
+  if (!isOpen && !isPageVariant) return null;
+
+  // For page variant, use a full-page layout instead of the modal overlay
+  if (isPageVariant) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 bg-muted/20 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black tracking-tight text-foreground">
+                  万图管理中心 (Wan Pictures Admin)
+                </h2>
+                <Badge variant="default" className="text-[10px] px-2 py-0.5">
+                  CONTROL PLANE
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-muted-foreground">
+                  全量资产管理、标签相册与 S3 / WebDAV 多存储引擎调度
+                </p>
+                <span className="text-muted-foreground/40">•</span>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${backendOnline ? "text-emerald-500" : "text-emerald-500"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500" : "bg-emerald-500"}`} />
+                  {backendOnline ? "云端服务在线" : "本地数据模式"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadTabData(activeTab)}
+              disabled={loading}
+              className="rounded-full h-8 px-3 text-xs gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span>刷新</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="rounded-full h-8 px-3 text-xs gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>返回</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Navigation Tabs Bar */}
+        <div className="flex items-center px-6 border-b border-border/80 bg-muted/40 overflow-x-auto no-scrollbar shrink-0 gap-1">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "overview"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>系统概览与指标</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("images")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "images"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>图片资产管理</span>
+            {stats && (
+              <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                {stats.totalImages}
+              </Badge>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("tags")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "tags"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <TagIcon className="w-4 h-4" />
+            <span>标签归类与合并</span>
+            {stats && (
+              <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                {stats.totalTags}
+              </Badge>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("albums")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "albums"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FolderKanban className="w-4 h-4" />
+            <span>相册空间管理</span>
+            {stats && (
+              <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                {stats.totalAlbums}
+              </Badge>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("storage")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "storage"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <HardDrive className="w-4 h-4" />
+            <span>存储引擎配置 (S3 / WebDAV)</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "users"
+                ? "border-primary text-primary bg-background/50"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="w-4 h-4 text-indigo-500" />
+            <span>用户权限管理</span>
+            <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono bg-indigo-500/10 text-indigo-500">
+              {userCount}
+            </Badge>
+          </button>
+        </div>
+
+        {/* Main Tab Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {renderTabContent()}
+        </div>
+
+        {/* Sub-dialogs */}
+        {renderDialogs()}
+      </div>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ duration: 0.2 }}
+          className="relative w-full max-w-6xl h-[92vh] max-h-[850px] bg-background border border-border/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-foreground"
+        >
+          {/* Top Header Bar */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border/80 bg-muted/20 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-black tracking-tight text-foreground">
+                    万图管理中心 (Wan Pictures Admin)
+                  </h2>
+                  <Badge variant="default" className="text-[10px] px-2 py-0.5">
+                    CONTROL PLANE
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-muted-foreground">
+                    全量资产管理、标签相册与 S3 / WebDAV 多存储引擎调度
+                  </p>
+                  <span className="text-muted-foreground/40">•</span>
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${backendOnline ? "text-emerald-500" : "text-emerald-500"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${backendOnline ? "bg-emerald-500" : "bg-emerald-500"}`} />
+                    {backendOnline ? "云端服务在线" : "本地数据模式"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadTabData(activeTab)}
+                disabled={loading}
+                className="rounded-full h-8 px-3 text-xs gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <span>刷新</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="rounded-full h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Navigation Tabs Bar */}
+          <div className="flex items-center px-6 border-b border-border/80 bg-muted/40 overflow-x-auto no-scrollbar shrink-0 gap-1">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>系统概览与指标</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("images")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "images"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ImageIcon className="w-4 h-4" />
+              <span>图片资产管理</span>
+              {stats && (
+                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                  {stats.totalImages}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("tags")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "tags"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <TagIcon className="w-4 h-4" />
+              <span>标签归类与合并</span>
+              {stats && (
+                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                  {stats.totalTags}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("albums")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "albums"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FolderKanban className="w-4 h-4" />
+              <span>相册空间管理</span>
+              {stats && (
+                <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono">
+                  {stats.totalAlbums}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("storage")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "storage"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <HardDrive className="w-4 h-4" />
+              <span>存储引擎配置 (S3 / WebDAV)</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "users"
+                  ? "border-primary text-primary bg-background/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="w-4 h-4 text-indigo-500" />
+              <span>用户权限管理</span>
+              <Badge variant="subtle" className="text-[10px] px-1.5 py-0 font-mono bg-indigo-500/10 text-indigo-500">
+                {userCount}
+              </Badge>
+            </button>
+          </div>
+
+          {/* Main Tab Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {renderTabContent()}
+          </div>
+
+          {/* Sub-dialogs */}
+          {renderDialogs()}
         </motion.div>
       </div>
     </AnimatePresence>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -58,7 +59,7 @@ interface NavbarProps {
   onOpenUpload: () => void;
   onOpenAlbums: () => void;
   onOpenSettings: () => void;
-  onOpenAdmin: () => void;
+  onOpenAdmin?: () => void;
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onOpenProfile: () => void;
   onShowToast?: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
@@ -80,6 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
   onShowToast,
 }) => {
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, backendOnline, logout } = useAuth();
@@ -168,31 +170,49 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   id="nav-tab-plaza"
                   onClick={() => onTabChange('plaza')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                  className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
                     currentTab === 'plaza'
-                      ? 'bg-background text-foreground shadow-xs'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <Compass className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{t('nav.plaza')}</span>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+                  {currentTab === 'plaza' && (
+                    <motion.span
+                      layoutId="nav-tab-indicator"
+                      className="absolute inset-0 rounded-full bg-background shadow-xs"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{t('nav.plaza')}</span>
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+                    </span>
                   </span>
                 </button>
 
                 <button
                   id="nav-tab-workspace"
                   onClick={() => onTabChange('workspace')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                  className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
                     currentTab === 'workspace'
-                      ? 'bg-background text-foreground shadow-xs'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <Upload className="w-3.5 h-3.5 text-primary" />
-                  <span>{t('nav.workspace')}</span>
+                  {currentTab === 'workspace' && (
+                    <motion.span
+                      layoutId="nav-tab-indicator"
+                      className="absolute inset-0 rounded-full bg-background shadow-xs"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-primary" />
+                    <span>{t('nav.workspace')}</span>
+                  </span>
                 </button>
               </div>
             </div>
@@ -376,7 +396,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                         <DropdownMenuItem
                           id="dropdown-item-admin"
-                          onClick={onOpenAdmin}
+                          onClick={() => {
+                            if (onOpenAdmin) onOpenAdmin();
+                            else navigate('/admin');
+                          }}
                           className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer"
                         >
                           <Shield className="w-4 h-4 text-primary shrink-0" />
@@ -623,40 +646,67 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   id="view-mode-masonry"
                   onClick={() => onFilterChange({ viewMode: 'masonry' })}
-                  className={`p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
+                  className={`relative p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
                     filters.viewMode === 'masonry'
-                      ? 'bg-background text-foreground shadow-xs'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                   aria-label={t('gallery.viewMasonry')}
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  {filters.viewMode === 'masonry' && (
+                    <motion.span
+                      layoutId="view-mode-indicator"
+                      className="absolute inset-0 rounded-full bg-background shadow-xs"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex">
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </span>
                 </button>
 
                 <button
                   id="view-mode-grid"
                   onClick={() => onFilterChange({ viewMode: 'grid' })}
-                  className={`p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
+                  className={`relative p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
                     filters.viewMode === 'grid'
-                      ? 'bg-background text-foreground shadow-xs'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                   aria-label={t('gallery.viewGrid')}
                 >
-                  <Grid2X2 className="w-3.5 h-3.5" />
+                  {filters.viewMode === 'grid' && (
+                    <motion.span
+                      layoutId="view-mode-indicator"
+                      className="absolute inset-0 rounded-full bg-background shadow-xs"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex">
+                    <Grid2X2 className="w-3.5 h-3.5" />
+                  </span>
                 </button>
 
                 <button
                   id="view-mode-list"
                   onClick={() => onFilterChange({ viewMode: 'list' })}
-                  className={`p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
+                  className={`relative p-1.5 rounded-full text-xs transition-colors cursor-pointer ${
                     filters.viewMode === 'list'
-                      ? 'bg-background text-foreground shadow-xs'
+                      ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                   aria-label={t('gallery.viewList')}
                 >
-                  <List className="w-3.5 h-3.5" />
+                  {filters.viewMode === 'list' && (
+                    <motion.span
+                      layoutId="view-mode-indicator"
+                      className="absolute inset-0 rounded-full bg-background shadow-xs"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex">
+                    <List className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               </div>
             </div>
@@ -814,7 +864,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      onOpenAdmin();
+                      if (onOpenAdmin) onOpenAdmin();
+                      else navigate('/admin');
                     }}
                     className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-primary/10 hover:bg-primary/15 border border-primary/30 text-primary transition-colors cursor-pointer"
                   >
