@@ -147,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2 sm:gap-5 shrink-0">
               <div
                 onClick={() => {
-                  onTabChange('workspace');
+                  onTabChange('plaza');
                   setIsMobileMenuOpen(false);
                 }}
                 className="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none"

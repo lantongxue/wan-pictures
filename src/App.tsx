@@ -28,11 +28,11 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* User Front-End Routes */}
+            {/* User Front-End Routes: Default root route is Image Plaza */}
             <Route path="/" element={<UserLayout />}>
-              <Route index element={<UserWorkspacePage />} />
-              <Route path="workspace" element={<UserWorkspacePage />} />
+              <Route index element={<UserPlazaPage />} />
               <Route path="plaza" element={<UserPlazaPage />} />
+              <Route path="workspace" element={<UserWorkspacePage />} />
             </Route>
 
             {/* Independent Admin Management System */}

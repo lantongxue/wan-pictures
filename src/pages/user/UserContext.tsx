@@ -102,13 +102,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Navigation Tab State (synced with route)
-  const currentTab: 'workspace' | 'plaza' = location.pathname.startsWith('/plaza') ? 'plaza' : 'workspace';
+  // Navigation Tab State (synced with route: default is plaza)
+  const currentTab: 'workspace' | 'plaza' = location.pathname.startsWith('/workspace') ? 'workspace' : 'plaza';
 
   const handleTabChange = useCallback(
     (tab: 'workspace' | 'plaza') => {
-      if (tab === 'plaza') {
-        navigate('/plaza');
+      if (tab === 'workspace') {
+        navigate('/workspace');
       } else {
         navigate('/');
       }
