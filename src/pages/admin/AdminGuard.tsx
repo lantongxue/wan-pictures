@@ -29,7 +29,7 @@ export const AdminGuard: React.FC = () => {
     setLoginLoading(true);
     setLoginError('');
     try {
-      const res = await login(account.trim(), password);
+      const res = await login({ account: account.trim(), password });
       if (!res.success) {
         setLoginError(res.message || '登录失败，请检查账号密码');
       }
@@ -190,7 +190,7 @@ export const AdminGuard: React.FC = () => {
             <Button
               onClick={() => {
                 // Logout and return to admin login screen
-                login('admin', 'password123');
+                login({ account: 'admin', password: 'password123' });
               }}
               className="w-full sm:flex-1 h-9 rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground"
             >

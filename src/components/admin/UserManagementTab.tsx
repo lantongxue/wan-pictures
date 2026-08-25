@@ -201,7 +201,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     setEditForm({
       email: u.email,
       nickname: u.nickname || u.username,
-      role: u.role,
+      role: (u.role === 'admin' || u.role === 'vip' ? u.role : 'user') as 'admin' | 'user' | 'vip',
       avatar: u.avatar || '',
       bio: u.bio || '',
     });
