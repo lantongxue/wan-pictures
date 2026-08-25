@@ -92,6 +92,7 @@ export interface StorageConfigItem {
   id: number;
   driver: StorageDriverType;
   name: string;
+  isEnabled?: boolean;
   isActive: boolean;
   config: LocalStorageConfig | S3Config | WebDAVConfig | Record<string, any>;
   createdAt?: string;
@@ -111,6 +112,32 @@ export interface StorageTestResult {
   rootPath?: string;
   storagePath?: string;
   previewSamplePath?: string;
+}
+
+export interface UploadQuotaSettings {
+  allow_anonymous: boolean;
+  anonymous_daily_limit: number;
+  anonymous_max_size_mb: number;
+  free_user_daily_limit: number;
+  free_user_max_size_mb: number;
+  vip_daily_limit: number;
+  vip_max_size_mb: number;
+  naming_rule: 'original' | 'timestamp' | 'random' | 'custom';
+  custom_prefix?: string;
+  auto_compress?: boolean;
+  compress_quality?: number;
+  convert_to_webp?: boolean;
+}
+
+export interface UploadQuotaInfo {
+  role: 'anonymous' | 'user' | 'vip' | 'admin' | string;
+  daily_limit: number;
+  today_used: number;
+  remaining_today: number;
+  single_max_size_mb: number;
+  single_max_size_bytes: number;
+  allow_anonymous: boolean;
+  naming_rule: string;
 }
 
 export interface AdminOverviewStats {
@@ -139,6 +166,7 @@ export interface UploadQueueItem {
   type: string;
   progress: number;
   status: 'pending' | 'processing' | 'done' | 'error';
+  isInstant?: boolean;
   error?: string;
   resultItem?: ImageItem;
   width?: number;
@@ -197,7 +225,7 @@ export interface User {
   email: string;
   nickname: string;
   avatar: string;
-  role: 'user' | 'admin' | string;
+  role: 'user' | 'admin' | 'vip' | string;
   bio?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -216,7 +244,7 @@ export interface CreateUserPayload {
   password: string;
   nickname?: string;
   avatar?: string;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'admin' | 'vip';
   bio?: string;
 }
 
@@ -224,7 +252,7 @@ export interface UpdateUserPayload {
   email?: string;
   nickname?: string;
   avatar?: string;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'admin' | 'vip';
   bio?: string;
   password?: string;
 }

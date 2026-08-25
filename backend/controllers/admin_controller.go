@@ -306,11 +306,11 @@ func (ctrl *AdminController) UpdateImage(c *gin.Context) {
 	c.JSON(http.StatusOK, models.SuccessResponse(img, "Image updated successfully"))
 }
 
-// DeleteImage deletes a single image
+// DeleteImage deletes a single image using reference counting safe deletion
 // DELETE /api/v1/admin/images/:id
 func (ctrl *AdminController) DeleteImage(c *gin.Context) {
 	id := c.Param("id")
-	if err := database.DB.Where("id = ?", id).Delete(&models.Image{}).Error; err != nil {
+	if err := DeleteImageWithRefCount(id); err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
@@ -328,9 +328,8 @@ func (ctrl *AdminController) BatchImageAction(c *gin.Context) {
 
 	switch req.Action {
 	case "delete":
-		if err := database.DB.Where("id IN ?", req.IDs).Delete(&models.Image{}).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, err.Error()))
-			return
+		for _, imgID := range req.IDs {
+			_ = DeleteImageWithRefCount(imgID)
 		}
 		c.JSON(http.StatusOK, models.SuccessResponse(gin.H{"deleted_count": len(req.IDs)}, "Batch deleted successfully"))
 
@@ -707,6 +706,7 @@ func (ctrl *AdminController) GetStorageConfigs(c *gin.Context) {
 		ID        uint                 `json:"id"`
 		Driver    models.StorageDriver `json:"driver"`
 		Name      string               `json:"name"`
+		IsEnabled bool                 `json:"is_enabled"`
 		IsActive  bool                 `json:"is_active"`
 		Config    interface{}          `json:"config"`
 		CreatedAt time.Time            `json:"created_at"`
@@ -740,6 +740,7 @@ func (ctrl *AdminController) GetStorageConfigs(c *gin.Context) {
 			ID:        cfg.ID,
 			Driver:    cfg.Driver,
 			Name:      cfg.Name,
+			IsEnabled: cfg.IsEnabled,
 			IsActive:  cfg.IsActive,
 			Config:    parsedConfig,
 			CreatedAt: cfg.CreatedAt,
@@ -770,6 +771,7 @@ func (ctrl *AdminController) SaveStorageConfig(c *gin.Context) {
 	if err == nil {
 		// Update existing
 		existing.Name = req.Name
+		existing.IsEnabled = req.IsEnabled
 		existing.IsActive = req.IsActive
 		existing.ConfigJSON = req.ConfigJSON
 		existing.UpdatedAt = time.Now()
@@ -780,6 +782,7 @@ func (ctrl *AdminController) SaveStorageConfig(c *gin.Context) {
 		newCfg := models.StorageConfig{
 			Driver:     req.Driver,
 			Name:       req.Name,
+			IsEnabled:  req.IsEnabled,
 			IsActive:   req.IsActive,
 			ConfigJSON: req.ConfigJSON,
 			CreatedAt:  time.Now(),
@@ -799,17 +802,95 @@ func (ctrl *AdminController) SetActiveStorage(c *gin.Context) {
 		return
 	}
 
-	// Deactivate all
-	database.DB.Model(&models.StorageConfig{}).Where("1 = 1").Update("is_active", false)
-
-	// Activate target driver
-	res := database.DB.Model(&models.StorageConfig{}).Where("driver = ?", req.Driver).Update("is_active", true)
-	if res.RowsAffected == 0 {
+	var target models.StorageConfig
+	if err := database.DB.Where("driver = ?", req.Driver).First(&target).Error; err != nil {
 		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Storage driver config not found"))
 		return
 	}
 
+	if !target.IsEnabled {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "无法将已禁用的存储引擎设为主存储，请先启用该引擎"))
+		return
+	}
+
+	// Deactivate all
+	database.DB.Model(&models.StorageConfig{}).Where("1 = 1").Update("is_active", false)
+
+	// Activate target driver
+	database.DB.Model(&models.StorageConfig{}).Where("driver = ?", req.Driver).Update("is_active", true)
+
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{"active_driver": req.Driver}, "Active storage switched successfully"))
+}
+
+// ToggleStorageEnabled enables or disables a storage driver
+// POST /api/v1/admin/storage/toggle
+func (ctrl *AdminController) ToggleStorageEnabled(c *gin.Context) {
+	var req models.ToggleStorageEnabledRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	var target models.StorageConfig
+	if err := database.DB.Where("driver = ?", req.Driver).First(&target).Error; err != nil {
+		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Storage driver config not found"))
+		return
+	}
+
+	target.IsEnabled = req.IsEnabled
+	if !req.IsEnabled && target.IsActive {
+		// If disabling currently active driver, switch active to local
+		target.IsActive = false
+		database.DB.Model(&models.StorageConfig{}).Where("driver = ?", models.StorageDriverLocal).Update("is_active", true)
+	}
+	target.UpdatedAt = time.Now()
+	database.DB.Save(&target)
+
+	actionText := "已启用"
+	if !req.IsEnabled {
+		actionText = "已禁用"
+	}
+	c.JSON(http.StatusOK, models.SuccessResponse(target, fmt.Sprintf("存储引擎 %s %s", req.Driver, actionText)))
+}
+
+// GetQuotaSettings retrieves global upload restrictions and naming policies
+// GET /api/v1/admin/settings/quotas
+func (ctrl *AdminController) GetQuotaSettings(c *gin.Context) {
+	quotas := GetSystemQuotaSettings()
+	c.JSON(http.StatusOK, models.SuccessResponse(quotas))
+}
+
+// UpdateQuotaSettings updates global upload restrictions and naming policies
+// PUT /api/v1/admin/settings/quotas
+func (ctrl *AdminController) UpdateQuotaSettings(c *gin.Context) {
+	var req models.UploadQuotaSettings
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	jsonBytes, err := json.Marshal(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to serialize quota settings: "+err.Error()))
+		return
+	}
+
+	var setting models.SystemSetting
+	err = database.DB.Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").First(&setting).Error
+	if err != nil {
+		setting = models.SystemSetting{
+			Key:       "upload_quotas",
+			Value:     string(jsonBytes),
+			UpdatedAt: time.Now(),
+		}
+		database.DB.Create(&setting)
+	} else {
+		setting.Value = string(jsonBytes)
+		setting.UpdatedAt = time.Now()
+		database.DB.Save(&setting)
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse(req, "全局上传限制与配额策略保存成功"))
 }
 
 // TestStorageConnection tests connectivity for S3 or WebDAV parameters
@@ -1072,7 +1153,7 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 	}
 
 	role := req.Role
-	if role != "admin" && role != "user" {
+	if role != "admin" && role != "user" && role != "vip" {
 		role = "user"
 	}
 
@@ -1161,7 +1242,7 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusForbidden, models.ErrorResponse(http.StatusForbidden, "Cannot demote primary root administrator"))
 			return
 		}
-		if *req.Role == "admin" || *req.Role == "user" {
+		if *req.Role == "admin" || *req.Role == "user" || *req.Role == "vip" {
 			user.Role = *req.Role
 		}
 	}

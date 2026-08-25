@@ -178,7 +178,7 @@ type AdminCreateUserRequest struct {
 	Password string `json:"password" binding:"required,min=6,max=64"`
 	Nickname string `json:"nickname" binding:"omitempty,max=32"`
 	Avatar   string `json:"avatar" binding:"omitempty"`
-	Role     string `json:"role" binding:"omitempty,oneof=user admin"`
+	Role     string `json:"role" binding:"omitempty,oneof=user admin vip"`
 	Bio      string `json:"bio" binding:"omitempty,max=255"`
 }
 
@@ -186,7 +186,7 @@ type AdminUpdateUserRequest struct {
 	Email    *string `json:"email" binding:"omitempty,email"`
 	Nickname *string `json:"nickname" binding:"omitempty,max=32"`
 	Avatar   *string `json:"avatar"`
-	Role     *string `json:"role" binding:"omitempty,oneof=user admin"`
+	Role     *string `json:"role" binding:"omitempty,oneof=user admin vip"`
 	Bio      *string `json:"bio" binding:"omitempty,max=255"`
 	Password *string `json:"password" binding:"omitempty,min=6,max=64"`
 }
@@ -213,6 +213,7 @@ type AdminUserItemResponse struct {
 type SaveStorageConfigRequest struct {
 	Driver     StorageDriver `json:"driver" binding:"required"`
 	Name       string        `json:"name" binding:"required"`
+	IsEnabled  bool          `json:"is_enabled"`
 	IsActive   bool          `json:"is_active"`
 	ConfigJSON string        `json:"config_json" binding:"required"`
 }
@@ -221,8 +222,39 @@ type SetActiveStorageRequest struct {
 	Driver StorageDriver `json:"driver" binding:"required"`
 }
 
+type ToggleStorageEnabledRequest struct {
+	Driver    StorageDriver `json:"driver" binding:"required"`
+	IsEnabled bool          `json:"is_enabled"`
+}
+
 type TestStorageConnectionRequest struct {
 	Driver     StorageDriver `json:"driver" binding:"required"`
 	ConfigJSON string        `json:"config_json" binding:"required"`
 }
+
+// Upload & Instant Deduplication DTOs
+type CheckHashRequest struct {
+	Hash     string `json:"hash" binding:"required,len=64"` // SHA-256
+	Size     int64  `json:"size" binding:"required,gt=0"`
+	Name     string `json:"name"`
+	AlbumID  string `json:"album_id"`
+}
+
+type CheckHashResponse struct {
+	Exists    bool   `json:"exists"`
+	Image     *Image `json:"image,omitempty"`
+	IsInstant bool   `json:"is_instant"`
+}
+
+type UploadQuotaInfo struct {
+	Role               string `json:"role"`                 // "anonymous", "user", "vip", "admin"
+	DailyLimit         int    `json:"daily_limit"`         // Max uploads today (e.g. 20)
+	TodayUsed          int    `json:"today_used"`          // Count uploaded today
+	RemainingToday     int    `json:"remaining_today"`     // Remaining allowed uploads
+	SingleMaxSizeMB    int    `json:"single_max_size_mb"`  // Max MB per image
+	SingleMaxSizeBytes int64  `json:"single_max_size_bytes"`
+	AllowAnonymous     bool   `json:"allow_anonymous"`
+	NamingRule         string `json:"naming_rule"`
+}
+
 

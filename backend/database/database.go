@@ -72,6 +72,9 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.Album{},
 		&models.Tag{},
 		&models.StorageConfig{},
+		&models.FileAsset{},
+		&models.SystemSetting{},
+		&models.UploadLog{},
 	); err != nil {
 		return err
 	}
@@ -81,7 +84,7 @@ func AutoMigrate(db *gorm.DB) error {
 	return nil
 }
 
-// SeedInitialData sets up initial albums, tags, storage configs, and admin user
+// SeedInitialData sets up initial albums, tags, storage configs, system settings, and admin user
 func SeedInitialData(db *gorm.DB) {
 	// 1. Seed Admin User if not exists
 	var userCount int64
@@ -176,6 +179,7 @@ func SeedInitialData(db *gorm.DB) {
 			{
 				Driver:     models.StorageDriverLocal,
 				Name:       "本地存储 (Local Storage)",
+				IsEnabled:  true,
 				IsActive:   true,
 				ConfigJSON: `{"max_size_mb": 50, "storage_path": "./uploads"}`,
 				CreatedAt:  time.Now(),
@@ -184,6 +188,7 @@ func SeedInitialData(db *gorm.DB) {
 			{
 				Driver:     models.StorageDriverS3,
 				Name:       "Amazon S3 / R2 / OSS / COS / MinIO",
+				IsEnabled:  true,
 				IsActive:   false,
 				ConfigJSON: `{"endpoint":"https://s3.us-east-1.amazonaws.com","region":"us-east-1","bucket":"wanpictures-bucket","access_key_id":"","secret_access_key":"","custom_domain":"","path_prefix":"uploads/{year}/{month}/","force_path_style":false,"acl":"public-read"}`,
 				CreatedAt:  time.Now(),
@@ -192,6 +197,7 @@ func SeedInitialData(db *gorm.DB) {
 			{
 				Driver:     models.StorageDriverWebDAV,
 				Name:       "WebDAV 网络存储 (Nextcloud / 坚果云 / Alist)",
+				IsEnabled:  true,
 				IsActive:   false,
 				ConfigJSON: `{"server_url":"https://dav.jianguoyun.com/dav/","username":"","password":"","root_path":"/wanpictures/uploads/","public_proxy":""}`,
 				CreatedAt:  time.Now(),
@@ -201,5 +207,17 @@ func SeedInitialData(db *gorm.DB) {
 		for _, cfg := range defaultConfigs {
 			db.Create(&cfg)
 		}
+	}
+
+	// 5. Seed Default System Upload Quotas & Naming Settings
+	var settingCount int64
+	db.Model(&models.SystemSetting{}).Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").Count(&settingCount)
+	if settingCount == 0 {
+		defaultQuotas := `{"allow_anonymous":true,"anonymous_daily_limit":20,"anonymous_max_size_mb":5,"free_user_daily_limit":50,"free_user_max_size_mb":10,"vip_daily_limit":500,"vip_max_size_mb":50,"naming_rule":"timestamp","custom_prefix":"pic_","auto_compress":false,"compress_quality":85,"convert_to_webp":false}`
+		db.Create(&models.SystemSetting{
+			Key:       "upload_quotas",
+			Value:     defaultQuotas,
+			UpdatedAt: time.Now(),
+		})
 	}
 }

@@ -801,6 +801,7 @@ export const adminApi = {
         id: item.id,
         driver: item.driver,
         name: item.name,
+        isEnabled: item.is_enabled !== false,
         isActive: item.is_active,
         config: item.config || {},
         createdAt: item.created_at,
@@ -824,6 +825,7 @@ export const adminApi = {
       body: JSON.stringify({
         driver: item.driver,
         name: item.name,
+        is_enabled: item.isEnabled !== false,
         is_active: item.isActive,
         config_json: JSON.stringify(item.config),
       }),
@@ -838,12 +840,77 @@ export const adminApi = {
   async setActiveStorage(driver: StorageDriverType): Promise<{ success: boolean; message?: string }> {
     await dbService.setActiveStorage(driver);
 
-    await request('/admin/storage/active', {
+    const res = await request('/admin/storage/active', {
       method: 'POST',
       body: JSON.stringify({ driver }),
     });
 
+    if (res.isBackendOnline && !res.success) {
+      throw new Error(res.message || '切换主存储失败');
+    }
+
     return { success: true, message: `Active storage driver switched to ${driver.toUpperCase()}` };
+  },
+
+  /**
+   * Toggle Enable/Disable for a Storage Engine
+   */
+  async toggleStorageEnabled(driver: StorageDriverType, isEnabled: boolean): Promise<{ success: boolean; message?: string }> {
+    const res = await request<any>('/admin/storage/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ driver, is_enabled: isEnabled }),
+    });
+
+    if (res.isBackendOnline && !res.success) {
+      throw new Error(res.message || '切换存储启用状态失败');
+    }
+
+    return { success: true, message: res.message || '已更新存储状态' };
+  },
+
+  /**
+   * Get System Upload Quota Settings
+   */
+  async getQuotaSettings(): Promise<{ success: boolean; data: any }> {
+    const res = await request<any>('/admin/settings/quotas');
+    if (res.isBackendOnline && res.success && res.data) {
+      return { success: true, data: res.data };
+    }
+
+    // Default fallback
+    return {
+      success: true,
+      data: {
+        allow_anonymous: true,
+        anonymous_daily_limit: 20,
+        anonymous_max_size_mb: 5,
+        free_user_daily_limit: 50,
+        free_user_max_size_mb: 10,
+        vip_daily_limit: 500,
+        vip_max_size_mb: 50,
+        naming_rule: 'timestamp',
+        custom_prefix: 'pic_',
+        auto_compress: false,
+        compress_quality: 85,
+        convert_to_webp: false,
+      },
+    };
+  },
+
+  /**
+   * Save System Upload Quota Settings
+   */
+  async saveQuotaSettings(quotas: any): Promise<{ success: boolean; message?: string }> {
+    const res = await request<any>('/admin/settings/quotas', {
+      method: 'PUT',
+      body: JSON.stringify(quotas),
+    });
+
+    if (res.isBackendOnline && !res.success) {
+      throw new Error(res.message || '保存配额策略失败');
+    }
+
+    return { success: true, message: '全局上传策略已保存' };
   },
 
   /**
@@ -1161,4 +1228,178 @@ export const adminApi = {
     }
   },
 };
+
+/**
+ * Wan Pictures (万图) Upload & Instant Deduplication API Service
+ */
+export const uploadApi = {
+  /**
+   * Fast SHA-256 computation in browser using Web Crypto API
+   */
+  async computeSHA256(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  },
+
+  /**
+   * Preflight Instant Upload Check (秒传预检)
+   */
+  async checkHash(payload: {
+    hash: string;
+    size: number;
+    name?: string;
+    albumId?: string;
+  }): Promise<{ success: boolean; exists: boolean; isInstant?: boolean; image?: ImageItem; message?: string }> {
+    const res = await request<any>('/upload/check-hash', {
+      method: 'POST',
+      body: JSON.stringify({
+        hash: payload.hash,
+        size: payload.size,
+        name: payload.name || '',
+        album_id: payload.albumId || 'default',
+      }),
+    });
+
+    if (res.isBackendOnline) {
+      if (res.success && res.data) {
+        const d = res.data;
+        if (d.exists && d.image) {
+          const img: ImageItem = {
+            id: d.image.id,
+            name: d.image.name,
+            originalName: d.image.original_name || d.image.name,
+            size: d.image.size,
+            type: d.image.type,
+            extension: d.image.extension,
+            width: d.image.width,
+            height: d.image.height,
+            aspectRatio: d.image.aspect_ratio,
+            dataUrl: d.image.data_url || d.image.url,
+            url: d.image.url,
+            createdAt: new Date(d.image.created_at).getTime() || Date.now(),
+            updatedAt: new Date(d.image.updated_at).getTime() || Date.now(),
+            albumId: d.image.album_id || 'default',
+            tags: typeof d.image.tags === 'string' ? JSON.parse(d.image.tags || '[]') : d.image.tags || [],
+            favorite: d.image.favorite,
+            storageDriver: d.image.storage_driver || 'local',
+          };
+          return { success: true, exists: true, isInstant: true, image: img, message: res.message };
+        }
+        return { success: true, exists: false, isInstant: false };
+      }
+      return { success: false, exists: false, message: res.message };
+    }
+
+    // Local fallback check
+    return { success: true, exists: false, isInstant: false };
+  },
+
+  /**
+   * Upload File with progress tracking to backend
+   */
+  async uploadFile(
+    file: File,
+    albumId = 'default',
+    onProgress?: (percent: number) => void
+  ): Promise<{ success: boolean; isInstant?: boolean; image?: ImageItem; message?: string }> {
+    const token = authStorage.getToken();
+    const url = `${API_BASE_URL}/upload`;
+
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        try {
+          const res = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300 && res.data?.image) {
+            const raw = res.data.image;
+            const img: ImageItem = {
+              id: raw.id,
+              name: raw.name,
+              originalName: raw.original_name || raw.name,
+              size: raw.size,
+              type: raw.type,
+              extension: raw.extension,
+              width: raw.width,
+              height: raw.height,
+              aspectRatio: raw.aspect_ratio,
+              dataUrl: raw.data_url || raw.url,
+              url: raw.url,
+              createdAt: new Date(raw.created_at).getTime() || Date.now(),
+              updatedAt: new Date(raw.updated_at).getTime() || Date.now(),
+              albumId: raw.album_id || 'default',
+              tags: typeof raw.tags === 'string' ? JSON.parse(raw.tags || '[]') : raw.tags || [],
+              favorite: raw.favorite,
+              storageDriver: raw.storage_driver || 'local',
+            };
+            resolve({
+              success: true,
+              isInstant: !!res.data.is_instant,
+              image: img,
+              message: res.message || '上传成功',
+            });
+          } else {
+            resolve({
+              success: false,
+              message: res.message || `上传失败 (HTTP ${xhr.status})`,
+            });
+          }
+        } catch {
+          resolve({
+            success: false,
+            message: `服务器响应异常 (HTTP ${xhr.status})`,
+          });
+        }
+      };
+
+      xhr.onerror = () => {
+        resolve({
+          success: false,
+          message: '网络连接异常，无法连接后端上传服务',
+        });
+      };
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('album_id', albumId);
+      xhr.send(formData);
+    });
+  },
+
+  /**
+   * Fetch current quota info for today
+   */
+  async getQuota(): Promise<{ success: boolean; data?: any; message?: string }> {
+    const res = await request<any>('/upload/quota');
+    if (res.isBackendOnline && res.success && res.data) {
+      return { success: true, data: res.data };
+    }
+    return {
+      success: true,
+      data: {
+        role: authStorage.getUser()?.role || 'anonymous',
+        daily_limit: 20,
+        today_used: 0,
+        remaining_today: 20,
+        single_max_size_mb: 5,
+        allow_anonymous: true,
+        naming_rule: 'timestamp',
+      },
+    };
+  },
+};
+
 

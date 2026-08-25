@@ -14,11 +14,12 @@ type User struct {
 	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // never expose password in json
 	Nickname  string         `gorm:"type:varchar(64)" json:"nickname"`
 	Avatar    string         `gorm:"type:varchar(255)" json:"avatar"`
-	Role      string         `gorm:"type:varchar(32);default:'user'" json:"role"` // 'user' or 'admin'
-	Bio       string         `gorm:"type:varchar(255)" json:"bio"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Role        string         `gorm:"type:varchar(32);default:'user'" json:"role"` // 'user', 'admin', 'vip'
+	VIPExpireAt *time.Time     `json:"vip_expire_at,omitempty"`
+	Bio         string         `gorm:"type:varchar(255)" json:"bio"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName overrides the default table name to 'users'

@@ -25,6 +25,8 @@ type Image struct {
 	Favorite      bool           `gorm:"type:boolean;default:false;index" json:"favorite"`
 	ColorPalette  string         `gorm:"type:text" json:"color_palette"` // JSON array of hex colors
 	StorageDriver string         `gorm:"type:varchar(32);default:'local';index" json:"storage_driver"` // 'local', 'webdav', 's3'
+	FileAssetID   uint           `gorm:"type:bigint;index" json:"file_asset_id"`                       // Foreign key to FileAsset
+	FileHash      string         `gorm:"type:varchar(64);index" json:"file_hash"`                      // SHA-256
 	Compressed    bool           `gorm:"type:boolean;default:false" json:"compressed"`
 	OriginalSize  int64          `gorm:"type:bigint" json:"original_size"`
 	CreatedAt     time.Time      `json:"created_at"`

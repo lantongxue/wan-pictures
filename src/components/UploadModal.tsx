@@ -127,7 +127,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       {item.status === 'done' && (
                         <span className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
                           <CheckCircle2 className="w-3 h-3" />
-                          {t('uploadModal.parseSuccess')}
+                          {item.isInstant ? '秒传成功' : t('uploadModal.parseSuccess')}
+                          {item.isInstant && (
+                            <Badge variant="subtle" className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold ml-1">
+                              ⚡ 秒传
+                            </Badge>
+                          )}
                           {item.resultItem?.compressed && (
                             <Badge variant="subtle" className="text-[9px] text-emerald-600 ml-1">
                               {t('uploadModal.compressedBadge')}

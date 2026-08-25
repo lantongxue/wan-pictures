@@ -122,7 +122,26 @@ export const AdminStoragePage: React.FC = () => {
     loadConfigs();
   }, []);
 
+  const isDriverEnabled = (driver: StorageDriverType) => {
+    const cfg = storageConfigs.find((c) => c.driver === driver);
+    return cfg ? cfg.isEnabled !== false : true;
+  };
+
+  const handleToggleEnabled = async (driver: StorageDriverType, isEnabled: boolean) => {
+    try {
+      await adminApi.toggleStorageEnabled(driver, isEnabled);
+      showNotification(`存储引擎 [${driver.toUpperCase()}] 已${isEnabled ? '启用' : '禁用'}`);
+      loadConfigs();
+    } catch (err: any) {
+      showNotification(err.message || '切换启用状态失败', 'error');
+    }
+  };
+
   const handleSwitchActiveStorage = async (driver: StorageDriverType) => {
+    if (!isDriverEnabled(driver)) {
+      showNotification(`无法设为主存储：存储引擎 ${driver.toUpperCase()} 当前处于禁用状态，请先开启启用开关`, 'error');
+      return;
+    }
     try {
       await adminApi.setActiveStorage(driver);
       setActiveDriver(driver);
@@ -163,6 +182,7 @@ export const AdminStoragePage: React.FC = () => {
         id: 1,
         driver: 'local',
         name: '本地文件系统与离线存储 (Local Storage)',
+        isEnabled: isDriverEnabled('local'),
         isActive: activeDriver === 'local',
         config: localConfig,
       };
@@ -181,6 +201,7 @@ export const AdminStoragePage: React.FC = () => {
         id: 2,
         driver: 's3',
         name: 'Amazon S3 / Cloudflare R2 / OSS / COS 对象存储',
+        isEnabled: isDriverEnabled('s3'),
         isActive: activeDriver === 's3',
         config: s3Config,
       };
@@ -199,6 +220,7 @@ export const AdminStoragePage: React.FC = () => {
         id: 3,
         driver: 'webdav',
         name: 'WebDAV 网盘存储 (坚果云 / Nextcloud / Alist)',
+        isEnabled: isDriverEnabled('webdav'),
         isActive: activeDriver === 'webdav',
         config: webdavConfig,
       };
@@ -242,7 +264,7 @@ export const AdminStoragePage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            支持本地磁盘 Local、S3/OSS/R2 对象存储与 WebDAV 网盘协议动态调度与连通性自检
+            支持本地磁盘 Local、S3/OSS/R2 对象存储与 WebDAV 网盘协议动态调度、独立启用开关与连通性自检
           </p>
         </div>
 
@@ -269,7 +291,7 @@ export const AdminStoragePage: React.FC = () => {
             selectedDriverTab === 'local'
               ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-500/5'
               : 'border-border/80 bg-card hover:border-border'
-          }`}
+          } ${!isDriverEnabled('local') ? 'opacity-80' : ''}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -277,26 +299,39 @@ export const AdminStoragePage: React.FC = () => {
                 <HardDrive className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground">本地磁盘存储</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-foreground">本地磁盘存储</h3>
+                  {!isDriverEnabled('local') && (
+                    <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
+                      已禁用
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-[11px] text-muted-foreground">Local File System</p>
               </div>
             </div>
 
-            {activeDriver === 'local' ? (
-              <Badge variant="default" className="text-[9px] bg-blue-600">
-                ACTIVE
-              </Badge>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSwitchActiveStorage('local');
-                }}
-                className="text-[10px] text-primary hover:underline font-semibold"
-              >
-                设为主存储
-              </button>
-            )}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={isDriverEnabled('local')}
+                onCheckedChange={(checked) => handleToggleEnabled('local', checked)}
+                title={isDriverEnabled('local') ? '点击禁用本地存储' : '点击启用本地存储'}
+              />
+              {activeDriver === 'local' ? (
+                <Badge variant="default" className="text-[9px] bg-blue-600">
+                  ACTIVE
+                </Badge>
+              ) : isDriverEnabled('local') ? (
+                <button
+                  onClick={() => handleSwitchActiveStorage('local')}
+                  className="text-[10px] text-primary hover:underline font-semibold"
+                >
+                  设为主存储
+                </button>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">需先启用</span>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -328,7 +363,7 @@ export const AdminStoragePage: React.FC = () => {
             selectedDriverTab === 's3'
               ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-500/5'
               : 'border-border/80 bg-card hover:border-border'
-          }`}
+          } ${!isDriverEnabled('s3') ? 'opacity-80' : ''}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -336,26 +371,39 @@ export const AdminStoragePage: React.FC = () => {
                 <Cloud className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground">S3 对象存储</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-foreground">S3 对象存储</h3>
+                  {!isDriverEnabled('s3') && (
+                    <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
+                      已禁用
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-[11px] text-muted-foreground">AWS / R2 / OSS / MinIO</p>
               </div>
             </div>
 
-            {activeDriver === 's3' ? (
-              <Badge variant="default" className="text-[9px] bg-amber-600">
-                ACTIVE
-              </Badge>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSwitchActiveStorage('s3');
-                }}
-                className="text-[10px] text-primary hover:underline font-semibold"
-              >
-                设为主存储
-              </button>
-            )}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={isDriverEnabled('s3')}
+                onCheckedChange={(checked) => handleToggleEnabled('s3', checked)}
+                title={isDriverEnabled('s3') ? '点击禁用 S3 存储' : '点击启用 S3 存储'}
+              />
+              {activeDriver === 's3' ? (
+                <Badge variant="default" className="text-[9px] bg-amber-600">
+                  ACTIVE
+                </Badge>
+              ) : isDriverEnabled('s3') ? (
+                <button
+                  onClick={() => handleSwitchActiveStorage('s3')}
+                  className="text-[10px] text-primary hover:underline font-semibold"
+                >
+                  设为主存储
+                </button>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">需先启用</span>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -387,7 +435,7 @@ export const AdminStoragePage: React.FC = () => {
             selectedDriverTab === 'webdav'
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-500/5'
               : 'border-border/80 bg-card hover:border-border'
-          }`}
+          } ${!isDriverEnabled('webdav') ? 'opacity-80' : ''}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -395,26 +443,39 @@ export const AdminStoragePage: React.FC = () => {
                 <Server className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground">WebDAV 网盘</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-foreground">WebDAV 网盘</h3>
+                  {!isDriverEnabled('webdav') && (
+                    <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
+                      已禁用
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-[11px] text-muted-foreground">坚果云 / Nextcloud / Alist</p>
               </div>
             </div>
 
-            {activeDriver === 'webdav' ? (
-              <Badge variant="default" className="text-[9px] bg-emerald-600">
-                ACTIVE
-              </Badge>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSwitchActiveStorage('webdav');
-                }}
-                className="text-[10px] text-primary hover:underline font-semibold"
-              >
-                设为主存储
-              </button>
-            )}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={isDriverEnabled('webdav')}
+                onCheckedChange={(checked) => handleToggleEnabled('webdav', checked)}
+                title={isDriverEnabled('webdav') ? '点击禁用 WebDAV 存储' : '点击启用 WebDAV 存储'}
+              />
+              {activeDriver === 'webdav' ? (
+                <Badge variant="default" className="text-[9px] bg-emerald-600">
+                  ACTIVE
+                </Badge>
+              ) : isDriverEnabled('webdav') ? (
+                <button
+                  onClick={() => handleSwitchActiveStorage('webdav')}
+                  className="text-[10px] text-primary hover:underline font-semibold"
+                >
+                  设为主存储
+                </button>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">需先启用</span>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground">

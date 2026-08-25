@@ -18,6 +18,7 @@ type StorageConfig struct {
 	ID         uint          `gorm:"primaryKey;autoIncrement" json:"id"`
 	Driver     StorageDriver `gorm:"type:varchar(32);uniqueIndex;not null" json:"driver"` // 'local', 'webdav', 's3'
 	Name       string        `gorm:"type:varchar(64);not null" json:"name"`
+	IsEnabled  bool          `gorm:"type:boolean;default:true;index" json:"is_enabled"`
 	IsActive   bool          `gorm:"type:boolean;default:false;index" json:"is_active"`
 	ConfigJSON string        `gorm:"type:text" json:"config_json"` // Serialized S3Config or WebDAVConfig
 	CreatedAt  time.Time     `json:"created_at"`

@@ -6,6 +6,7 @@ import {
   Search,
   Shield,
   User as UserIcon,
+  Crown,
   Mail,
   Edit3,
   Trash2,
@@ -68,7 +69,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user' | 'vip'>('all');
 
   // Modal States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -361,6 +362,17 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setRoleFilter('vip')}
+              className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
+                roleFilter === 'vip'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              VIP 会员
+            </button>
+            <button
+              type="button"
               onClick={() => setRoleFilter('user')}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                 roleFilter === 'user'
@@ -497,6 +509,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${
                         u.role === 'admin'
                           ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                          : u.role === 'vip'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                           : 'bg-muted text-muted-foreground border border-border/60'
                       }`}
                     >
@@ -504,6 +518,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         <>
                           <Shield className="w-3 h-3" />
                           <span>管理员</span>
+                        </>
+                      ) : u.role === 'vip' ? (
+                        <>
+                          <Crown className="w-3 h-3" />
+                          <span>VIP 会员</span>
                         </>
                       ) : (
                         <>
@@ -681,7 +700,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 <div className="mt-1">
                   <Select
                     value={createForm.role}
-                    onValueChange={(val: 'user' | 'admin') =>
+                    onValueChange={(val: 'user' | 'admin' | 'vip') =>
                       setCreateForm({ ...createForm, role: val })
                     }
                   >
@@ -690,6 +709,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">普通用户 (User)</SelectItem>
+                      <SelectItem value="vip">付费 / VIP 用户 (VIP)</SelectItem>
                       <SelectItem value="admin">管理员 (Admin)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -892,7 +912,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   <Select
                     value={editForm.role}
                     disabled={Number(editingUser.id) === 1}
-                    onValueChange={(val: 'user' | 'admin') =>
+                    onValueChange={(val: 'user' | 'admin' | 'vip') =>
                       setEditForm({ ...editForm, role: val })
                     }
                   >
@@ -905,6 +925,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">普通用户 (User)</SelectItem>
+                      <SelectItem value="vip">付费 / VIP 用户 (VIP)</SelectItem>
                       <SelectItem value="admin">系统管理员 (Admin)</SelectItem>
                     </SelectContent>
                   </Select>

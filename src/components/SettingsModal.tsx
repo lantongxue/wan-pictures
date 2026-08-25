@@ -444,32 +444,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-1.5">
-                  <Label className="font-medium text-foreground">
-                    {t('settings.uploadSection.namingRule')}
-                  </Label>
-                  <Select
-                    value={localSettings.namingRule}
-                    onValueChange={(val) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        namingRule: val as UploadSettings['namingRule'],
-                      })
-                    }
-                  >
-                    <SelectTrigger className="h-8 rounded-xl font-normal">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="original">{t('hero.namingOriginal')}</SelectItem>
-                      <SelectItem value="timestamp">{t('hero.namingTimestamp')}</SelectItem>
-                      <SelectItem value="random">{t('hero.namingRandom')}</SelectItem>
-                      <SelectItem value="custom">{t('hero.namingCustom')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-1.5">
+                <div className="p-4 rounded-2xl border border-border/80 bg-muted/20 space-y-1.5 sm:col-span-2">
                   <Label className="font-medium text-foreground">
                     {t('settings.uploadSection.defaultAlbum')}
                   </Label>

@@ -27,6 +27,7 @@ import {
   ViewMode
 } from './types';
 
+import { uploadApi } from './services/api';
 import { dbService, DEFAULT_ALBUMS, DEFAULT_SETTINGS } from './utils/db';
 import { processImageUpload, getImageMetadata } from './utils/imageProcessing';
 import { INITIAL_SAMPLE_IMAGES } from './data/sampleImages';
@@ -222,8 +223,10 @@ function WanPicturesApp({ initialTab = 'workspace' }: WanPicturesAppProps) {
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
 
-    if (!isAuthenticated) {
-      showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
+    // Check quota and anonymous upload permissions
+    const quotaRes = await uploadApi.getQuota().catch(() => null);
+    if (!isAuthenticated && quotaRes?.data && !quotaRes.data.allow_anonymous) {
+      showToast(t('albums.authRequiredTitle'), '管理员已关闭匿名上传，请先登录账号后再上传图片', 'warning');
       setAuthModalMode('login');
       setIsAuthModalOpen(true);
       return;
@@ -248,27 +251,101 @@ function WanPicturesApp({ initialTab = 'workspace' }: WanPicturesAppProps) {
     for (let i = 0; i < newQueueItems.length; i++) {
       const qItem = newQueueItems[i];
       setUploadQueue((prev) =>
-        prev.map((item) => (item.id === qItem.id ? { ...item, status: 'processing' } : item))
+        prev.map((item) => (item.id === qItem.id ? { ...item, status: 'processing', progress: 15 } : item))
       );
 
       try {
-        const processedImage = await processImageUpload(qItem.file, settings, uploadTargetAlbumId);
-        await dbService.saveImage(processedImage);
-        processedResults.push(processedImage);
+        // Step 1: Compute SHA-256 Hash for instant deduplication precheck
+        const fileHash = await uploadApi.computeSHA256(qItem.file);
 
-        setUploadQueue((prev) =>
-          prev.map((item) =>
-            item.id === qItem.id
-              ? { ...item, status: 'done', resultItem: processedImage, progress: 100 }
-              : item
-          )
-        );
-      } catch (err) {
+        // Step 2: Instant Upload Preflight (秒传哈希预检)
+        const checkRes = await uploadApi.checkHash({
+          hash: fileHash,
+          size: qItem.file.size,
+          name: qItem.file.name,
+          albumId: uploadTargetAlbumId,
+        });
+
+        if (checkRes.success && checkRes.exists && checkRes.image) {
+          // Instant Deduplication Success! (⚡ 秒传触发)
+          await dbService.saveImage(checkRes.image);
+          processedResults.push(checkRes.image);
+
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === qItem.id
+                ? {
+                    ...item,
+                    status: 'done',
+                    progress: 100,
+                    isInstant: true,
+                    resultItem: checkRes.image,
+                  }
+                : item
+            )
+          );
+          continue;
+        }
+
+        // Step 3: Regular Upload with Multi-Storage Dispatch
+        const uploadRes = await uploadApi.uploadFile(qItem.file, uploadTargetAlbumId, (percent) => {
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === qItem.id ? { ...item, progress: Math.max(15, percent) } : item
+            )
+          );
+        });
+
+        if (uploadRes.success && uploadRes.image) {
+          await dbService.saveImage(uploadRes.image);
+          processedResults.push(uploadRes.image);
+
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === qItem.id
+                ? {
+                    ...item,
+                    status: 'done',
+                    progress: 100,
+                    isInstant: !!uploadRes.isInstant,
+                    resultItem: uploadRes.image,
+                  }
+                : item
+            )
+          );
+        } else {
+          // If server reported quota or engine error
+          if (uploadRes.message && !uploadRes.message.includes('无法连接后端')) {
+            setUploadQueue((prev) =>
+              prev.map((item) =>
+                item.id === qItem.id
+                  ? { ...item, status: 'error', error: uploadRes.message }
+                  : item
+              )
+            );
+            showToast('上传受阻', uploadRes.message, 'warning');
+            continue;
+          }
+
+          // Fallback to local storage processing if backend is offline
+          const processedImage = await processImageUpload(qItem.file, settings, uploadTargetAlbumId);
+          await dbService.saveImage(processedImage);
+          processedResults.push(processedImage);
+
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === qItem.id
+                ? { ...item, status: 'done', resultItem: processedImage, progress: 100 }
+                : item
+            )
+          );
+        }
+      } catch (err: any) {
         console.error('Failed to process image:', err);
         setUploadQueue((prev) =>
           prev.map((item) =>
             item.id === qItem.id
-              ? { ...item, status: 'error', error: 'Process Error' }
+              ? { ...item, status: 'error', error: err.message || '上传处理异常' }
               : item
           )
         );
@@ -287,9 +364,12 @@ function WanPicturesApp({ initialTab = 'workspace' }: WanPicturesAppProps) {
         colors: ['#3B82F6', '#6366F1', '#10B981'],
       });
 
+      const instantCount = uploadQueue.filter((q) => q.isInstant).length;
       showToast(
         t('uploadModal.titleDone'),
-        t('uploadModal.progressSubtitle', { done: processedResults.length, total: processedResults.length }),
+        instantCount > 0
+          ? `成功上传 ${processedResults.length} 张图片（包含 ${instantCount} 张 ⚡ 秒传去重）`
+          : t('uploadModal.progressSubtitle', { done: processedResults.length, total: processedResults.length }),
         'success'
       );
       setLinkModalImages(processedResults);

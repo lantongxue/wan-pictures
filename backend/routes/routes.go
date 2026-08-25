@@ -34,6 +34,10 @@ func SetupRouter() *gin.Engine {
 	// Controllers
 	authCtrl := controllers.NewAuthController()
 	adminCtrl := controllers.NewAdminController()
+	uploadCtrl := controllers.NewUploadController()
+
+	// Static route to serve uploaded local image assets
+	r.Static("/uploads", "./uploads")
 
 	// API v1 group
 	v1 := r.Group("/api/v1")
@@ -53,6 +57,11 @@ func SetupRouter() *gin.Engine {
 			protectedAuth.PUT("/profile", authCtrl.UpdateProfile)
 			protectedAuth.POST("/password", authCtrl.ChangePassword)
 		}
+
+		// Public Upload & Instant Deduplication APIs
+		v1.POST("/upload/check-hash", uploadCtrl.CheckHash)
+		v1.POST("/upload", uploadCtrl.UploadFile)
+		v1.GET("/upload/quota", uploadCtrl.GetQuota)
 
 		// Public Read & Workspace APIs
 		v1.GET("/images", adminCtrl.ListImages)
@@ -104,9 +113,14 @@ func SetupRouter() *gin.Engine {
 			admin.GET("/storage", adminCtrl.GetStorageConfigs)
 			admin.POST("/storage", adminCtrl.SaveStorageConfig)
 			admin.POST("/storage/active", adminCtrl.SetActiveStorage)
+			admin.POST("/storage/toggle", adminCtrl.ToggleStorageEnabled)
 			admin.POST("/storage/test", adminCtrl.TestStorageConnection)
 
-			// 6. Users Management CRUD
+			// 6. System Settings & Upload Quotas
+			admin.GET("/settings/quotas", adminCtrl.GetQuotaSettings)
+			admin.PUT("/settings/quotas", adminCtrl.UpdateQuotaSettings)
+
+			// 7. Users Management CRUD
 			admin.GET("/users", adminCtrl.ListUsers)
 			admin.GET("/users/:id", adminCtrl.GetUser)
 			admin.POST("/users", adminCtrl.CreateUser)
