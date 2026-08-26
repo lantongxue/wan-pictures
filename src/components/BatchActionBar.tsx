@@ -27,7 +27,7 @@ interface BatchActionBarProps {
   albums: Album[];
   onClearSelection: () => void;
   onOpenBatchLinks: () => void;
-  onBatchMoveToAlbum: (albumId: string) => void;
+  onBatchMoveToAlbum: (albumId: number) => void;
   onBatchDelete: () => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }

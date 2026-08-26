@@ -15,7 +15,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Album, ImageItem } from '../../types';
-import { adminApi } from '../../services/api';
+import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -102,8 +102,7 @@ export const AdminAlbumsPage: React.FC = () => {
     if (!createName.trim()) return;
 
     try {
-      const newAlbum: Album = {
-        id: 'alb_' + Date.now(),
+      const newAlbum: Omit<Album, 'id'> = {
         name: createName.trim(),
         description: createDesc.trim(),
         color: createColor,
@@ -157,7 +156,7 @@ export const AdminAlbumsPage: React.FC = () => {
   };
 
   const handleDeleteAlbum = async (alb: Album) => {
-    if (alb.isDefault || alb.id === 'default') {
+    if (alb.isDefault || alb.id === DEFAULT_ALBUM_ID) {
       showNotification('系统默认相册不可删除', 'error');
       return;
     }
@@ -355,7 +354,7 @@ export const AdminAlbumsPage: React.FC = () => {
                         <span>编辑</span>
                       </Button>
 
-                      {!alb.isDefault && alb.id !== 'default' && (
+                      {!alb.isDefault && alb.id !== DEFAULT_ALBUM_ID && (
                         <Button
                           variant="ghost"
                           size="sm"

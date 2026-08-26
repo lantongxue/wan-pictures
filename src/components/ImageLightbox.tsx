@@ -46,9 +46,9 @@ interface ImageLightboxProps {
   albums: Album[];
   onClose: () => void;
   onNavigate: (image: ImageItem) => void;
-  onUpdateImage: (id: string, updates: Partial<ImageItem>) => void;
-  onDelete: (id: string) => void;
-  onToggleFavorite: (id: string) => void;
+  onUpdateImage: (id: number, updates: Partial<ImageItem>) => void;
+  onDelete: (id: number) => void;
+  onToggleFavorite: (id: number) => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
@@ -394,15 +394,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         <span className="text-muted-foreground">{t('lightbox.album')}</span>
                         <div className="w-36">
                           <Select
-                            value={image.albumId}
-                            onValueChange={(val) => onUpdateImage(image.id, { albumId: val })}
+                            value={String(image.albumId)}
+                            onValueChange={(val) => onUpdateImage(image.id, { albumId: Number(val) })}
                           >
                             <SelectTrigger className="h-7 text-xs rounded-full font-normal">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {albums.map((alb) => (
-                                <SelectItem key={alb.id} value={alb.id}>
+                                <SelectItem key={alb.id} value={String(alb.id)}>
                                   {alb.name}
                                 </SelectItem>
                               ))}

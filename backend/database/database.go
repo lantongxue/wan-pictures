@@ -80,9 +80,40 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
+	PurgeOrphanSoftDeletedAssets(db)
+
 	// Run Seed Data
 	SeedInitialData(db)
 	return nil
+}
+
+// PurgeOrphanSoftDeletedAssets removes legacy soft-deleted FileAsset rows that
+// are no longer referenced by any active Image. Their physical files were
+// already removed when the last reference was deleted, but the stale rows kept
+// occupying the unique file_hash index, which made re-uploading identical
+// content fail with a duplicate-key error.
+func PurgeOrphanSoftDeletedAssets(db *gorm.DB) {
+	activeRefSubQuery := db.Model(&models.Image{}).
+		Select("file_asset_id").
+		Where("file_asset_id > 0") // default scope excludes soft-deleted images
+
+	var orphanIDs []uint
+	if err := db.Unscoped().Model(&models.FileAsset{}).
+		Where("deleted_at IS NOT NULL").
+		Where("id NOT IN (?)", activeRefSubQuery).
+		Pluck("id", &orphanIDs).Error; err != nil {
+		log.Printf("[Database] Orphan asset purge skipped, query failed: %v", err)
+		return
+	}
+	if len(orphanIDs) == 0 {
+		return
+	}
+
+	if err := db.Unscoped().Where("id IN ?", orphanIDs).Delete(&models.FileAsset{}).Error; err != nil {
+		log.Printf("[Database] Orphan asset purge failed: %v", err)
+		return
+	}
+	log.Printf("[Database] Purged %d orphan soft-deleted file asset(s), released their hash slots", len(orphanIDs))
 }
 
 // SeedInitialData sets up initial albums, tags, storage configs, system settings, and admin user
@@ -90,13 +121,13 @@ func SeedInitialData(db *gorm.DB) {
 	// 1. Ensure initial admin account exists (credentials from env config)
 	ensureAdminUser(db)
 
-	// 2. Seed Default Albums
+	// 2. Seed Default Albums (fixed auto-increment IDs; DefaultAlbumID must stay 1)
 	var albumCount int64
 	db.Model(&models.Album{}).Count(&albumCount)
 	if albumCount == 0 {
 		defaultAlbums := []models.Album{
 			{
-				ID:          "default",
+				ID:          models.DefaultAlbumID,
 				Name:        "默认相册",
 				Description: "未分类的所有上传图片",
 				Color:       "#6366F1",
@@ -106,7 +137,7 @@ func SeedInitialData(db *gorm.DB) {
 				UpdatedAt:   time.Now(),
 			},
 			{
-				ID:          "wallpapers",
+				ID:          models.DefaultAlbumID + 1,
 				Name:        "壁纸精选",
 				Description: "高清电脑与手机壁纸合集",
 				Color:       "#0EA5E9",
@@ -116,7 +147,7 @@ func SeedInitialData(db *gorm.DB) {
 				UpdatedAt:   time.Now(),
 			},
 			{
-				ID:          "photography",
+				ID:          models.DefaultAlbumID + 2,
 				Name:        "光影记录",
 				Description: "自然风光与街头人文摄影",
 				Color:       "#10B981",
@@ -126,7 +157,7 @@ func SeedInitialData(db *gorm.DB) {
 				UpdatedAt:   time.Now(),
 			},
 			{
-				ID:          "designs",
+				ID:          models.DefaultAlbumID + 3,
 				Name:        "设计灵感",
 				Description: "UI 界面、插画与设计素材",
 				Color:       "#F59E0B",

@@ -8,7 +8,7 @@ import (
 
 // Image represents an uploaded or imported image asset
 type Image struct {
-	ID            string         `gorm:"type:varchar(64);primaryKey" json:"id"`
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name          string         `gorm:"type:varchar(255);not null;index" json:"name"`
 	OriginalName  string         `gorm:"type:varchar(255)" json:"original_name"`
 	Size          int64          `gorm:"type:bigint" json:"size"`
@@ -19,7 +19,7 @@ type Image struct {
 	AspectRatio   float64        `gorm:"type:decimal(6,3)" json:"aspect_ratio"`
 	DataUrl       string         `gorm:"type:longtext" json:"data_url,omitempty"`
 	Url           string         `gorm:"type:varchar(1024)" json:"url"`
-	AlbumID       string         `gorm:"type:varchar(64);index;default:'default'" json:"album_id"`
+	AlbumID       uint           `gorm:"index;default:1" json:"album_id"`
 	UserID        uint           `gorm:"type:bigint;index;default:1" json:"user_id"`
 	Tags          string         `gorm:"type:text" json:"tags"` // JSON array or comma separated: ["WALLPAPER","4K"]
 	Favorite      bool           `gorm:"type:boolean;default:false;index" json:"favorite"`

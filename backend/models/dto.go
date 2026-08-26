@@ -113,7 +113,7 @@ type AdminOverviewStats struct {
 
 // Image CRUD Request DTOs
 type SaveImageRequest struct {
-	ID            string   `json:"id"`
+	ID            uint     `json:"id"`
 	Name          string   `json:"name" binding:"required"`
 	OriginalName  string   `json:"original_name"`
 	Size          int64    `json:"size"`
@@ -124,7 +124,7 @@ type SaveImageRequest struct {
 	AspectRatio   float64  `json:"aspect_ratio"`
 	DataUrl       string   `json:"data_url"`
 	Url           string   `json:"url"`
-	AlbumID       string   `json:"album_id"`
+	AlbumID       uint     `json:"album_id"`
 	Tags          []string `json:"tags"`
 	Favorite      bool     `json:"favorite"`
 	ColorPalette  []string `json:"color_palette"`
@@ -135,27 +135,27 @@ type SaveImageRequest struct {
 
 type UpdateImageRequest struct {
 	Name          *string   `json:"name"`
-	AlbumID       *string   `json:"album_id"`
+	AlbumID       *uint     `json:"album_id"`
 	Tags          *[]string `json:"tags"`
 	Favorite      *bool     `json:"favorite"`
 	StorageDriver *string   `json:"storage_driver"`
 }
 
 type BatchImageActionRequest struct {
-	IDs      []string `json:"ids" binding:"required,min=1"`
-	Action   string   `json:"action" binding:"required"` // "delete", "move", "tag"
-	AlbumID  string   `json:"album_id"`
-	TagToAdd string   `json:"tag_to_add"`
+	IDs      []uint  `json:"ids" binding:"required,min=1"`
+	Action   string  `json:"action" binding:"required"` // "delete", "move", "tag"
+	AlbumID  uint    `json:"album_id"`
+	TagToAdd string  `json:"tag_to_add"`
 }
 
 // Album CRUD Request DTOs
 type SaveAlbumRequest struct {
-	ID            string `json:"id"`
+	ID            uint   `json:"id"`
 	Name          string `json:"name" binding:"required,min=1,max=128"`
 	Description   string `json:"description" binding:"omitempty,max=512"`
 	Color         string `json:"color" binding:"omitempty,max=32"`
 	CoverImageUrl string `json:"cover_image_url"`
-	CoverImageID  string `json:"cover_image_id"`
+	CoverImageID  uint   `json:"cover_image_id"`
 	IsDefault     bool   `json:"is_default"`
 }
 
@@ -240,10 +240,10 @@ type TestStorageConnectionRequest struct {
 
 // Upload & Instant Deduplication DTOs
 type CheckHashRequest struct {
-	Hash     string `json:"hash" binding:"required,len=64"` // SHA-256
-	Size     int64  `json:"size" binding:"required,gt=0"`
-	Name     string `json:"name"`
-	AlbumID  string `json:"album_id"`
+	Hash    string `json:"hash" binding:"required,len=64"` // SHA-256
+	Size    int64  `json:"size" binding:"required,gt=0"`
+	Name    string `json:"name"`
+	AlbumID uint   `json:"album_id"`
 }
 
 type CheckHashResponse struct {

@@ -12,7 +12,7 @@ export type ImageFormat =
 export type LinkFormatType = 'raw' | 'markdown' | 'html' | 'bbcode' | 'markdown_link';
 
 export interface ImageItem {
-  id: string;
+  id: number;
   name: string;
   originalName: string;
   size: number; // in bytes
@@ -25,7 +25,7 @@ export interface ImageItem {
   url?: string; // Public external URL
   createdAt: number;
   updatedAt: number;
-  albumId: string;
+  albumId: number;
   tags: string[];
   favorite?: boolean;
   colorPalette?: string[];
@@ -35,11 +35,11 @@ export interface ImageItem {
 }
 
 export interface Album {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   color: string;
-  coverImageId?: string;
+  coverImageId?: number;
   coverImageUrl?: string;
   createdAt: number;
   isDefault?: boolean;
@@ -191,7 +191,7 @@ export type SortOption =
 export type AspectRatioFilter = 'all' | 'landscape' | 'portrait' | 'square';
 
 export interface FilterOptions {
-  albumId: string; // 'all' | 'unassigned' | albumId
+  albumId: number | 'all' | 'unassigned'; // 'all' | 'unassigned' | numeric album id
   searchQuery: string;
   formatFilter: string; // 'all' | 'png' | 'jpeg' | 'webp' | 'svg' | 'gif'
   favoritesOnly: boolean;

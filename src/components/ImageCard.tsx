@@ -19,10 +19,10 @@ interface ImageCardProps {
   image: ImageItem;
   album?: Album;
   isSelected: boolean;
-  onSelect: (id: string, e: React.MouseEvent) => void;
+  onSelect: (id: number, e: React.MouseEvent) => void;
   onPreview: (image: ImageItem) => void;
-  onDelete: (id: string) => void;
-  onToggleFavorite: (id: string) => void;
+  onDelete: (id: number) => void;
+  onToggleFavorite: (id: number) => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   viewMode: 'masonry' | 'grid' | 'list';
 }

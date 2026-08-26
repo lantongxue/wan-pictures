@@ -22,6 +22,15 @@ func NewAdminController() *AdminController {
 	return &AdminController{}
 }
 
+// parseUintParam parses a numeric auto-increment route parameter
+func parseUintParam(raw string) (uint, error) {
+	parsed, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || parsed == 0 {
+		return 0, fmt.Errorf("invalid id %q", raw)
+	}
+	return uint(parsed), nil
+}
+
 // GetOverviewStats returns overall system metrics
 // GET /api/v1/admin/stats
 func (ctrl *AdminController) GetOverviewStats(c *gin.Context) {
@@ -120,8 +129,10 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 	}
 
 	// Album filter
-	if albumID := c.Query("album_id"); albumID != "" && albumID != "all" {
-		query = query.Where("album_id = ?", albumID)
+	if rawAlbumID := c.Query("album_id"); rawAlbumID != "" && rawAlbumID != "all" {
+		if parsedAlbumID, perr := strconv.ParseUint(rawAlbumID, 10, 64); perr == nil {
+			query = query.Where("album_id = ?", uint(parsedAlbumID))
+		}
 	}
 
 	// Tag filter
@@ -194,7 +205,11 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 // GetImage retrieves a single image by ID
 // GET /api/v1/admin/images/:id
 func (ctrl *AdminController) GetImage(c *gin.Context) {
-	id := c.Param("id")
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid image id"))
+		return
+	}
 	var image models.Image
 	if err := database.DB.Where("id = ?", id).First(&image).Error; err != nil {
 		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Image not found"))
@@ -221,17 +236,11 @@ func (ctrl *AdminController) CreateImage(c *gin.Context) {
 	}
 
 	albumID := req.AlbumID
-	if albumID == "" {
-		albumID = "default"
-	}
-
-	id := req.ID
-	if id == "" {
-		id = fmt.Sprintf("img_%d", time.Now().UnixNano()/1e6)
+	if albumID == 0 {
+		albumID = models.DefaultAlbumID
 	}
 
 	img := models.Image{
-		ID:            id,
 		Name:          req.Name,
 		OriginalName:  req.OriginalName,
 		Size:          req.Size,
@@ -265,7 +274,11 @@ func (ctrl *AdminController) CreateImage(c *gin.Context) {
 // UpdateImage updates image metadata
 // PUT /api/v1/admin/images/:id
 func (ctrl *AdminController) UpdateImage(c *gin.Context) {
-	id := c.Param("id")
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid image id"))
+		return
+	}
 	var img models.Image
 	if err := database.DB.Where("id = ?", id).First(&img).Error; err != nil {
 		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Image not found"))
@@ -282,7 +295,7 @@ func (ctrl *AdminController) UpdateImage(c *gin.Context) {
 	if req.Name != nil && *req.Name != "" {
 		updates["name"] = strings.TrimSpace(*req.Name)
 	}
-	if req.AlbumID != nil && *req.AlbumID != "" {
+	if req.AlbumID != nil && *req.AlbumID != 0 {
 		updates["album_id"] = *req.AlbumID
 	}
 	if req.Favorite != nil {
@@ -309,7 +322,11 @@ func (ctrl *AdminController) UpdateImage(c *gin.Context) {
 // DeleteImage deletes a single image using reference counting safe deletion
 // DELETE /api/v1/admin/images/:id
 func (ctrl *AdminController) DeleteImage(c *gin.Context) {
-	id := c.Param("id")
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid image id"))
+		return
+	}
 	if err := DeleteImageWithRefCount(id); err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -334,7 +351,7 @@ func (ctrl *AdminController) BatchImageAction(c *gin.Context) {
 		c.JSON(http.StatusOK, models.SuccessResponse(gin.H{"deleted_count": len(req.IDs)}, "Batch deleted successfully"))
 
 	case "move":
-		if req.AlbumID == "" {
+		if req.AlbumID == 0 {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Target album_id is required"))
 			return
 		}
@@ -412,18 +429,12 @@ func (ctrl *AdminController) CreateAlbum(c *gin.Context) {
 		return
 	}
 
-	id := req.ID
-	if id == "" {
-		id = fmt.Sprintf("alb_%d", time.Now().UnixNano()/1e6)
-	}
-
 	color := req.Color
 	if color == "" {
 		color = "#6366F1"
 	}
 
 	album := models.Album{
-		ID:            id,
 		Name:          strings.TrimSpace(req.Name),
 		Description:   strings.TrimSpace(req.Description),
 		Color:         color,
@@ -446,7 +457,11 @@ func (ctrl *AdminController) CreateAlbum(c *gin.Context) {
 // UpdateAlbum updates an album
 // PUT /api/v1/admin/albums/:id
 func (ctrl *AdminController) UpdateAlbum(c *gin.Context) {
-	id := c.Param("id")
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid album id"))
+		return
+	}
 	var album models.Album
 	if err := database.DB.Where("id = ?", id).First(&album).Error; err != nil {
 		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Album not found"))
@@ -477,18 +492,22 @@ func (ctrl *AdminController) UpdateAlbum(c *gin.Context) {
 	c.JSON(http.StatusOK, models.SuccessResponse(album, "Album updated successfully"))
 }
 
-// DeleteAlbum deletes an album (reassigns its images to 'default')
+// DeleteAlbum deletes an album (reassigns its images to the default album)
 // DELETE /api/v1/admin/albums/:id
 func (ctrl *AdminController) DeleteAlbum(c *gin.Context) {
-	id := c.Param("id")
-	if id == "default" {
+	id, err := parseUintParam(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid album id"))
+		return
+	}
+	if id == models.DefaultAlbumID {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Default album cannot be deleted"))
 		return
 	}
 
-	// Reassign images to default album
+	// Reassign images to the default album
 	database.DB.Model(&models.Image{}).Where("album_id = ?", id).Updates(map[string]interface{}{
-		"album_id":   "default",
+		"album_id":   models.DefaultAlbumID,
 		"updated_at": time.Now(),
 	})
 

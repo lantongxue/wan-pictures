@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -15,11 +16,14 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"wanpictures-backend/database"
 	"wanpictures-backend/models"
 	"wanpictures-backend/services/storage"
@@ -184,6 +188,96 @@ func generateStoragePath(fileName string) string {
 	return fmt.Sprintf("uploads/%04d/%02d/%02d/%s", now.Year(), int(now.Month()), now.Day(), fileName)
 }
 
+// withRowLock appends SELECT ... FOR UPDATE on databases that support it.
+// SQLite serializes writers internally and does not support the locking clause,
+// so it is skipped there.
+func withRowLock(tx *gorm.DB) *gorm.DB {
+	switch tx.Dialector.Name() {
+	case "mysql", "postgres", "postgresql":
+		return tx.Clauses(clause.Locking{Strength: "UPDATE"})
+	default:
+		return tx
+	}
+}
+
+// isDuplicateKeyError reports whether err was caused by violating a unique index
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unique constraint") ||
+		strings.Contains(msg, "duplicate entry") ||
+		strings.Contains(msg, "duplicate key")
+}
+
+// buildImageFromAsset constructs a logical Image record pointing at an existing
+// physical FileAsset (the deduplicated original). Used by all instant-upload paths.
+func buildImageFromAsset(asset *models.FileAsset, name, originalName string, albumID, userID uint) models.Image {
+	now := time.Now()
+	return models.Image{
+		Name:          name,
+		OriginalName:  originalName,
+		Size:          asset.Size,
+		Type:          asset.MimeType,
+		Extension:     asset.Extension,
+		Width:         asset.Width,
+		Height:        asset.Height,
+		AspectRatio:   asset.AspectRatio,
+		Url:           asset.URL,
+		AlbumID:       albumID,
+		UserID:        userID,
+		Tags:          fmt.Sprintf("[\"%s\"]", strings.ToUpper(asset.Extension)),
+		ColorPalette:  asset.ColorPalette,
+		StorageDriver: asset.StorageDriver,
+		FileAssetID:   asset.ID,
+		FileHash:      asset.FileHash,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+}
+
+// persistInstantImage atomically links a new logical Image to an existing FileAsset:
+// locks the asset row against concurrent deletions of the last reference, then
+// inserts the Image + UploadLog and bumps ref_count in a single transaction.
+// Returns gorm.ErrRecordNotFound wrapped if the asset vanished concurrently.
+func persistInstantImage(asset *models.FileAsset, name, originalName string, albumID, userID uint, clientIP string) (*models.Image, error) {
+	var created *models.Image
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var locked models.FileAsset
+		if err := withRowLock(tx.Where("id = ?", asset.ID)).First(&locked).Error; err != nil {
+			return fmt.Errorf("file asset unavailable for instant upload: %w", err)
+		}
+
+		img := buildImageFromAsset(&locked, name, originalName, albumID, userID)
+		if err := tx.Create(&img).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.FileAsset{}).Where("id = ?", locked.ID).
+			UpdateColumn("ref_count", gorm.Expr("ref_count + ?", 1)).Error; err != nil {
+			return err
+		}
+
+		tx.Create(&models.UploadLog{
+			UserID:    userID,
+			IPAddress: clientIP,
+			ImageID:   img.ID,
+			FileHash:  locked.FileHash,
+			Size:      locked.Size,
+			IsInstant: true,
+			CreatedAt: time.Now(),
+		})
+
+		created = &img
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
+}
+
 // CheckHash handles pre-flight instant-upload checks (秒传预检)
 // POST /api/v1/upload/check-hash
 func (ctrl *UploadController) CheckHash(c *gin.Context) {
@@ -213,9 +307,6 @@ func (ctrl *UploadController) CheckHash(c *gin.Context) {
 		return
 	}
 
-	// Instant upload matched! Atomically increment ref_count
-	database.DB.Model(&fileAsset).Update("ref_count", fileAsset.RefCount+1)
-
 	// Determine image name
 	quotas := GetSystemQuotaSettings()
 	imgName := req.Name
@@ -226,54 +317,29 @@ func (ctrl *UploadController) CheckHash(c *gin.Context) {
 	}
 
 	albumID := req.AlbumID
-	if albumID == "" {
-		albumID = "default"
+	if albumID == 0 {
+		albumID = models.DefaultAlbumID
 	}
 
-	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
-
-	newImage := models.Image{
-		ID:            imageID,
-		Name:          imgName,
-		OriginalName:  req.Name,
-		Size:          fileAsset.Size,
-		Type:          fileAsset.MimeType,
-		Extension:     fileAsset.Extension,
-		Width:         fileAsset.Width,
-		Height:        fileAsset.Height,
-		AspectRatio:   fileAsset.AspectRatio,
-		Url:           fileAsset.URL,
-		AlbumID:       albumID,
-		UserID:        userID,
-		Tags:          fmt.Sprintf("[\"%s\"]", strings.ToUpper(fileAsset.Extension)),
-		ColorPalette:  fileAsset.ColorPalette,
-		StorageDriver: fileAsset.StorageDriver,
-		FileAssetID:   fileAsset.ID,
-		FileHash:      fileAsset.FileHash,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}
-
-	if err := database.DB.Create(&newImage).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+err.Error()))
+	newImage, linkErr := persistInstantImage(&fileAsset, imgName, req.Name, albumID, userID, clientIP)
+	if linkErr != nil {
+		if errors.Is(linkErr, gorm.ErrRecordNotFound) {
+			// Asset purged between lookup and linking (last reference deleted
+			// concurrently) - tell the client to fall back to a regular upload.
+			c.JSON(http.StatusOK, models.SuccessResponse(models.CheckHashResponse{
+				Exists:    false,
+				IsInstant: false,
+			}))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
 		return
 	}
-
-	// Record upload log
-	database.DB.Create(&models.UploadLog{
-		UserID:    userID,
-		IPAddress: clientIP,
-		ImageID:   newImage.ID,
-		FileHash:  fileAsset.FileHash,
-		Size:      fileAsset.Size,
-		IsInstant: true,
-		CreatedAt: time.Now(),
-	})
 
 	c.JSON(http.StatusOK, models.SuccessResponse(models.CheckHashResponse{
 		Exists:    true,
 		IsInstant: true,
-		Image:     &newImage,
+		Image:     newImage,
 	}, "⚡ 秒传成功 (Instant Upload Success)"))
 }
 
@@ -315,9 +381,11 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 	md5HashBytes := md5.Sum(fileBytes)
 	md5Hash := hex.EncodeToString(md5HashBytes[:])
 
-	albumID := c.DefaultPostForm("album_id", "default")
-	if albumID == "" {
-		albumID = "default"
+	albumID := models.DefaultAlbumID
+	if raw := c.PostForm("album_id"); raw != "" {
+		if parsed, perr := strconv.ParseUint(raw, 10, 64); perr == nil {
+			albumID = uint(parsed)
+		}
 	}
 
 	quotas := GetSystemQuotaSettings()
@@ -325,50 +393,22 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 	// 4. Check if file already exists in file_assets for instant deduplication (秒传)
 	var existingAsset models.FileAsset
 	if err := database.DB.Where("file_hash = ?", sha256Hash).First(&existingAsset).Error; err == nil {
-		// Increment ref count
-		database.DB.Model(&existingAsset).Update("ref_count", existingAsset.RefCount+1)
-
 		formattedName := formatFileNameBySystemRule(fileHeader.Filename, quotas.NamingRule, quotas.CustomPrefix)
-		imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
 
-		newImage := models.Image{
-			ID:            imageID,
-			Name:          formattedName,
-			OriginalName:  fileHeader.Filename,
-			Size:          existingAsset.Size,
-			Type:          existingAsset.MimeType,
-			Extension:     existingAsset.Extension,
-			Width:         existingAsset.Width,
-			Height:        existingAsset.Height,
-			AspectRatio:   existingAsset.AspectRatio,
-			Url:           existingAsset.URL,
-			AlbumID:       albumID,
-			UserID:        userID,
-			Tags:          fmt.Sprintf("[\"%s\"]", strings.ToUpper(existingAsset.Extension)),
-			ColorPalette:  existingAsset.ColorPalette,
-			StorageDriver: existingAsset.StorageDriver,
-			FileAssetID:   existingAsset.ID,
-			FileHash:      existingAsset.FileHash,
-			CreatedAt:     time.Now(),
-			UpdatedAt:     time.Now(),
+		newImage, linkErr := persistInstantImage(&existingAsset, formattedName, fileHeader.Filename, albumID, userID, clientIP)
+		if linkErr == nil {
+			c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
+				"is_instant": true,
+				"image":      newImage,
+			}, "⚡ 秒传成功"))
+			return
 		}
-
-		database.DB.Create(&newImage)
-		database.DB.Create(&models.UploadLog{
-			UserID:    userID,
-			IPAddress: clientIP,
-			ImageID:   newImage.ID,
-			FileHash:  existingAsset.FileHash,
-			Size:      existingAsset.Size,
-			IsInstant: true,
-			CreatedAt: time.Now(),
-		})
-
-		c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
-			"is_instant": true,
-			"image":      newImage,
-		}, "⚡ 秒传成功"))
-		return
+		if !errors.Is(linkErr, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
+			return
+		}
+		// Asset purged between lookup and linking (last reference deleted
+		// concurrently) - fall through and store the file as a fresh upload.
 	}
 
 	// 5. Decode Image Dimensions
@@ -414,7 +454,8 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		return
 	}
 
-	// 9. Insert FileAsset
+	// 9-11. Persist FileAsset + Image (+ upload log) atomically so a partial
+	// failure never leaves an orphaned asset with a phantom reference.
 	newAsset := models.FileAsset{
 		FileHash:      sha256Hash,
 		MD5Hash:       md5Hash,
@@ -432,56 +473,86 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
+	var createdImage models.Image
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&newAsset).Error; err != nil {
+			return err
+		}
 
-	if err := database.DB.Create(&newAsset).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to record asset: "+err.Error()))
-		return
-	}
+		now := time.Now()
+		createdImage = models.Image{
+			Name:          formattedName,
+			OriginalName:  fileHeader.Filename,
+			Size:          int64(len(fileBytes)),
+			Type:          contentType,
+			Extension:     cleanExt,
+			Width:         width,
+			Height:        height,
+			AspectRatio:   aspectRatio,
+			Url:           publicURL,
+			AlbumID:       albumID,
+			UserID:        userID,
+			Tags:          fmt.Sprintf("[\"%s\"]", strings.ToUpper(cleanExt)),
+			ColorPalette:  newAsset.ColorPalette,
+			StorageDriver: string(driver),
+			FileAssetID:   newAsset.ID,
+			FileHash:      newAsset.FileHash,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		}
+		if err := tx.Create(&createdImage).Error; err != nil {
+			return err
+		}
 
-	// 10. Insert Image
-	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
-	newImage := models.Image{
-		ID:            imageID,
-		Name:          formattedName,
-		OriginalName:  fileHeader.Filename,
-		Size:          int64(len(fileBytes)),
-		Type:          contentType,
-		Extension:     cleanExt,
-		Width:         width,
-		Height:        height,
-		AspectRatio:   aspectRatio,
-		Url:           publicURL,
-		AlbumID:       albumID,
-		UserID:        userID,
-		Tags:          fmt.Sprintf("[\"%s\"]", strings.ToUpper(cleanExt)),
-		ColorPalette:  newAsset.ColorPalette,
-		StorageDriver: string(driver),
-		FileAssetID:   newAsset.ID,
-		FileHash:      newAsset.FileHash,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}
+		tx.Create(&models.UploadLog{
+			UserID:    userID,
+			IPAddress: clientIP,
+			ImageID:   createdImage.ID,
+			FileHash:  sha256Hash,
+			Size:      int64(len(fileBytes)),
+			IsInstant: false,
+			CreatedAt: time.Now(),
+		})
 
-	if err := database.DB.Create(&newImage).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image: "+err.Error()))
-		return
-	}
-
-	// 11. Record upload log
-	database.DB.Create(&models.UploadLog{
-		UserID:    userID,
-		IPAddress: clientIP,
-		ImageID:   newImage.ID,
-		FileHash:  sha256Hash,
-		Size:      int64(len(fileBytes)),
-		IsInstant: false,
-		CreatedAt: time.Now(),
+		return nil
 	})
+
+	if err != nil {
+		if isDuplicateKeyError(err) {
+			// A concurrent request stored the identical physical file first.
+			// The transaction rolled back; clean up our redundant object and
+			// degrade gracefully to instant-upload reuse of the winner's asset.
+			_ = engine.Delete(c.Request.Context(), storageKey)
+
+			var winner models.FileAsset
+			if ferr := database.DB.Where("file_hash = ?", sha256Hash).First(&winner).Error; ferr == nil {
+				newImage, linkErr := persistInstantImage(&winner, formattedName, fileHeader.Filename, albumID, userID, clientIP)
+				if linkErr == nil {
+					c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
+						"is_instant": true,
+						"image":      newImage,
+					}, "⚡ 秒传成功"))
+					return
+				}
+				if !errors.Is(linkErr, gorm.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
+					return
+				}
+			}
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "File asset disappeared during deduplication, please retry"))
+			return
+		}
+
+		// Transaction rolled back - remove the object we saved to storage
+		_ = engine.Delete(c.Request.Context(), storageKey)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to persist upload: "+err.Error()))
+		return
+	}
 
 	_ = imgErr // keep compiler happy if image decode error
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
 		"is_instant": false,
-		"image":      newImage,
+		"image":      createdImage,
 	}, "上传成功"))
 }
 
@@ -538,41 +609,82 @@ func (ctrl *UploadController) GetQuota(c *gin.Context) {
 	}))
 }
 
-// DeleteImageWithRefCount handles safe deletion with reference counting
-func DeleteImageWithRefCount(imageID string) error {
-	var img models.Image
-	if err := database.DB.Where("id = ?", imageID).First(&img).Error; err != nil {
-		return err
-	}
+// DeleteImageWithRefCount safely deletes a logical image while honoring the
+// deduplicated storage model (Image.FileAssetID acts as "pid" to the real file):
+//
+//   - The current Image record is ALWAYS soft-deleted only.
+//   - Remaining ACTIVE images referencing the same FileAsset are counted:
+//       * refs > 0 -> keep the asset & physical file untouched; ref_count is
+//         repaired from the live count in case it drifted.
+//       * refs = 0 -> the physical file is removed AND the FileAsset row is
+//         hard-deleted, releasing its unique file_hash index so identical
+//         content can be uploaded again later.
+//
+// The exact same code path serves both original uploads and instant-upload
+// copies, because both are just Image rows pointing at a shared FileAsset.
+func DeleteImageWithRefCount(imageID uint) error {
+	var (
+		purgeNeeded bool
+		purgeDriver string
+		purgeKey    string
+	)
 
-	// Delete logical image record
-	if err := database.DB.Delete(&img).Error; err != nil {
-		return err
-	}
-
-	// If linked to a FileAsset, safely decrement RefCount
-	if img.FileAssetID > 0 || img.FileHash != "" {
-		var asset models.FileAsset
-		var errAsset error
-		if img.FileAssetID > 0 {
-			errAsset = database.DB.First(&asset, img.FileAssetID).Error
-		} else {
-			errAsset = database.DB.Where("file_hash = ?", img.FileHash).First(&asset).Error
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var img models.Image
+		if err := withRowLock(tx.Where("id = ?", imageID)).First(&img).Error; err != nil {
+			return err
 		}
 
-		if errAsset == nil {
-			newRefCount := asset.RefCount - 1
-			if newRefCount <= 0 {
-				// No more references anywhere in the system! Safe to physically delete
-				mgr := storage.GetManager()
-				if eng, err := mgr.GetEngineByDriver(models.StorageDriver(asset.StorageDriver)); err == nil {
-					_ = eng.Delete(context.Background(), asset.StorageKey)
-				}
-				database.DB.Delete(&asset)
-			} else {
-				// Still referenced by other images/users! Keep physical file safe
-				database.DB.Model(&asset).Update("ref_count", newRefCount)
-			}
+		// Soft-delete the logical record (original or instant-upload copy alike)
+		if err := tx.Delete(&img).Error; err != nil {
+			return err
+		}
+
+		if img.FileAssetID <= 0 && img.FileHash == "" {
+			return nil // manually imported record without dedup linkage
+		}
+
+		var asset models.FileAsset
+		assetQuery := tx
+		if img.FileAssetID > 0 {
+			assetQuery = tx.Where("id = ?", img.FileAssetID)
+		} else {
+			assetQuery = tx.Where("file_hash = ?", img.FileHash)
+		}
+		if err := withRowLock(assetQuery).First(&asset).Error; err != nil {
+			return nil // asset already gone; nothing left to clean up
+		}
+
+		// Live references: non-deleted Image rows pointing at this asset.
+		// GORM's default scope already excludes soft-deleted images here,
+		// which is exactly the "is anyone still referencing this pid?" check.
+		var liveRefs int64
+		if err := tx.Model(&models.Image{}).Where("file_asset_id = ?", asset.ID).Count(&liveRefs).Error; err != nil {
+			return err
+		}
+
+		if liveRefs > 0 {
+			// Others still reference the physical file - keep everything,
+			// and self-heal any counter drift with the authoritative count.
+			return tx.Model(&models.FileAsset{}).Where("id = ?", asset.ID).
+				UpdateColumn("ref_count", liveRefs).Error
+		}
+
+		// Last reference gone: release the unique hash slot and drop metadata.
+		// Physical file removal happens after commit below.
+		purgeNeeded = true
+		purgeDriver = asset.StorageDriver
+		purgeKey = asset.StorageKey
+		return tx.Unscoped().Delete(&asset).Error
+	})
+	if err != nil {
+		return err
+	}
+
+	if purgeNeeded {
+		mgr := storage.GetManager()
+		if eng, derr := mgr.GetEngineByDriver(models.StorageDriver(purgeDriver)); derr == nil {
+			_ = eng.Delete(context.Background(), purgeKey)
 		}
 	}
 

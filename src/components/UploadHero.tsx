@@ -33,8 +33,8 @@ import {
 interface UploadHeroProps {
   onFilesSelected: (files: File[]) => void;
   albums: Album[];
-  selectedAlbumId: string;
-  onAlbumChange: (albumId: string) => void;
+  selectedAlbumId: number;
+  onAlbumChange: (albumId: number) => void;
 }
 
 export const UploadHero: React.FC<UploadHeroProps> = ({
@@ -213,13 +213,13 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
               {t('hero.targetAlbum')}:
             </span>
             <div className="w-44">
-              <Select value={selectedAlbumId} onValueChange={onAlbumChange}>
+              <Select value={String(selectedAlbumId)} onValueChange={(val) => onAlbumChange(Number(val))}>
                 <SelectTrigger id="upload-album-select" className="h-8 rounded-full">
                   <SelectValue placeholder={t('hero.selectAlbumPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {albums.map((alb) => (
-                    <SelectItem key={alb.id} value={alb.id}>
+                    <SelectItem key={alb.id} value={String(alb.id)}>
                       <span className="flex items-center gap-2">
                         <span
                           className="w-2 h-2 rounded-full"

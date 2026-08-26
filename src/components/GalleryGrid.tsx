@@ -22,13 +22,13 @@ interface GalleryGridProps {
   albums: Album[];
   filters: FilterOptions;
   onFilterChange: (filters: Partial<FilterOptions>) => void;
-  selectedIds: Set<string>;
-  onToggleSelect: (id: string, e: React.MouseEvent) => void;
+  selectedIds: Set<number>;
+  onToggleSelect: (id: number, e: React.MouseEvent) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
   onPreview: (image: ImageItem) => void;
-  onDelete: (id: string) => void;
-  onToggleFavorite: (id: string) => void;
+  onDelete: (id: number) => void;
+  onToggleFavorite: (id: number) => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onOpenUpload: () => void;
 }

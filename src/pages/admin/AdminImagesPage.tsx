@@ -25,7 +25,7 @@ import {
   Download,
 } from 'lucide-react';
 import { ImageItem, Album, TagItem, StorageDriverType } from '../../types';
-import { adminApi } from '../../services/api';
+import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
 import { toAbsoluteImageUrl } from '../../utils/linkFormatter';
 import { Button } from '../../components/ui/button';
@@ -62,29 +62,29 @@ export const AdminImagesPage: React.FC = () => {
 
   // Filters & View Mode
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAlbum, setSelectedAlbum] = useState('all');
+  const [selectedAlbum, setSelectedAlbum] = useState<number | 'all' | 'unassigned'>('all');
   const [selectedDriver, setSelectedDriver] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   // Selection
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   // Modals & Drawers
   const [editingImage, setEditingImage] = useState<ImageItem | null>(null);
   const [editName, setEditName] = useState('');
-  const [editAlbum, setEditAlbum] = useState('');
+  const [editAlbum, setEditAlbum] = useState<number>(DEFAULT_ALBUM_ID);
   const [editTags, setEditTags] = useState('');
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
 
   // Batch Modals
   const [isBatchMoveOpen, setIsBatchMoveOpen] = useState(false);
-  const [batchTargetAlbum, setBatchTargetAlbum] = useState('default');
+  const [batchTargetAlbum, setBatchTargetAlbum] = useState<number>(DEFAULT_ALBUM_ID);
   const [isBatchTagOpen, setIsBatchTagOpen] = useState(false);
   const [batchNewTag, setBatchNewTag] = useState('');
 
   // Toast / Feedback message
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -125,7 +125,7 @@ export const AdminImagesPage: React.FC = () => {
   };
 
   // Selection handlers
-  const handleToggleSelect = (id: string) => {
+  const handleToggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -151,7 +151,7 @@ export const AdminImagesPage: React.FC = () => {
   const handleOpenEdit = (img: ImageItem) => {
     setEditingImage(img);
     setEditName(img.name);
-    setEditAlbum(img.albumId || 'default');
+    setEditAlbum(Number(img.albumId) || DEFAULT_ALBUM_ID);
     setEditTags(img.tags ? img.tags.join(', ') : '');
   };
 
@@ -181,7 +181,7 @@ export const AdminImagesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteImage = async (id: string, name: string) => {
+  const handleDeleteImage = async (id: number, name: string) => {
     if (!confirm(`确定要彻底删除图片 "${name}" 吗？此操作无法撤销。`)) return;
     try {
       const res = await adminApi.deleteImage(id);
@@ -349,14 +349,17 @@ export const AdminImagesPage: React.FC = () => {
           {/* Filters */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Album Filter */}
-            <Select value={selectedAlbum} onValueChange={setSelectedAlbum}>
+            <Select
+              value={selectedAlbum === 'all' ? 'all' : String(selectedAlbum)}
+              onValueChange={(val) => setSelectedAlbum(val === 'all' ? 'all' : Number(val))}
+            >
               <SelectTrigger className="w-[140px] text-xs h-9 rounded-xl">
                 <SelectValue placeholder="全部相册" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部相册</SelectItem>
                 {albums.map((alb) => (
-                  <SelectItem key={alb.id} value={alb.id}>
+                  <SelectItem key={alb.id} value={String(alb.id)}>
                     {alb.name}
                   </SelectItem>
                 ))}
@@ -808,13 +811,13 @@ export const AdminImagesPage: React.FC = () => {
 
                   <Field>
                     <FieldLabel htmlFor="edit-img-album">归属相册空间</FieldLabel>
-                    <Select value={editAlbum} onValueChange={setEditAlbum}>
+                    <Select value={String(editAlbum)} onValueChange={(val) => setEditAlbum(Number(val))}>
                       <SelectTrigger id="edit-img-album" className="w-full text-xs h-9 rounded-xl">
                         <SelectValue placeholder="选择相册" />
                       </SelectTrigger>
                       <SelectContent>
                         {albums.map((alb) => (
-                          <SelectItem key={alb.id} value={alb.id}>
+                          <SelectItem key={alb.id} value={String(alb.id)}>
                             {alb.name}
                           </SelectItem>
                         ))}
@@ -880,13 +883,13 @@ export const AdminImagesPage: React.FC = () => {
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="batch-move-album">目标相册空间</FieldLabel>
-                  <Select value={batchTargetAlbum} onValueChange={setBatchTargetAlbum}>
+                  <Select value={String(batchTargetAlbum)} onValueChange={(val) => setBatchTargetAlbum(Number(val))}>
                     <SelectTrigger id="batch-move-album" className="w-full text-xs h-9 rounded-xl">
                       <SelectValue placeholder="选择目标相册" />
                     </SelectTrigger>
                     <SelectContent>
                       {albums.map((alb) => (
-                        <SelectItem key={alb.id} value={alb.id}>
+                        <SelectItem key={alb.id} value={String(alb.id)}>
                           {alb.name}
                         </SelectItem>
                       ))}

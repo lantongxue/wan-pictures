@@ -10,7 +10,7 @@ import {
   FilterOptions,
   ToastMessage,
 } from '../../types';
-import { uploadApi, publicApi, adminApi } from '../../services/api';
+import { uploadApi, publicApi, adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { partitionAllowedImages, isAllowedImageType, extractExtension } from '../../utils/imageProcessing';
 import { useAuth } from '../../context/AuthContext';
 
@@ -26,8 +26,8 @@ export interface UserContextType {
   handleTabChange: (tab: 'workspace' | 'plaza') => void;
 
   // Upload States
-  uploadTargetAlbumId: string;
-  setUploadTargetAlbumId: (id: string) => void;
+  uploadTargetAlbumId: number;
+  setUploadTargetAlbumId: (id: number) => void;
   uploadQueue: UploadQueueItem[];
   setUploadQueue: React.Dispatch<React.SetStateAction<UploadQueueItem[]>>;
   isUploadModalOpen: boolean;
@@ -56,8 +56,8 @@ export interface UserContextType {
   setPreviewImage: (image: ImageItem | null) => void;
 
   // Selection & Filters
-  selectedIds: Set<string>;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  selectedIds: Set<number>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<number>>>;
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   filteredImages: ImageItem[];
@@ -73,16 +73,16 @@ export interface UserContextType {
   refreshImages: () => Promise<void>;
   refreshAlbums: () => Promise<void>;
   handleFilesSelected: (files: File[]) => Promise<void>;
-  handleDeleteImage: (id: string) => Promise<void>;
-  handleToggleFavorite: (id: string) => Promise<void>;
-  handleUpdateImage: (id: string, updates: Partial<ImageItem>) => Promise<void>;
-  handleCreateAlbum: (album: Album) => Promise<void>;
+  handleDeleteImage: (id: number) => Promise<void>;
+  handleToggleFavorite: (id: number) => Promise<void>;
+  handleUpdateImage: (id: number, updates: Partial<ImageItem>) => Promise<void>;
+  handleCreateAlbum: (album: Omit<Album, 'id'>) => Promise<void>;
   handleUpdateAlbum: (album: Album) => Promise<void>;
-  handleDeleteAlbum: (id: string) => Promise<void>;
-  handleToggleSelect: (id: string, e: React.MouseEvent) => void;
+  handleDeleteAlbum: (id: number) => Promise<void>;
+  handleToggleSelect: (id: number, e: React.MouseEvent) => void;
   handleSelectAll: () => void;
   handleClearSelection: () => void;
-  handleBatchMoveToAlbum: (targetAlbumId: string) => Promise<void>;
+  handleBatchMoveToAlbum: (targetAlbumId: number) => Promise<void>;
   handleBatchDelete: () => Promise<void>;
   handleOpenBatchLinks: () => void;
 
@@ -121,7 +121,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [albums, setAlbums] = useState<Album[]>([]);
 
   // Upload States
-  const [uploadTargetAlbumId, setUploadTargetAlbumId] = useState<string>('default');
+  const [uploadTargetAlbumId, setUploadTargetAlbumId] = useState<number>(DEFAULT_ALBUM_ID);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [quotaInfo, setQuotaInfo] = useState<UploadQuotaInfo | null>(null);
@@ -137,7 +137,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
 
   // Selection & Filters
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [filters, setFilters] = useState<FilterOptions>({
     albumId: 'all',
     searchQuery: '',
@@ -526,7 +526,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Image CRUD actions (persisted by the backend, reflected in memory)
   const handleDeleteImage = useCallback(
-    async (id: string) => {
+    async (id: number) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -551,7 +551,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const handleToggleFavorite = useCallback(
-    async (id: string) => {
+    async (id: number) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -574,7 +574,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const handleUpdateImage = useCallback(
-    async (id: string, updates: Partial<ImageItem>) => {
+    async (id: number, updates: Partial<ImageItem>) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -595,7 +595,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Album actions
   const handleCreateAlbum = useCallback(
-    async (album: Album) => {
+    async (album: Omit<Album, 'id'>) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -631,7 +631,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const handleDeleteAlbum = useCallback(
-    async (id: string) => {
+    async (id: number) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -643,7 +643,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         showToast(t('common.error'), res.message || '相册删除失败', 'error');
         return;
       }
-      // Backend reassigns the album's images to 'default' — reload both lists
+      // Backend reassigns the album's images to the default album — reload both lists
       await Promise.all([refreshAlbums(), refreshImages()]);
       setFilters((prev) => (prev.albumId === id ? { ...prev, albumId: 'all' } : prev));
     },
@@ -651,7 +651,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Batch actions (looped single-item calls through the user workspace route)
-  const handleToggleSelect = useCallback((id: string, e: React.MouseEvent) => {
+  const handleToggleSelect = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -670,7 +670,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleBatchMoveToAlbum = useCallback(
-    async (targetAlbumId: string) => {
+    async (targetAlbumId: number) => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
         setAuthModalMode('login');
@@ -704,7 +704,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthModalOpen(true);
       return;
     }
-    const ids: string[] = Array.from(selectedIds);
+    const ids: number[] = Array.from(selectedIds);
     if (window.confirm(`Confirm batch delete ${ids.length} images?`)) {
       let failed = 0;
       for (const id of ids) {

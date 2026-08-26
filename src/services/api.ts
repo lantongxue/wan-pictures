@@ -26,6 +26,12 @@ import { sha256 } from 'js-sha256';
 // API Base URL (same-origin /api/v1 via dev proxy, or override with VITE_API_BASE_URL)
 const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/v1';
 
+/**
+ * Well-known auto-increment ID of the seeded default album.
+ * The backend guarantees albums.id = 1 is the default album (models.DefaultAlbumID).
+ */
+export const DEFAULT_ALBUM_ID = 1;
+
 const TOKEN_KEY = 'wan_auth_token';
 const USER_KEY = 'wan_auth_user';
 
@@ -234,7 +240,7 @@ export const publicApi = {
    */
   async getImages(params: {
     q?: string;
-    albumId?: string;
+    albumId?: number | 'all' | 'unassigned';
     tag?: string;
     storageDriver?: string;
     sortBy?: string;
@@ -243,7 +249,7 @@ export const publicApi = {
   }): Promise<{ success: boolean; data: { items: ImageItem[]; total: number }; message?: string }> {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
-    if (params.albumId && params.albumId !== 'all') query.set('album_id', params.albumId);
+    if (typeof params.albumId === 'number') query.set('album_id', String(params.albumId));
     if (params.tag) query.set('tag', params.tag);
     if (params.storageDriver && params.storageDriver !== 'all') query.set('storage_driver', params.storageDriver);
     if (params.sortBy) query.set('sort_by', params.sortBy);
@@ -254,7 +260,7 @@ export const publicApi = {
       if (res.success && res.data) {
         const d = res.data as any;
         const items = ((d.items || []) as any[]).map((img) => ({
-          id: img.id,
+          id: Number(img.id),
           name: img.name,
           originalName: img.original_name || img.name,
           size: img.size,
@@ -267,7 +273,7 @@ export const publicApi = {
           url: img.url,
           createdAt: new Date(img.created_at).getTime() || Date.now(),
           updatedAt: new Date(img.updated_at).getTime() || Date.now(),
-          albumId: img.album_id || 'default',
+          albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
           tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
           favorite: img.favorite,
           colorPalette: typeof img.color_palette === 'string' ? JSON.parse(img.color_palette || '[]') : img.color_palette,
@@ -290,12 +296,12 @@ export const publicApi = {
     return request<any[]>('/albums').then((res) => {
       if (res.success && Array.isArray(res.data)) {
         const albums: Album[] = res.data.map((a) => ({
-          id: a.id,
+          id: Number(a.id),
           name: a.name,
           description: a.description,
           color: a.color || '#6366F1',
           coverImageUrl: a.cover_image_url,
-          coverImageId: a.cover_image_id,
+          coverImageId: a.cover_image_id ? Number(a.cover_image_id) : undefined,
           isDefault: a.is_default,
           createdAt: new Date(a.created_at).getTime() || Date.now(),
           imageCount: a.image_count,
@@ -332,7 +338,7 @@ export const adminApi = {
           },
           formatStats: d.format_stats || {},
           recentActivity: (d.recent_activity || []).map((img: any) => ({
-            id: img.id,
+            id: Number(img.id),
             name: img.name,
             originalName: img.original_name || img.name,
             size: img.size,
@@ -345,7 +351,7 @@ export const adminApi = {
             url: img.url,
             createdAt: new Date(img.created_at).getTime() || Date.now(),
             updatedAt: new Date(img.updated_at).getTime() || Date.now(),
-            albumId: img.album_id || 'default',
+            albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
             tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
             favorite: img.favorite,
             storageDriver: img.storage_driver || 'local',
@@ -362,7 +368,7 @@ export const adminApi = {
    */
   async getImages(params: {
     q?: string;
-    albumId?: string;
+    albumId?: number | 'all' | 'unassigned';
     tag?: string;
     storageDriver?: string;
     sortBy?: string;
@@ -371,7 +377,7 @@ export const adminApi = {
   }): Promise<{ success: boolean; data: { items: ImageItem[]; total: number }; message?: string }> {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
-    if (params.albumId) query.set('album_id', params.albumId);
+    if (typeof params.albumId === 'number') query.set('album_id', String(params.albumId));
     if (params.tag) query.set('tag', params.tag);
     if (params.storageDriver) query.set('storage_driver', params.storageDriver);
     if (params.sortBy) query.set('sort_by', params.sortBy);
@@ -381,7 +387,7 @@ export const adminApi = {
     const res = await request<any>(`/admin/images?${query.toString()}`);
     if (res.isBackendOnline && res.success && res.data) {
       const items = (res.data.items || []).map((img: any) => ({
-        id: img.id,
+        id: Number(img.id),
         name: img.name,
         originalName: img.original_name || img.name,
         size: img.size,
@@ -394,7 +400,7 @@ export const adminApi = {
         url: img.url,
         createdAt: new Date(img.created_at).getTime() || Date.now(),
         updatedAt: new Date(img.updated_at).getTime() || Date.now(),
-        albumId: img.album_id || 'default',
+        albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
         colorPalette: typeof img.color_palette === 'string' ? JSON.parse(img.color_palette || '[]') : img.color_palette,
@@ -419,7 +425,7 @@ export const adminApi = {
   /**
    * Update Image Metadata (requires JWT; goes through the user workspace route)
    */
-  async updateImage(id: string, updates: Partial<ImageItem>): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
+  async updateImage(id: number, updates: Partial<ImageItem>): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
     const payload: Record<string, any> = {};
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.albumId !== undefined) payload.album_id = updates.albumId;
@@ -435,7 +441,7 @@ export const adminApi = {
     if (res.success && res.data) {
       const img = res.data as any;
       const updated: ImageItem = {
-        id: img.id,
+        id: Number(img.id),
         name: img.name,
         originalName: img.original_name || img.name,
         size: img.size,
@@ -448,7 +454,7 @@ export const adminApi = {
         url: img.url,
         createdAt: new Date(img.created_at).getTime() || Date.now(),
         updatedAt: new Date(img.updated_at).getTime() || Date.now(),
-        albumId: img.album_id || 'default',
+        albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
         storageDriver: img.storage_driver || 'local',
@@ -461,7 +467,7 @@ export const adminApi = {
   /**
    * Delete Image (requires JWT; goes through the user workspace route)
    */
-  async deleteImage(id: string): Promise<{ success: boolean; message?: string }> {
+  async deleteImage(id: number): Promise<{ success: boolean; message?: string }> {
     const res = await request(`/user/images/${id}`, { method: 'DELETE' });
     return { success: res.success, message: res.message };
   },
@@ -469,13 +475,13 @@ export const adminApi = {
   /**
    * Batch Operation on Images (admin only)
    */
-  async batchImageAction(ids: string[], action: 'delete' | 'move' | 'tag', extra?: { albumId?: string; tagToAdd?: string }): Promise<{ success: boolean; message?: string }> {
+  async batchImageAction(ids: number[], action: 'delete' | 'move' | 'tag', extra?: { albumId?: number; tagToAdd?: string }): Promise<{ success: boolean; message?: string }> {
     const res = await request('/admin/images/batch', {
       method: 'POST',
       body: JSON.stringify({
         ids,
         action,
-        album_id: extra?.albumId || '',
+        album_id: extra?.albumId || 0,
         tag_to_add: extra?.tagToAdd || '',
       }),
     });
@@ -489,12 +495,12 @@ export const adminApi = {
     const res = await request<any[]>('/admin/albums');
     if (res.isBackendOnline && res.success && Array.isArray(res.data)) {
       const albums: Album[] = res.data.map((a) => ({
-        id: a.id,
+        id: Number(a.id),
         name: a.name,
         description: a.description,
         color: a.color || '#6366F1',
         coverImageUrl: a.cover_image_url,
-        coverImageId: a.cover_image_id,
+        coverImageId: a.cover_image_id ? Number(a.cover_image_id) : undefined,
         isDefault: a.is_default,
         createdAt: new Date(a.created_at).getTime() || Date.now(),
         imageCount: a.image_count,
@@ -511,24 +517,38 @@ export const adminApi = {
   },
 
   /**
-   * Create Album (requires JWT; goes through the user workspace route)
+   * Create Album (requires JWT; goes through the user workspace route).
+   * The backend assigns the auto-increment ID; the created album is returned.
    */
-  async saveAlbum(album: Album): Promise<{ success: boolean; data?: Album; message?: string }> {
+  async saveAlbum(album: Omit<Album, 'id'> & { id?: number }): Promise<{ success: boolean; data?: Album; message?: string }> {
     const res = await request<any>('/user/albums', {
       method: 'POST',
       body: JSON.stringify({
-        id: album.id,
+        id: album.id || 0,
         name: album.name,
         description: album.description || '',
         color: album.color || '#6366F1',
         cover_image_url: album.coverImageUrl || '',
-        cover_image_id: album.coverImageId || '',
+        cover_image_id: album.coverImageId || 0,
         is_default: !!album.isDefault,
       }),
     });
 
-    if (res.success) {
-      return { success: true, data: album, message: res.message || 'Album created' };
+    if (res.success && res.data) {
+      const a = res.data;
+      const created: Album = {
+        id: Number(a.id),
+        name: a.name,
+        description: a.description,
+        color: a.color || '#6366F1',
+        coverImageUrl: a.cover_image_url,
+        coverImageId: a.cover_image_id ? Number(a.cover_image_id) : undefined,
+        isDefault: a.is_default,
+        createdAt: new Date(a.created_at).getTime() || Date.now(),
+        imageCount: 0,
+        totalSize: 0,
+      };
+      return { success: true, data: created, message: res.message || 'Album created' };
     }
     return { success: false, message: res.message || '相册创建失败' };
   },
@@ -544,7 +564,7 @@ export const adminApi = {
         description: album.description || '',
         color: album.color,
         cover_image_url: album.coverImageUrl || '',
-        cover_image_id: album.coverImageId || '',
+        cover_image_id: album.coverImageId || 0,
       }),
     });
 
@@ -555,10 +575,10 @@ export const adminApi = {
   },
 
   /**
-   * Delete Album (requires JWT; backend reassigns its images to 'default')
+   * Delete Album (requires JWT; backend reassigns its images to the default album)
    */
-  async deleteAlbum(id: string): Promise<{ success: boolean; message?: string }> {
-    if (id === 'default') {
+  async deleteAlbum(id: number): Promise<{ success: boolean; message?: string }> {
+    if (id === DEFAULT_ALBUM_ID) {
       return { success: false, message: '默认相册不可删除' };
     }
     const res = await request(`/user/albums/${id}`, { method: 'DELETE' });
@@ -1054,7 +1074,7 @@ export const uploadApi = {
     hash: string;
     size: number;
     name?: string;
-    albumId?: string;
+    albumId?: number;
   }): Promise<{ success: boolean; exists: boolean; isInstant?: boolean; image?: ImageItem; message?: string; isBackendOnline: boolean }> {
     const res = await request<any>('/upload/check-hash', {
       method: 'POST',
@@ -1062,7 +1082,7 @@ export const uploadApi = {
         hash: payload.hash,
         size: payload.size,
         name: payload.name || '',
-        album_id: payload.albumId || 'default',
+        album_id: payload.albumId || DEFAULT_ALBUM_ID,
       }),
     });
 
@@ -1071,7 +1091,7 @@ export const uploadApi = {
         const d = res.data;
         if (d.exists && d.image) {
           const img: ImageItem = {
-            id: d.image.id,
+            id: Number(d.image.id),
             name: d.image.name,
             originalName: d.image.original_name || d.image.name,
             size: d.image.size,
@@ -1084,7 +1104,7 @@ export const uploadApi = {
             url: d.image.url,
             createdAt: new Date(d.image.created_at).getTime() || Date.now(),
             updatedAt: new Date(d.image.updated_at).getTime() || Date.now(),
-            albumId: d.image.album_id || 'default',
+            albumId: Number(d.image.album_id) || DEFAULT_ALBUM_ID,
             tags: typeof d.image.tags === 'string' ? JSON.parse(d.image.tags || '[]') : d.image.tags || [],
             favorite: d.image.favorite,
             storageDriver: d.image.storage_driver || 'local',
@@ -1106,7 +1126,7 @@ export const uploadApi = {
    */
   async uploadFile(
     file: File,
-    albumId = 'default',
+    albumId: number = DEFAULT_ALBUM_ID,
     onProgress?: (percent: number) => void
   ): Promise<{ success: boolean; isInstant?: boolean; image?: ImageItem; message?: string; isBackendOnline: boolean }> {
     const token = authStorage.getToken();
@@ -1132,7 +1152,7 @@ export const uploadApi = {
           if (xhr.status >= 200 && xhr.status < 300 && res.data?.image) {
             const raw = res.data.image;
             const img: ImageItem = {
-              id: raw.id,
+              id: Number(raw.id),
               name: raw.name,
               originalName: raw.original_name || raw.name,
               size: raw.size,
@@ -1145,7 +1165,7 @@ export const uploadApi = {
               url: raw.url,
               createdAt: new Date(raw.created_at).getTime() || Date.now(),
               updatedAt: new Date(raw.updated_at).getTime() || Date.now(),
-              albumId: raw.album_id || 'default',
+              albumId: Number(raw.album_id) || DEFAULT_ALBUM_ID,
               tags: typeof raw.tags === 'string' ? JSON.parse(raw.tags || '[]') : raw.tags || [],
               favorite: raw.favorite,
               storageDriver: raw.storage_driver || 'local',
@@ -1183,7 +1203,7 @@ export const uploadApi = {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('album_id', albumId);
+      formData.append('album_id', String(albumId));
       xhr.send(formData);
     });
   },

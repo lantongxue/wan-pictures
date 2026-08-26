@@ -33,9 +33,9 @@ interface AlbumManagerModalProps {
   albums: Album[];
   images: ImageItem[];
   onClose: () => void;
-  onCreateAlbum: (album: Album) => void;
+  onCreateAlbum: (album: Omit<Album, 'id'>) => void;
   onUpdateAlbum: (album: Album) => void;
-  onDeleteAlbum: (id: string) => void;
+  onDeleteAlbum: (id: number) => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onOpenAuth?: (mode?: 'login' | 'register') => void;
 }
@@ -69,7 +69,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
   const [newAlbumDesc, setNewAlbumDesc] = useState('');
   const [newAlbumColor, setNewAlbumColor] = useState(PRESET_COLORS[0]);
 
-  const [editingAlbumId, setEditingAlbumId] = useState<string | null>(null);
+  const [editingAlbumId, setEditingAlbumId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
 
@@ -127,8 +127,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
     e.preventDefault();
     if (!newAlbumName.trim()) return;
 
-    const newAlbum: Album = {
-      id: 'album_' + Date.now(),
+    const newAlbum: Omit<Album, 'id'> = {
       name: newAlbumName.trim(),
       description: newAlbumDesc.trim() || undefined,
       color: newAlbumColor,

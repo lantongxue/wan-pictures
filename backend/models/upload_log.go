@@ -7,7 +7,7 @@ type UploadLog struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID    uint      `gorm:"type:bigint;index;default:0" json:"user_id"` // 0 for anonymous/guest
 	IPAddress string    `gorm:"type:varchar(64);index" json:"ip_address"`
-	ImageID   string    `gorm:"type:varchar(64);index" json:"image_id"`
+	ImageID   uint      `gorm:"index" json:"image_id"`
 	FileHash  string    `gorm:"type:varchar(64);index" json:"file_hash"`
 	Size      int64     `gorm:"type:bigint" json:"size"`
 	IsInstant bool      `gorm:"type:boolean;default:false" json:"is_instant"`

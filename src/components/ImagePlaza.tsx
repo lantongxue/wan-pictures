@@ -38,7 +38,7 @@ interface ImagePlazaProps {
   images: ImageItem[];
   albums: Album[];
   onPreview: (image: ImageItem) => void;
-  onToggleFavorite: (id: string) => void;
+  onToggleFavorite: (id: number) => void;
   onOpenBatchLinks?: (images: ImageItem[]) => void;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   onOpenUpload: () => void;
@@ -83,7 +83,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   const [aspectRatioFilter, setAspectRatioFilter] = useState<AspectRatioFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [columnCount, setColumnCount] = useState<3 | 4 | 5 | 2>(4);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const albumMap = useMemo(() => new Map(albums.map((a) => [a.id, a])), [albums]);
 
