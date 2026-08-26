@@ -222,7 +222,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     >
       {/* Image Container */}
       <div
-        className={`relative w-full overflow-hidden flex items-center justify-center bg-muted/40 ${
+        className={`relative w-full overflow-hidden flex items-center justify-center bg-muted/40 min-h-[120px] ${
           viewMode === 'grid' ? 'aspect-[4/3]' : ''
         }`}
       >
