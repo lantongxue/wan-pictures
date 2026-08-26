@@ -57,7 +57,7 @@ func (rc *rateLimitCache) loadGlobalLimits() (anonQPS, anonRPM, userQPS, userRPM
 
 	quotas := models.DefaultUploadQuotaSettings()
 	var setting models.SystemSetting
-	if err := database.DB.Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").First(&setting).Error; err == nil && setting.Value != "" {
+	if err := database.DB.Where(map[string]interface{}{"key": "upload_quotas"}).First(&setting).Error; err == nil && setting.Value != "" {
 		if err := json.Unmarshal([]byte(setting.Value), &quotas); err == nil {
 			rc.mu.Lock()
 			rc.global = quotas

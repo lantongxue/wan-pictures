@@ -39,7 +39,7 @@ func NewUploadController() *UploadController {
 // GetSystemQuotaSettings retrieves system-level upload quota settings from DB or defaults
 func GetSystemQuotaSettings() models.UploadQuotaSettings {
 	var setting models.SystemSetting
-	err := database.DB.Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").First(&setting).Error
+	err := database.DB.Where(map[string]interface{}{"key": "upload_quotas"}).First(&setting).Error
 	if err != nil || setting.Value == "" {
 		return models.DefaultUploadQuotaSettings()
 	}

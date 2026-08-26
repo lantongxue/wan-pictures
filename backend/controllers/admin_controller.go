@@ -895,7 +895,7 @@ func (ctrl *AdminController) UpdateQuotaSettings(c *gin.Context) {
 	}
 
 	var setting models.SystemSetting
-	err = database.DB.Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").First(&setting).Error
+	err = database.DB.Where(map[string]interface{}{"key": "upload_quotas"}).First(&setting).Error
 	if err != nil {
 		setting = models.SystemSetting{
 			Key:       "upload_quotas",
