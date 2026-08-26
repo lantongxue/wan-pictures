@@ -72,12 +72,6 @@ export const LINK_FORMAT_OPTIONS: FormattedLinkOption[] = [
       return `[![${item.name}](${abs})](${abs})`;
     },
   },
-  {
-    type: 'data_uri',
-    label: 'Data URI (Base64)',
-    syntaxExample: 'data:image/png;base64,...',
-    format: (item) => item.dataUrl,
-  },
 ];
 
 export function formatSingleImageLink(

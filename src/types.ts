@@ -9,7 +9,7 @@ export type ImageFormat =
   | 'image/x-icon'
   | string;
 
-export type LinkFormatType = 'raw' | 'markdown' | 'html' | 'bbcode' | 'markdown_link' | 'data_uri';
+export type LinkFormatType = 'raw' | 'markdown' | 'html' | 'bbcode' | 'markdown_link';
 
 export interface ImageItem {
   id: string;
