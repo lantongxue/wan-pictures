@@ -1067,6 +1067,7 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 			Role:       u.Role,
 			Bio:        u.Bio,
 			UploadQPS:  u.UploadQPS,
+			UploadRPM:  u.UploadRPM,
 			ImageCount: imgCount,
 			AlbumCount: albCount,
 			CreatedAt:  u.CreatedAt,
@@ -1113,6 +1114,7 @@ func (ctrl *AdminController) GetUser(c *gin.Context) {
 		Role:       user.Role,
 		Bio:        user.Bio,
 		UploadQPS:  user.UploadQPS,
+		UploadRPM:  user.UploadRPM,
 		ImageCount: imgCount,
 		AlbumCount: albCount,
 		CreatedAt:  user.CreatedAt,
@@ -1176,9 +1178,12 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
-	// Per-account upload QPS override (-1/NULL=follow global, 0=unlimited, >0=custom)
+	// Per-account upload QPS/RPM overrides (-1/NULL=follow global, 0=unlimited, >0=custom)
 	if req.UploadQPS != nil && *req.UploadQPS >= 0 {
 		newUser.UploadQPS = req.UploadQPS
+	}
+	if req.UploadRPM != nil && *req.UploadRPM >= 0 {
+		newUser.UploadRPM = req.UploadRPM
 	}
 
 	if err := database.DB.Create(&newUser).Error; err != nil {
@@ -1195,6 +1200,7 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 		Role:       newUser.Role,
 		Bio:        newUser.Bio,
 		UploadQPS:  newUser.UploadQPS,
+		UploadRPM:  newUser.UploadRPM,
 		ImageCount: 0,
 		AlbumCount: 0,
 		CreatedAt:  newUser.CreatedAt,
@@ -1263,13 +1269,21 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 		user.Password = hashed
 	}
 
-	// Per-account upload QPS override (-1=follow global/NULL, 0=unlimited, >0=custom)
+	// Per-account upload QPS/RPM overrides (-1=follow global/NULL, 0=unlimited, >0=custom)
 	if req.UploadQPS != nil {
 		if *req.UploadQPS < 0 {
 			user.UploadQPS = nil
 		} else {
 			qps := *req.UploadQPS
 			user.UploadQPS = &qps
+		}
+	}
+	if req.UploadRPM != nil {
+		if *req.UploadRPM < 0 {
+			user.UploadRPM = nil
+		} else {
+			rpm := *req.UploadRPM
+			user.UploadRPM = &rpm
 		}
 	}
 
@@ -1293,6 +1307,7 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 		Role:       user.Role,
 		Bio:        user.Bio,
 		UploadQPS:  user.UploadQPS,
+		UploadRPM:  user.UploadRPM,
 		ImageCount: imgCount,
 		AlbumCount: albCount,
 		CreatedAt:  user.CreatedAt,

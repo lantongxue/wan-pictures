@@ -25,11 +25,13 @@ type UploadQuotaSettings struct {
 	VIPDailyLimit       int    `json:"vip_daily_limit"`        // e.g. 500
 	VIPMaxSizeMB        int    `json:"vip_max_size_mb"`         // e.g. 50
 
-	// Upload rate limiting (Redis sliding window, QPS = requests per second)
+	// Upload rate limiting (Redis sliding window; QPS = requests/second, RPM = requests/minute)
 	// Pointer fields: nil (= key absent in legacy JSON) falls back to defaults,
 	// explicit 0 disables limiting, >0 overrides.
 	AnonymousUploadQPS *int `json:"anonymous_upload_qps,omitempty"` // global QPS for anonymous (IP-based)
 	UserUploadQPS      *int `json:"user_upload_qps,omitempty"`      // global QPS for logged-in users
+	AnonymousUploadRPM *int `json:"anonymous_upload_rpm,omitempty"` // global RPM for anonymous (IP-based)
+	UserUploadRPM      *int `json:"user_upload_rpm,omitempty"`      // global RPM for logged-in users
 
 	NamingRule          string `json:"naming_rule"`            // 'uuid', 'original'
 	CustomPrefix        string `json:"custom_prefix"`          // legacy, kept for compat (unused by uuid naming)
@@ -50,6 +52,8 @@ func DefaultUploadQuotaSettings() UploadQuotaSettings {
 		VIPMaxSizeMB:        50,
 		AnonymousUploadQPS:  intPtr(2),
 		UserUploadQPS:       intPtr(10),
+		AnonymousUploadRPM:  intPtr(30),
+		UserUploadRPM:       intPtr(200),
 		NamingRule:          "uuid",
 		CustomPrefix:        "pic_",
 		AutoCompress:        false,
@@ -72,6 +76,22 @@ func (s UploadQuotaSettings) EffectiveUserUploadQPS() int {
 		return *s.UserUploadQPS
 	}
 	return 10
+}
+
+// EffectiveAnonymousUploadRPM returns the configured anonymous RPM or the default (30)
+func (s UploadQuotaSettings) EffectiveAnonymousUploadRPM() int {
+	if s.AnonymousUploadRPM != nil {
+		return *s.AnonymousUploadRPM
+	}
+	return 30
+}
+
+// EffectiveUserUploadRPM returns the configured user RPM or the default (200)
+func (s UploadQuotaSettings) EffectiveUserUploadRPM() int {
+	if s.UserUploadRPM != nil {
+		return *s.UserUploadRPM
+	}
+	return 200
 }
 
 func intPtr(v int) *int {

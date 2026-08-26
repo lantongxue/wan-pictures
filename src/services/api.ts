@@ -218,6 +218,7 @@ function mapBackendUser(u: any): AdminUserItem {
     role: u.role || 'user',
     bio: u.bio,
     uploadQps: u.upload_qps === undefined || u.upload_qps === null ? null : Number(u.upload_qps),
+    uploadRpm: u.upload_rpm === undefined || u.upload_rpm === null ? null : Number(u.upload_rpm),
     imageCount: Number(u.image_count || 0),
     albumCount: Number(u.album_count || 0),
     createdAt: u.created_at,
@@ -922,9 +923,11 @@ export const adminApi = {
    */
   async createUser(payload: CreateUserPayload): Promise<{ success: boolean; data?: AdminUserItem; message?: string }> {
     const body: Record<string, any> = { ...payload };
-    // -1=follow global, 0=unlimited, >0=custom QPS
+    // -1=follow global, 0=unlimited, >0=custom
     body.upload_qps = payload.uploadQps === undefined || payload.uploadQps === null ? -1 : payload.uploadQps;
+    body.upload_rpm = payload.uploadRpm === undefined || payload.uploadRpm === null ? -1 : payload.uploadRpm;
     delete body.uploadQps;
+    delete body.uploadRpm;
 
     const res = await request<any>('/admin/users', {
       method: 'POST',
@@ -951,8 +954,9 @@ export const adminApi = {
     if (payload.role !== undefined) body.role = payload.role;
     if (payload.bio !== undefined) body.bio = payload.bio;
     if (payload.password !== undefined && payload.password !== '') body.password = payload.password;
-    // -1=follow global (clears override), 0=unlimited, >0=custom QPS
+    // -1=follow global (clears override), 0=unlimited, >0=custom QPS/RPM
     if (payload.uploadQps !== undefined) body.upload_qps = payload.uploadQps === null ? -1 : payload.uploadQps;
+    if (payload.uploadRpm !== undefined) body.upload_rpm = payload.uploadRpm === null ? -1 : payload.uploadRpm;
 
     const res = await request<any>(`/admin/users/${id}`, {
       method: 'PUT',

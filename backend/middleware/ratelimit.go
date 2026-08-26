@@ -17,15 +17,16 @@ import (
 )
 
 const (
-	rateLimitWindow   = time.Second     // QPS semantics: fixed 1s sliding window
-	rateLimitCacheTTL = 5 * time.Second // admin config takes effect within this delay
-	rateLimitDimUser  = "user"          // logged-in dimension, keyed by user ID
-	rateLimitDimAnon  = "anon"          // anonymous dimension, keyed by client IP
+	rateLimitQPSWindow = time.Second       // QPS semantics: fixed 1s sliding window
+	rateLimitRPMWindow = time.Minute       // RPM semantics: fixed 60s sliding window
+	rateLimitCacheTTL  = 5 * time.Second   // admin config takes effect within this delay
+	rateLimitDimUser   = "user"            // logged-in dimension, keyed by user ID
+	rateLimitDimAnon   = "anon"            // anonymous dimension, keyed by client IP
 )
 
-type userQPSEntry struct {
-	qps      *int
-	expireAt time.Time
+type userLimits struct {
+	qps *int // NULL=follow global, 0=unlimited, >0=custom
+	rpm *int // NULL=follow global, 0=unlimited, >0=custom
 }
 
 type rateLimitCache struct {
@@ -33,19 +34,24 @@ type rateLimitCache struct {
 	global       models.UploadQuotaSettings
 	globalValid  bool
 	globalExpire time.Time
-	users        map[uint]userQPSEntry
+	users        map[uint]userLimitsWithExpiry
 }
 
-var rlCache = &rateLimitCache{users: make(map[uint]userQPSEntry)}
+type userLimitsWithExpiry struct {
+	limits   userLimits
+	expireAt time.Time
+}
 
-// loadGlobalQPS reads global QPS thresholds from system settings with a short TTL cache
-func (rc *rateLimitCache) loadGlobalQPS() (anonymousQPS, userQPS int) {
+var rlCache = &rateLimitCache{users: make(map[uint]userLimitsWithExpiry)}
+
+// loadGlobalLimits reads global QPS/RPM thresholds from system settings with a short TTL cache
+func (rc *rateLimitCache) loadGlobalLimits() (anonQPS, anonRPM, userQPS, userRPM int) {
 	rc.mu.RLock()
 	if rc.globalValid && time.Now().Before(rc.globalExpire) {
-		a := rc.global.EffectiveAnonymousUploadQPS()
-		u := rc.global.EffectiveUserUploadQPS()
+		g := rc.global
 		rc.mu.RUnlock()
-		return a, u
+		return g.EffectiveAnonymousUploadQPS(), g.EffectiveAnonymousUploadRPM(),
+			g.EffectiveUserUploadQPS(), g.EffectiveUserUploadRPM()
 	}
 	rc.mu.RUnlock()
 
@@ -60,37 +66,55 @@ func (rc *rateLimitCache) loadGlobalQPS() (anonymousQPS, userQPS int) {
 			rc.mu.Unlock()
 		}
 	}
-	return quotas.EffectiveAnonymousUploadQPS(), quotas.EffectiveUserUploadQPS()
+	return quotas.EffectiveAnonymousUploadQPS(), quotas.EffectiveAnonymousUploadRPM(),
+		quotas.EffectiveUserUploadQPS(), quotas.EffectiveUserUploadRPM()
 }
 
-// loadUserQPS reads the per-account override (users.upload_qps) with a short TTL cache
-func (rc *rateLimitCache) loadUserQPS(userID uint) *int {
+// loadUserLimits reads per-account overrides (users.upload_qps / upload_rpm) with a short TTL cache
+func (rc *rateLimitCache) loadUserLimits(userID uint) (qps, rpm *int, ok bool) {
 	now := time.Now()
 
 	rc.mu.RLock()
-	entry, ok := rc.users[userID]
-	if ok && now.Before(entry.expireAt) {
-		qps := entry.qps
+	entry, found := rc.users[userID]
+	if found && now.Before(entry.expireAt) {
 		rc.mu.RUnlock()
-		return qps
+		return entry.limits.qps, entry.limits.rpm, true
 	}
 	rc.mu.RUnlock()
 
 	var user models.User
-	if err := database.DB.Select("id", "upload_qps").First(&user, userID).Error; err != nil {
-		return nil
+	if err := database.DB.Select("id", "upload_qps", "upload_rpm").First(&user, userID).Error; err != nil {
+		return nil, nil, false
 	}
 
+	limits := userLimits{qps: user.UploadQPS, rpm: user.UploadRPM}
 	rc.mu.Lock()
-	rc.users[userID] = userQPSEntry{qps: user.UploadQPS, expireAt: now.Add(rateLimitCacheTTL)}
+	rc.users[userID] = userLimitsWithExpiry{limits: limits, expireAt: now.Add(rateLimitCacheTTL)}
 	rc.mu.Unlock()
-	return user.UploadQPS
+	return limits.qps, limits.rpm, true
 }
 
-// UploadRateLimit enforces Redis sliding-window QPS limits for upload endpoints.
+// resolveUserLimits merges per-account overrides over the role-global defaults (field-wise)
+func resolveUserLimits(override userLimits, gQPS, gRPM int) (qpsLimit, rpmLimit int64) {
+	if override.qps != nil {
+		qpsLimit = int64(*override.qps)
+	} else {
+		qpsLimit = int64(gQPS)
+	}
+	if override.rpm != nil {
+		rpmLimit = int64(*override.rpm)
+	} else {
+		rpmLimit = int64(gRPM)
+	}
+	return qpsLimit, rpmLimit
+}
+
+// UploadRateLimit enforces Redis sliding-window QPS + RPM limits for upload endpoints.
 // Dimension: logged-in users are keyed by user ID, anonymous visitors by client IP.
-// Threshold priority: per-account users.upload_qps (NULL=follow global, 0=unlimited,
-// >0=override) -> global anonymous_upload_qps / user_upload_qps.
+// Threshold priority (per field): per-account users.upload_qps/upload_rpm
+// (NULL=follow global, 0=unlimited, >0=override) -> global defaults.
+// Both windows are checked atomically with all-or-nothing recording: a request
+// rejected by one constraint never consumes quota of the other.
 // The check is fail-closed: if Redis is unavailable the request is rejected with 503.
 func UploadRateLimit() gin.HandlerFunc {
 	limiter := ratelimit.NewLimiter(database.Rdb)
@@ -98,20 +122,23 @@ func UploadRateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		dimension, identity, userID := resolveRateLimitIdentity(c)
 
-		var limit int64
+		var qpsLimit, rpmLimit int64
 		if dimension == rateLimitDimUser {
-			if override := rlCache.loadUserQPS(userID); override != nil {
-				limit = int64(*override)
-			} else {
-				_, userQPS := rlCache.loadGlobalQPS()
-				limit = int64(userQPS)
+			_, _, userQPS, userRPM := rlCache.loadGlobalLimits()
+			qpsPtr, rpmPtr, found := rlCache.loadUserLimits(userID)
+			override := userLimits{}
+			if found {
+				override = userLimits{qps: qpsPtr, rpm: rpmPtr}
 			}
+			qpsLimit, rpmLimit = resolveUserLimits(override, userQPS, userRPM)
 		} else {
-			anonymousQPS, _ := rlCache.loadGlobalQPS()
-			limit = int64(anonymousQPS)
+			anonQPS, anonRPM, _, _ := rlCache.loadGlobalLimits()
+			qpsLimit, rpmLimit = int64(anonQPS), int64(anonRPM)
 		}
 
-		result, err := limiter.Allow(c.Request.Context(), limiter.BuildKey(dimension, identity), limit, rateLimitWindow)
+		qpsKey, rpmKey := limiter.BuildKeys(dimension, identity)
+		result, err := limiter.AllowBoth(c.Request.Context(), qpsKey, rpmKey,
+			qpsLimit, rpmLimit, rateLimitQPSWindow, rateLimitRPMWindow)
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, models.ErrorResponse(http.StatusServiceUnavailable,
 				"限流服务暂时不可用，请稍后重试（Rate limiter temporarily unavailable）"))
@@ -126,12 +153,24 @@ func UploadRateLimit() gin.HandlerFunc {
 			}
 			c.Header("Retry-After", strconv.Itoa(retrySeconds))
 			c.JSON(http.StatusTooManyRequests, models.ErrorResponse(http.StatusTooManyRequests,
-				"上传请求过于频繁，请稍后再试（Rate limit exceeded）"))
+				rateLimitMessage(result.Constraint)))
 			c.Abort()
 			return
 		}
 
 		c.Next()
+	}
+}
+
+// rateLimitMessage tailors the rejection message to the binding constraint
+func rateLimitMessage(constraint ratelimit.BindingConstraint) string {
+	switch constraint {
+	case ratelimit.BindRPM:
+		return "上传请求过于频繁（已达每分钟上限），请稍后再试（Rate limit exceeded）"
+	case ratelimit.BindBoth:
+		return "上传请求过于频繁（每秒与每分钟上限均已触发），请稍后再试（Rate limit exceeded）"
+	default:
+		return "上传请求过于频繁，请稍后再试（Rate limit exceeded）"
 	}
 }
 

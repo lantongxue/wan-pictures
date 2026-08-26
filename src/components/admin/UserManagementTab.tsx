@@ -105,12 +105,16 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     bio: '',
   });
 
-  // Per-account upload QPS override states (create & edit)
+  // Per-account upload QPS/RPM override states (create & edit)
   type QpsMode = 'global' | 'unlimited' | 'custom';
   const [createQpsMode, setCreateQpsMode] = useState<QpsMode>('global');
   const [createQpsCustom, setCreateQpsCustom] = useState('5');
+  const [createRpmMode, setCreateRpmMode] = useState<QpsMode>('global');
+  const [createRpmCustom, setCreateRpmCustom] = useState('30');
   const [editQpsMode, setEditQpsMode] = useState<QpsMode>('global');
   const [editQpsCustom, setEditQpsCustom] = useState('5');
+  const [editRpmMode, setEditRpmMode] = useState<QpsMode>('global');
+  const [editRpmCustom, setEditRpmCustom] = useState('30');
 
   // Form States - Reset Password
   const [newPassword, setNewPassword] = useState('');
@@ -175,11 +179,23 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     }
   };
 
-  const resolveQpsPayload = (mode: QpsMode, custom: string): number => {
-    // -1=follow global, 0=unlimited, >0=custom QPS
+  const resolveLimitPayload = (mode: QpsMode, custom: string): number => {
+    // -1=follow global, 0=unlimited, >0=custom
     if (mode === 'global') return -1;
     if (mode === 'unlimited') return 0;
     return Math.max(1, parseInt(custom) || 1);
+  };
+
+  const initLimitMode = (value: number | null | undefined): QpsMode => {
+    if (value === null || value === undefined) return 'global';
+    if (Number(value) === 0) return 'unlimited';
+    return 'custom';
+  };
+
+  const formatLimitLabel = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '全局';
+    if (Number(value) === 0) return '∞';
+    return String(value);
   };
 
   const handleSubmitCreate = async (e: React.FormEvent) => {
@@ -197,7 +213,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     try {
       const res = await adminApi.createUser({
         ...createForm,
-        uploadQps: resolveQpsPayload(createQpsMode, createQpsCustom),
+        uploadQps: resolveLimitPayload(createQpsMode, createQpsCustom),
+        uploadRpm: resolveLimitPayload(createRpmMode, createRpmCustom),
       });
       if (res.success) {
         onShowToast('用户创建成功', `用户 @${createForm.username} 已成功添加`, 'success');
@@ -225,11 +242,15 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     });
     if (u.uploadQps === null || u.uploadQps === undefined) {
       setEditQpsMode('global');
-    } else if (Number(u.uploadQps) === 0) {
-      setEditQpsMode('unlimited');
     } else {
-      setEditQpsMode('custom');
+      setEditQpsMode(initLimitMode(u.uploadQps));
       setEditQpsCustom(String(u.uploadQps));
+    }
+    if (u.uploadRpm === null || u.uploadRpm === undefined) {
+      setEditRpmMode('global');
+    } else {
+      setEditRpmMode(initLimitMode(u.uploadRpm));
+      setEditRpmCustom(String(u.uploadRpm));
     }
   };
 
@@ -241,7 +262,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     try {
       const res = await adminApi.updateUser(editingUser.id, {
         ...editForm,
-        uploadQps: resolveQpsPayload(editQpsMode, editQpsCustom),
+        uploadQps: resolveLimitPayload(editQpsMode, editQpsCustom),
+        uploadRpm: resolveLimitPayload(editRpmMode, editRpmCustom),
       });
       if (res.success) {
         onShowToast('用户信息更新成功', `用户 @${editingUser.username} 的资料已保存`, 'success');
@@ -605,18 +627,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         <span>相册</span>
                       </span>
                       <span
-                        className={`flex items-center gap-1 text-[11px] font-medium ${u.uploadQps !== null && u.uploadQps !== undefined ? 'text-indigo-500' : 'text-muted-foreground/60'}`}
+                        className={`flex items-center gap-1 text-[11px] font-medium ${u.uploadQps !== null && u.uploadQps !== undefined || u.uploadRpm !== null && u.uploadRpm !== undefined ? 'text-indigo-500' : 'text-muted-foreground/60'}`}
                         title={
-                          u.uploadQps === null || u.uploadQps === undefined
-                            ? '上传QPS: 跟随全局默认'
-                            : u.uploadQps === 0
-                            ? '上传QPS: 不限流'
-                            : `单账号上传QPS: ${u.uploadQps} 次/秒`
+                          `上传QPS: ${formatLimitLabel(u.uploadQps)} · 上传RPM: ${formatLimitLabel(u.uploadRpm)}`
                         }
                       >
                         <Gauge className="w-3.5 h-3.5" />
                         <span className="font-mono font-bold">
-                          QPS {u.uploadQps === null || u.uploadQps === undefined ? '全局' : u.uploadQps === 0 ? '∞' : u.uploadQps}
+                          QPS {formatLimitLabel(u.uploadQps)} · RPM {formatLimitLabel(u.uploadRpm)}
                         </span>
                       </span>
                     </div>
@@ -798,7 +816,41 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   />
                 </div>
                 <FieldDescription>
-                  基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局 QPS
+                  基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局阈值
+                </FieldDescription>
+              </Field>
+
+              {/* Upload RPM Override */}
+              <Field>
+                <FieldLabel htmlFor="create-user-rpm-mode">上传频率 RPM 限制 (次/分)</FieldLabel>
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    value={createRpmMode}
+                    onValueChange={(val: QpsMode) => setCreateRpmMode(val)}
+                  >
+                    <SelectTrigger id="create-user-rpm-mode" className="w-full text-xs h-9 rounded-xl">
+                      <SelectValue placeholder="限流策略" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">跟随全局默认</SelectItem>
+                      <SelectItem value="unlimited">不限流</SelectItem>
+                      <SelectItem value="custom">自定义阈值</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="create-user-rpm-custom"
+                    type="number"
+                    min={1}
+                    max={10000}
+                    disabled={createRpmMode !== 'custom'}
+                    value={createRpmCustom}
+                    onChange={(e) => setCreateRpmCustom(e.target.value)}
+                    placeholder="次/分钟"
+                    className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                  />
+                </div>
+                <FieldDescription>
+                  与 QPS 同时生效：请求须同时满足秒级与分钟级滑动窗口才会被放行
                 </FieldDescription>
               </Field>
 
@@ -1057,7 +1109,41 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     />
                   </div>
                   <FieldDescription>
-                    基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局 QPS
+                    基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局阈值
+                  </FieldDescription>
+                </Field>
+
+                {/* Upload RPM Override */}
+                <Field>
+                  <FieldLabel htmlFor="edit-user-rpm-mode">上传频率 RPM 限制 (次/分)</FieldLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select
+                      value={editRpmMode}
+                      onValueChange={(val: QpsMode) => setEditRpmMode(val)}
+                    >
+                      <SelectTrigger id="edit-user-rpm-mode" className="w-full text-xs h-9 rounded-xl">
+                        <SelectValue placeholder="限流策略" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">跟随全局默认</SelectItem>
+                        <SelectItem value="unlimited">不限流</SelectItem>
+                        <SelectItem value="custom">自定义阈值</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="edit-user-rpm-custom"
+                      type="number"
+                      min={1}
+                      max={10000}
+                      disabled={editRpmMode !== 'custom'}
+                      value={editRpmCustom}
+                      onChange={(e) => setEditRpmCustom(e.target.value)}
+                      placeholder="次/分钟"
+                      className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                    />
+                  </div>
+                  <FieldDescription>
+                    与 QPS 同时生效：请求须同时满足秒级与分钟级滑动窗口才会被放行
                   </FieldDescription>
                 </Field>
 

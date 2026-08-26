@@ -181,6 +181,7 @@ type AdminCreateUserRequest struct {
 	Role      string `json:"role" binding:"omitempty,oneof=user admin vip"`
 	Bio       string `json:"bio" binding:"omitempty,max=255"`
 	UploadQPS *int   `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
+	UploadRPM *int   `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
 }
 
 type AdminUpdateUserRequest struct {
@@ -191,6 +192,7 @@ type AdminUpdateUserRequest struct {
 	Bio       *string `json:"bio" binding:"omitempty,max=255"`
 	Password  *string `json:"password" binding:"omitempty,min=6,max=64"`
 	UploadQPS *int    `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
+	UploadRPM *int    `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
 }
 
 type AdminResetPasswordRequest struct {
@@ -206,6 +208,7 @@ type AdminUserItemResponse struct {
 	Role       string    `json:"role"`
 	Bio        string    `json:"bio"`
 	UploadQPS  *int      `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
+	UploadRPM  *int      `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
 	ImageCount int64     `json:"image_count"`
 	AlbumCount int64     `json:"album_count"`
 	CreatedAt  time.Time `json:"created_at"`

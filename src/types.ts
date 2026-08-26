@@ -122,8 +122,10 @@ export interface UploadQuotaSettings {
   free_user_max_size_mb: number;
   vip_daily_limit: number;
   vip_max_size_mb: number;
-  anonymous_upload_qps?: number; // 匿名上传 QPS（Redis 滑动窗口），<=0 表示不限流
-  user_upload_qps?: number;      // 登录用户上传 QPS（Redis 滑动窗口），<=0 表示不限流
+  anonymous_upload_qps?: number; // 匿名上传 QPS（Redis 滑动窗口），0 表示不限流
+  user_upload_qps?: number;      // 登录用户上传 QPS（Redis 滑动窗口），0 表示不限流
+  anonymous_upload_rpm?: number; // 匿名上传 RPM（每分钟滑动窗口），0 表示不限流
+  user_upload_rpm?: number;      // 登录用户上传 RPM（每分钟滑动窗口），0 表示不限流
   naming_rule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
   custom_prefix?: string;
   auto_compress?: boolean;
@@ -239,6 +241,7 @@ export interface AdminUserItem extends User {
   imageCount?: number;
   albumCount?: number;
   uploadQps?: number | null; // null=跟随全局, 0=不限流, >0=自定义 QPS
+  uploadRpm?: number | null; // null=跟随全局, 0=不限流, >0=自定义 RPM
 }
 
 export interface CreateUserPayload {
@@ -250,6 +253,7 @@ export interface CreateUserPayload {
   role?: 'user' | 'admin' | 'vip';
   bio?: string;
   uploadQps?: number | null;
+  uploadRpm?: number | null;
 }
 
 export interface UpdateUserPayload {
@@ -260,6 +264,7 @@ export interface UpdateUserPayload {
   bio?: string;
   password?: string;
   uploadQps?: number | null;
+  uploadRpm?: number | null;
 }
 
 export interface ResetUserPasswordPayload {

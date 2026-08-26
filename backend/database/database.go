@@ -200,7 +200,7 @@ func SeedInitialData(db *gorm.DB) {
 	var settingCount int64
 	db.Model(&models.SystemSetting{}).Where("`key` = ? OR key = ?", "upload_quotas", "upload_quotas").Count(&settingCount)
 	if settingCount == 0 {
-		defaultQuotas := `{"allow_anonymous":true,"anonymous_daily_limit":20,"anonymous_max_size_mb":5,"free_user_daily_limit":50,"free_user_max_size_mb":10,"vip_daily_limit":500,"vip_max_size_mb":50,"anonymous_upload_qps":2,"user_upload_qps":10,"naming_rule":"uuid","custom_prefix":"pic_","auto_compress":false,"compress_quality":85,"convert_to_webp":false}`
+		defaultQuotas := `{"allow_anonymous":true,"anonymous_daily_limit":20,"anonymous_max_size_mb":5,"free_user_daily_limit":50,"free_user_max_size_mb":10,"vip_daily_limit":500,"vip_max_size_mb":50,"anonymous_upload_qps":2,"user_upload_qps":10,"anonymous_upload_rpm":30,"user_upload_rpm":200,"naming_rule":"uuid","custom_prefix":"pic_","auto_compress":false,"compress_quality":85,"convert_to_webp":false}`
 		db.Create(&models.SystemSetting{
 			Key:       "upload_quotas",
 			Value:     defaultQuotas,
