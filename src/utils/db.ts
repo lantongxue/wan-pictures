@@ -1,4 +1,4 @@
-import { ImageItem, Album, UploadSettings, TagItem, StorageConfigItem, StorageDriverType, AdminUserItem, CreateUserPayload, UpdateUserPayload } from '../types';
+import { ImageItem, Album, UploadSettings, TagItem, StorageConfigItem, StorageDriverType } from '../types';
 
 const DB_NAME = 'WanPictures_DB';
 const DB_VERSION = 3;
@@ -7,49 +7,6 @@ const STORE_ALBUMS = 'albums';
 const STORE_SETTINGS = 'settings';
 const STORE_TAGS = 'tags';
 const STORE_STORAGE = 'storage_configs';
-const STORE_USERS = 'users';
-
-export const DEFAULT_USERS: AdminUserItem[] = [
-  {
-    id: 1,
-    username: 'admin',
-    email: 'admin@wanpictures.dev',
-    nickname: '超级管理员 (Root)',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    role: 'admin',
-    bio: '万图图床系统管理员，掌控全局图床配置、存储驱动与用户权限。',
-    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    imageCount: 0,
-    albumCount: 0,
-  },
-  {
-    id: 2,
-    username: 'creator',
-    email: 'creator@wanpictures.dev',
-    nickname: '视觉设计总监',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    role: 'user',
-    bio: '专注于极简 UI 与 4K 视觉插画创作，图床常驻创作者。',
-    createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    imageCount: 0,
-    albumCount: 0,
-  },
-  {
-    id: 3,
-    username: 'photographer',
-    email: 'lens@wanpictures.dev',
-    nickname: '光影摄影师',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    role: 'user',
-    bio: '自然风景与城市街头摄影爱好者，记录生活与旅行的光影瞬间。',
-    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    imageCount: 0,
-    albumCount: 0,
-  },
-];
 
 export const DEFAULT_ALBUMS: Album[] = [
   {
@@ -185,11 +142,6 @@ class StorageDB {
         if (!db.objectStoreNames.contains(STORE_STORAGE)) {
           db.createObjectStore(STORE_STORAGE, { keyPath: 'driver' });
         }
-        if (!db.objectStoreNames.contains(STORE_USERS)) {
-          const userStore = db.createObjectStore(STORE_USERS, { keyPath: 'id' });
-          userStore.createIndex('username', 'username', { unique: true });
-          userStore.createIndex('email', 'email', { unique: true });
-        }
       };
 
       request.onsuccess = () => {
@@ -238,19 +190,6 @@ class StorageDB {
       const store = tx.objectStore(STORE_STORAGE);
       for (const sc of DEFAULT_STORAGE_CONFIGS) {
         store.put(sc);
-      }
-      await new Promise((res) => {
-        tx.oncomplete = () => res(null);
-      });
-    }
-
-    // Init Users
-    const users = await this.getAllUsers();
-    if (users.length === 0) {
-      const tx = db.transaction(STORE_USERS, 'readwrite');
-      const store = tx.objectStore(STORE_USERS);
-      for (const u of DEFAULT_USERS) {
-        store.put(u);
       }
       await new Promise((res) => {
         tx.oncomplete = () => res(null);
@@ -650,211 +589,13 @@ class StorageDB {
     };
   }
 
-  // -------------------------------------------------------------
-  // USER CRUD OPERATIONS
-  // -------------------------------------------------------------
-
-  async getAllUsers(filter?: { q?: string; role?: string }): Promise<AdminUserItem[]> {
-    const db = await this.openDB();
-    const allImages = await this.getAllImages();
-    const allAlbums = await this.getAllAlbums();
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_USERS, 'readonly');
-      const store = tx.objectStore(STORE_USERS);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        let users: AdminUserItem[] = request.result || [];
-        if (users.length === 0) {
-          users = [...DEFAULT_USERS];
-        }
-
-        // Attach counts
-        users = users.map((u, idx) => {
-          let imgCount = 0;
-          let albCount = 0;
-          if (idx === 0) {
-            imgCount = Math.max(allImages.length, 12);
-            albCount = Math.max(allAlbums.length, 4);
-          } else if (idx === 1) {
-            imgCount = Math.floor(allImages.length * 0.4);
-            albCount = 2;
-          } else {
-            imgCount = Math.floor(allImages.length * 0.2);
-            albCount = 1;
-          }
-          return {
-            ...u,
-            imageCount: u.imageCount !== undefined ? u.imageCount : imgCount,
-            albumCount: u.albumCount !== undefined ? u.albumCount : albCount,
-          };
-        });
-
-        if (filter?.q) {
-          const query = filter.q.toLowerCase().trim();
-          users = users.filter(
-            (u) =>
-              u.username.toLowerCase().includes(query) ||
-              (u.nickname && u.nickname.toLowerCase().includes(query)) ||
-              (u.email && u.email.toLowerCase().includes(query)) ||
-              (u.bio && u.bio.toLowerCase().includes(query))
-          );
-        }
-
-        if (filter?.role && filter.role !== 'all') {
-          users = users.filter((u) => u.role === filter.role);
-        }
-
-        users.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
-        resolve(users);
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async getUserById(id: number | string): Promise<AdminUserItem | null> {
-    const numId = Number(id);
-    const users = await this.getAllUsers();
-    const found = users.find((u) => u.id === numId || String(u.id) === String(id));
-    return found || null;
-  }
-
-  async createUser(payload: CreateUserPayload): Promise<AdminUserItem> {
-    const db = await this.openDB();
-    const users = await this.getAllUsers();
-
-    // Check duplicate username or email
-    const cleanUsername = payload.username.trim();
-    const cleanEmail = payload.email.toLowerCase().trim();
-
-    if (users.some((u) => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
-      throw new Error(`用户名 "${cleanUsername}" 已存在，请使用其他用户名`);
-    }
-    if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
-      throw new Error(`电子邮箱 "${cleanEmail}" 已被注册，请更换邮箱`);
-    }
-
-    const maxId = users.reduce((max, u) => Math.max(max, Number(u.id) || 0), 0);
-    const newId = maxId + 1;
-
-    const newUser: AdminUserItem = {
-      id: newId,
-      username: cleanUsername,
-      email: cleanEmail,
-      nickname: payload.nickname?.trim() || cleanUsername,
-      avatar:
-        payload.avatar?.trim() ||
-        `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`,
-      role: payload.role || 'user',
-      bio: payload.bio?.trim() || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      imageCount: 0,
-      albumCount: 0,
-    };
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_USERS, 'readwrite');
-      const store = tx.objectStore(STORE_USERS);
-      const request = store.put(newUser);
-
-      request.onsuccess = () => resolve(newUser);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async updateUser(id: number | string, payload: UpdateUserPayload): Promise<AdminUserItem> {
-    const db = await this.openDB();
-    const existing = await this.getUserById(id);
-    if (!existing) {
-      throw new Error(`找不到 ID 为 ${id} 的用户`);
-    }
-
-    const numId = Number(id);
-    const users = await this.getAllUsers();
-
-    if (payload.email) {
-      const cleanEmail = payload.email.toLowerCase().trim();
-      if (
-        cleanEmail !== existing.email.toLowerCase() &&
-        users.some((u) => u.id !== numId && u.email.toLowerCase() === cleanEmail)
-      ) {
-        throw new Error(`电子邮箱 "${cleanEmail}" 已被其他用户占用`);
-      }
-      existing.email = cleanEmail;
-    }
-
-    if (payload.nickname !== undefined) existing.nickname = payload.nickname.trim();
-    if (payload.avatar !== undefined) existing.avatar = payload.avatar.trim();
-    if (payload.role !== undefined) {
-      if (numId === 1 && payload.role !== 'admin') {
-        throw new Error('不能撤销超级管理员 (Root) 的管理权限');
-      }
-      existing.role = payload.role;
-    }
-    if (payload.bio !== undefined) existing.bio = payload.bio.trim();
-    existing.updatedAt = new Date().toISOString();
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_USERS, 'readwrite');
-      const store = tx.objectStore(STORE_USERS);
-      const request = store.put(existing);
-
-      request.onsuccess = () => resolve(existing);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async deleteUser(id: number | string): Promise<void> {
-    const numId = Number(id);
-    if (numId === 1) {
-      throw new Error('系统受保护：不能删除根管理员 (Root) 账号');
-    }
-
-    const db = await this.openDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_USERS, 'readwrite');
-      const store = tx.objectStore(STORE_USERS);
-      const request = store.delete(numId);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async resetUserPassword(id: number | string, newPassword: string): Promise<void> {
-    const existing = await this.getUserById(id);
-    if (!existing) {
-      throw new Error(`用户不存在 (ID: ${id})`);
-    }
-    if (!newPassword || newPassword.length < 6) {
-      throw new Error('新密码长度不能少于 6 位');
-    }
-    const db = await this.openDB();
-    existing.updatedAt = new Date().toISOString();
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_USERS, 'readwrite');
-      const store = tx.objectStore(STORE_USERS);
-      const request = store.put(existing);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
   async clearAllData(): Promise<void> {
     const db = await this.openDB();
-    const tx = db.transaction([STORE_IMAGES, STORE_ALBUMS, STORE_TAGS, STORE_STORAGE, STORE_USERS], 'readwrite');
+    const tx = db.transaction([STORE_IMAGES, STORE_ALBUMS, STORE_TAGS, STORE_STORAGE], 'readwrite');
     tx.objectStore(STORE_IMAGES).clear();
     tx.objectStore(STORE_ALBUMS).clear();
     tx.objectStore(STORE_TAGS).clear();
     tx.objectStore(STORE_STORAGE).clear();
-    if (tx.objectStoreNames.contains(STORE_USERS)) {
-      tx.objectStore(STORE_USERS).clear();
-    }
     await new Promise((res) => {
       tx.oncomplete = () => res(null);
     });

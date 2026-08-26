@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 	"wanpictures-backend/config"
 	"wanpictures-backend/models"
+	"wanpictures-backend/utils"
 )
 
 var DB *gorm.DB
@@ -86,22 +87,8 @@ func AutoMigrate(db *gorm.DB) error {
 
 // SeedInitialData sets up initial albums, tags, storage configs, system settings, and admin user
 func SeedInitialData(db *gorm.DB) {
-	// 1. Seed Admin User if not exists
-	var userCount int64
-	db.Model(&models.User{}).Count(&userCount)
-	if userCount == 0 {
-		// Create admin and test user
-		adminUser := models.User{
-			Username: "admin",
-			Email:    "admin@wanpictures.dev",
-			Password: "$2a$10$w8.m2f.Gvh0j5cTqA6qLku8d2r9l3O9b/5G5b4fU1hGvC8bYy5y6.", // bcrypt for "password123"
-			Nickname: "万图 Admin",
-			Avatar:   "https://api.dicebear.com/7.x/identicon/svg?seed=admin",
-			Role:     "admin",
-			Bio:      "万图 (Wan Pictures) 系统超级管理员",
-		}
-		db.Create(&adminUser)
-	}
+	// 1. Ensure initial admin account exists (credentials from env config)
+	ensureAdminUser(db)
 
 	// 2. Seed Default Albums
 	var albumCount int64
@@ -220,4 +207,38 @@ func SeedInitialData(db *gorm.DB) {
 			UpdatedAt: time.Now(),
 		})
 	}
+}
+
+// ensureAdminUser creates the initial admin account (from env config) if it does not exist
+func ensureAdminUser(db *gorm.DB) {
+	cfg := config.AppConfig
+
+	var count int64
+	db.Model(&models.User{}).Where("username = ?", cfg.AdminUsername).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	hashedPassword, err := utils.HashPassword(cfg.AdminPassword)
+	if err != nil {
+		log.Printf("[Seed] Failed to hash initial admin password: %v", err)
+		return
+	}
+
+	adminUser := models.User{
+		Username: cfg.AdminUsername,
+		Email:    cfg.AdminEmail,
+		Password: hashedPassword,
+		Nickname: "万图 Admin",
+		Avatar:   "https://api.dicebear.com/7.x/identicon/svg?seed=" + cfg.AdminUsername,
+		Role:     "admin",
+		Bio:      "万图 (Wan Pictures) 系统超级管理员",
+	}
+
+	if err := db.Create(&adminUser).Error; err != nil {
+		log.Printf("[Seed] Failed to create initial admin account: %v", err)
+		return
+	}
+
+	log.Printf("[Seed] Initial admin account created: %s", cfg.AdminUsername)
 }

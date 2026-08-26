@@ -110,12 +110,11 @@ export const AdminSettingsPage: React.FC = () => {
   // Export Full Data Backup (JSON)
   const handleExportBackup = async () => {
     try {
-      const [images, albumsList, tagsList, configs, usersList] = await Promise.all([
+      const [images, albumsList, tagsList, configs] = await Promise.all([
         dbService.getAllImages(),
         dbService.getAllAlbums(),
         dbService.getAllTags(),
         dbService.getStorageConfigs(),
-        dbService.getAllUsers(),
       ]);
 
       const backupData = {
@@ -128,7 +127,6 @@ export const AdminSettingsPage: React.FC = () => {
           tags: tagsList,
           storageConfigs: configs,
           settings,
-          users: usersList,
         },
       };
 

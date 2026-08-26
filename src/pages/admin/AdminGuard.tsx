@@ -15,16 +15,16 @@ import {
 } from '../../components/ui/field';
 
 export const AdminGuard: React.FC = () => {
-  const { user, isAuthenticated, login, backendOnline } = useAuth();
+  const { user, isAuthenticated, login, logout, backendOnline } = useAuth();
   const navigate = useNavigate();
 
-  // Inline Quick Admin Login State
-  const [account, setAccount] = useState('admin');
-  const [password, setPassword] = useState('password123');
+  // Inline Admin Login State
+  const [account, setAccount] = useState('');
+  const [password, setPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const handleQuickAdminLogin = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError('');
@@ -67,7 +67,7 @@ export const AdminGuard: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleQuickAdminLogin}>
+          <form onSubmit={handleAdminLogin}>
             <FieldSet className="gap-4">
               <FieldGroup className="gap-3.5">
                 <Field>
@@ -81,7 +81,7 @@ export const AdminGuard: React.FC = () => {
                     required
                     value={account}
                     onChange={(e) => setAccount(e.target.value)}
-                    placeholder="例如: admin"
+                    placeholder="输入管理员用户名或邮箱"
                     className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
                   />
                 </Field>
@@ -92,7 +92,6 @@ export const AdminGuard: React.FC = () => {
                       <KeyRound className="w-3.5 h-3.5 text-primary" />
                       <span>管理密码</span>
                     </FieldLabel>
-                    <span className="text-[11px] text-muted-foreground/80">默认测试: password123</span>
                   </div>
                   <Input
                     id="admin-login-password"
@@ -188,14 +187,12 @@ export const AdminGuard: React.FC = () => {
               <span>返回前台主页</span>
             </Button>
             <Button
-              onClick={() => {
-                // Logout and return to admin login screen
-                login({ account: 'admin', password: 'password123' });
-              }}
-              className="w-full sm:flex-1 h-9 rounded-xl text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground"
+              onClick={logout}
+              variant="destructive"
+              className="w-full sm:flex-1 h-9 rounded-xl text-xs gap-1.5 cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>切换管理员账号</span>
+              <span>退出登录并切换账号</span>
             </Button>
           </div>
         </div>

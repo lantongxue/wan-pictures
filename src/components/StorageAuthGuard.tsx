@@ -7,13 +7,11 @@ import {
   LogIn,
   UserPlus,
   ShieldCheck,
-  Zap,
   ArrowRight,
   Compass,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { useAuth } from '../context/AuthContext';
 
 interface StorageAuthGuardProps {
   onOpenAuth: (mode?: 'login' | 'register') => void;
@@ -24,27 +22,8 @@ interface StorageAuthGuardProps {
 export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
   onOpenAuth,
   onGoToPlaza,
-  onShowToast,
 }) => {
   const { t } = useTranslation();
-  const { login } = useAuth();
-
-  const handleQuickDemoLogin = async (role: 'admin' | 'designer') => {
-    onShowToast(t('guard.loggingIn'), role === 'admin' ? 'Admin' : 'Designer', 'info');
-    const res = await login({
-      account: role === 'admin' ? 'admin' : 'designer',
-      password: 'password123',
-    });
-    if (res.success) {
-      onShowToast(
-        t('auth.loginSuccess'),
-        role === 'admin' ? 'Admin Account' : 'Designer Account',
-        'success'
-      );
-    } else {
-      onShowToast(t('auth.loginFailed'), res.message || '', 'error');
-    }
-  };
 
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-300 py-4">
@@ -92,36 +71,6 @@ export const StorageAuthGuard: React.FC<StorageAuthGuardProps> = ({
               <UserPlus className="w-4 h-4 text-primary" />
               <span>{t('guard.registerBtn')}</span>
             </Button>
-          </div>
-
-          {/* Quick Demo Login Bar */}
-          <div className="mt-8 pt-6 border-t border-border/60 w-full max-w-md">
-            <p className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-3 flex items-center justify-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>{t('guard.quickDemoTitle')}</span>
-            </p>
-            <div className="flex gap-2.5">
-              <Button
-                id="guard-quick-admin-btn"
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickDemoLogin('admin')}
-                className="flex-1 rounded-xl text-xs font-medium py-4 border-dashed hover:border-primary/60 transition-all cursor-pointer"
-              >
-                {t('guard.quickAdmin')}
-              </Button>
-              <Button
-                id="guard-quick-designer-btn"
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickDemoLogin('designer')}
-                className="flex-1 rounded-xl text-xs font-medium py-4 border-dashed hover:border-primary/60 transition-all cursor-pointer"
-              >
-                {t('guard.quickDesigner')}
-              </Button>
-            </div>
           </div>
         </div>
       </div>

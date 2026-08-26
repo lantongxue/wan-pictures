@@ -15,7 +15,6 @@ import {
   FieldGroup,
   FieldLabel,
   FieldDescription,
-  FieldSeparator,
 } from './ui/field';
 import {
   User as UserIcon,
@@ -136,17 +135,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } else {
       setErrorMsg(res.message || t('auth.registerFailed'));
     }
-  };
-
-  const fillQuickDemo = (accountType: 'admin' | 'designer') => {
-    if (accountType === 'admin') {
-      setLoginAccount('admin');
-      setLoginPassword('password123');
-    } else {
-      setLoginAccount('designer');
-      setLoginPassword('password123');
-    }
-    setErrorMsg(null);
   };
 
   return (
@@ -276,34 +264,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 </Button>
 
-                {/* Quick test accounts */}
-                <FieldSeparator />
-                <div>
-                  <p className="text-[11px] text-muted-foreground mb-2 flex items-center justify-between">
-                    <span>{t('auth.quickDemo')}</span>
-                    <span className="text-[10px] font-mono opacity-70">pwd: password123</span>
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fillQuickDemo('admin')}
-                      className="flex-1 text-[11px] h-7 cursor-pointer"
-                    >
-                      Admin
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fillQuickDemo('designer')}
-                      className="flex-1 text-[11px] h-7 cursor-pointer"
-                    >
-                      Designer
-                    </Button>
-                  </div>
-                </div>
               </FieldSet>
             </form>
           ) : (

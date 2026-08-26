@@ -22,8 +22,8 @@ import {
 } from '../types';
 import { dbService } from '../utils/db';
 
-// API Base URL (defaults to proxy /api/v1 or standard local Go backend port 8080)
-const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || 'http://localhost:8080/api/v1';
+// API Base URL (same-origin /api/v1 via dev proxy, or override with VITE_API_BASE_URL)
+const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/v1';
 
 const TOKEN_KEY = 'wan_auth_token';
 const USER_KEY = 'wan_auth_user';
@@ -107,191 +107,59 @@ async function request<T>(
   }
 }
 
-/**
- * Local simulated auth for preview / fallback when Go server is not running on localhost
- */
-const LOCAL_USERS_KEY = 'wan_simulated_users';
-
-function getSimulatedUsers(): Array<User & { password: string }> {
-  const raw = localStorage.getItem(LOCAL_USERS_KEY);
-  if (!raw) {
-    const initial: Array<User & { password: string }> = [
-      {
-        id: 1,
-        username: 'admin',
-        email: 'admin@wanpictures.dev',
-        password: 'password123',
-        nickname: '万图 Admin',
-        avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=admin',
-        role: 'admin',
-        bio: '万图 (Wan Pictures) 系统超级管理员',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        username: 'designer',
-        email: 'designer@wanpictures.dev',
-        password: 'password123',
-        nickname: 'Creative Designer',
-        avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=designer',
-        role: 'user',
-        bio: '热爱视觉艺术与设计摄影',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(initial));
-    return initial;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
 export const authApi = {
   /**
-   * Register a new user
+   * Register a new user (Go backend)
    */
-  async register(payload: RegisterPayload): Promise<{ success: boolean; data?: AuthResponse; message?: string; isLocalFallback?: boolean }> {
-    // 1. Try Go backend first
+  async register(payload: RegisterPayload): Promise<{ success: boolean; data?: AuthResponse; message?: string }> {
     const res = await request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (res.isBackendOnline) {
-      if (res.success && res.data) {
-        authStorage.setToken(res.data.token);
-        authStorage.setUser(res.data.user);
-        return { success: true, data: res.data, message: res.message };
-      }
-      return { success: false, message: res.message };
+    if (res.success && res.data) {
+      authStorage.setToken(res.data.token);
+      authStorage.setUser(res.data.user);
+      return { success: true, data: res.data, message: res.message };
     }
-
-    // 2. Fallback mode if Go backend server is not running locally
-    const users = getSimulatedUsers();
-    if (users.some((u) => u.username.toLowerCase() === payload.username.toLowerCase())) {
-      return { success: false, message: '用户名已被注册' };
-    }
-    if (users.some((u) => u.email.toLowerCase() === payload.email.toLowerCase())) {
-      return { success: false, message: '该邮箱已被注册' };
-    }
-
-    const newUser: User = {
-      id: Date.now(),
-      username: payload.username,
-      email: payload.email,
-      nickname: payload.nickname || payload.username,
-      avatar: payload.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${payload.username}`,
-      role: 'user',
-      bio: '万图 (Wan Pictures) 用户',
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push({ ...newUser, password: payload.password });
-    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
-
-    const simulatedAuthResponse: AuthResponse = {
-      token: 'simulated_jwt_token_' + Date.now(),
-      token_type: 'Bearer',
-      expires_in: 259200,
-      user: newUser,
-    };
-
-    authStorage.setToken(simulatedAuthResponse.token);
-    authStorage.setUser(newUser);
-
-    return {
-      success: true,
-      data: simulatedAuthResponse,
-      message: '注册成功',
-      isLocalFallback: true,
-    };
+    return { success: false, message: res.message || '无法连接后端服务，请稍后重试' };
   },
 
   /**
-   * Login user
+   * Login user (Go backend)
    */
-  async login(payload: LoginPayload): Promise<{ success: boolean; data?: AuthResponse; message?: string; isLocalFallback?: boolean }> {
-    // 1. Try Go backend first
+  async login(payload: LoginPayload): Promise<{ success: boolean; data?: AuthResponse; message?: string }> {
     const res = await request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (res.isBackendOnline) {
-      if (res.success && res.data) {
-        authStorage.setToken(res.data.token);
-        authStorage.setUser(res.data.user);
-        return { success: true, data: res.data, message: res.message };
-      }
-      return { success: false, message: res.message };
+    if (res.success && res.data) {
+      authStorage.setToken(res.data.token);
+      authStorage.setUser(res.data.user);
+      return { success: true, data: res.data, message: res.message };
     }
-
-    // 2. Fallback mode
-    const users = getSimulatedUsers();
-    const accountLower = payload.account.toLowerCase();
-    const found = users.find(
-      (u) => (u.username.toLowerCase() === accountLower || u.email.toLowerCase() === accountLower) && u.password === payload.password
-    );
-
-    if (!found) {
-      return { success: false, message: '账号或密码错误（测试账号: admin / password123）' };
-    }
-
-    const safeUser: User = {
-      id: found.id,
-      username: found.username,
-      email: found.email,
-      nickname: found.nickname,
-      avatar: found.avatar,
-      role: found.role,
-      bio: found.bio,
-      createdAt: found.createdAt,
-    };
-
-    const simulatedAuthResponse: AuthResponse = {
-      token: 'simulated_jwt_token_' + Date.now(),
-      token_type: 'Bearer',
-      expires_in: 259200,
-      user: safeUser,
-    };
-
-    authStorage.setToken(simulatedAuthResponse.token);
-    authStorage.setUser(safeUser);
-
-    return {
-      success: true,
-      data: simulatedAuthResponse,
-      message: '登录成功',
-      isLocalFallback: true,
-    };
+    return { success: false, message: res.message || '无法连接后端服务，请稍后重试' };
   },
 
   /**
-   * Get current authenticated user profile
+   * Get current authenticated user profile (Go backend)
    */
   async getMe(): Promise<{ success: boolean; data?: User; message?: string }> {
     const res = await request<User>('/auth/me', {
       method: 'GET',
     });
 
-    if (res.isBackendOnline && res.success && res.data) {
+    if (res.success && res.data) {
       authStorage.setUser(res.data);
       return { success: true, data: res.data };
-    }
-
-    const cached = authStorage.getUser();
-    if (cached) {
-      return { success: true, data: cached };
     }
 
     return { success: false, message: res.message || '未登录' };
   },
 
   /**
-   * Update current user profile
+   * Update current user profile (Go backend)
    */
   async updateProfile(payload: UpdateProfilePayload): Promise<{ success: boolean; data?: User; message?: string }> {
     const res = await request<User>('/auth/profile', {
@@ -299,24 +167,12 @@ export const authApi = {
       body: JSON.stringify(payload),
     });
 
-    if (res.isBackendOnline && res.success && res.data) {
+    if (res.success && res.data) {
       authStorage.setUser(res.data);
       return { success: true, data: res.data, message: res.message };
     }
 
-    const current = authStorage.getUser();
-    if (current) {
-      const updated: User = {
-        ...current,
-        ...(payload.nickname ? { nickname: payload.nickname } : {}),
-        ...(payload.avatar ? { avatar: payload.avatar } : {}),
-        ...(payload.bio !== undefined ? { bio: payload.bio } : {}),
-      };
-      authStorage.setUser(updated);
-      return { success: true, data: updated, message: '个人信息更新成功' };
-    }
-
-    return { success: false, message: '更新失败' };
+    return { success: false, message: res.message || '更新失败' };
   },
 
   /**
@@ -346,13 +202,33 @@ export const authApi = {
 /**
  * Wan Pictures (万图) Admin & Management API Service
  */
+
+/**
+ * Map backend AdminUserItemResponse (snake_case) to frontend AdminUserItem
+ */
+function mapBackendUser(u: any): AdminUserItem {
+  return {
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    nickname: u.nickname || u.username,
+    avatar: u.avatar,
+    role: u.role || 'user',
+    bio: u.bio,
+    imageCount: Number(u.image_count || 0),
+    albumCount: Number(u.album_count || 0),
+    createdAt: u.created_at,
+    updatedAt: u.updated_at,
+  };
+}
+
 export const adminApi = {
   /**
    * Get Admin Overview Metrics & Storage Usage
    */
-  async getOverviewStats(): Promise<{ success: boolean; data: AdminOverviewStats }> {
+  async getOverviewStats(): Promise<{ success: boolean; data?: AdminOverviewStats; message?: string }> {
     const res = await request<any>('/admin/stats');
-    if (res.isBackendOnline && res.success && res.data) {
+    if (res.success && res.data) {
       const d = res.data;
       return {
         success: true,
@@ -392,43 +268,7 @@ export const adminApi = {
       };
     }
 
-    // Local IndexedDB Fallback calculation
-    const images = await dbService.getAllImages();
-    const albums = await dbService.getAllAlbums();
-    const tags = await dbService.getAllTags();
-    const storageConfigs = await dbService.getStorageConfigs();
-    const activeCfg = storageConfigs.find((c) => c.isActive);
-
-    const formatStats: Record<string, number> = {};
-    const storageUsage = { local: 0, s3: 0, webdav: 0 };
-    let totalSize = 0;
-
-    for (const img of images) {
-      totalSize += img.size || 0;
-      const ext = img.extension ? img.extension.toLowerCase().replace('.', '') : 'other';
-      formatStats[ext] = (formatStats[ext] || 0) + 1;
-      const drv = (img.storageDriver || 'local') as keyof typeof storageUsage;
-      if (storageUsage[drv] !== undefined) {
-        storageUsage[drv] += img.size || 0;
-      } else {
-        storageUsage.local += img.size || 0;
-      }
-    }
-
-    return {
-      success: true,
-      data: {
-        totalImages: images.length,
-        totalAlbums: albums.length,
-        totalTags: tags.length,
-        totalUsers: getSimulatedUsers().length,
-        totalSize,
-        activeStorage: activeCfg ? activeCfg.driver : 'local',
-        storageUsage,
-        formatStats,
-        recentActivity: images.slice(0, 8),
-      },
-    };
+    return { success: false, message: res.message || '无法连接后端服务' };
   },
 
   /**
@@ -1037,7 +877,7 @@ export const adminApi = {
   },
 
   // -------------------------------------------------------------
-  // 6. User Management CRUD APIs
+  // 6. User Management CRUD APIs (Go backend)
   // -------------------------------------------------------------
 
   /**
@@ -1052,77 +892,41 @@ export const adminApi = {
     if (params?.role && params.role !== 'all') qParams.set('role', params.role);
     const queryString = qParams.toString() ? `?${qParams.toString()}` : '';
 
-    const res = await request<{ items: AdminUserItem[]; total: number }>(`/admin/users${queryString}`);
-    if (res.isBackendOnline && res.success && res.data) {
+    const res = await request<{ items: any[]; total: number }>(`/admin/users${queryString}`);
+    if (res.success && res.data) {
       return {
         success: true,
-        data: res.data.items || [],
+        data: (res.data.items || []).map(mapBackendUser),
         message: res.message,
       };
     }
-
-    // Client fallback via dbService
-    const localUsers = await dbService.getAllUsers({ q: params?.q, role: params?.role });
-    return {
-      success: true,
-      data: localUsers,
-      message: 'Loaded from local storage fallback',
-    };
+    return { success: false, data: [], message: res.message || '无法连接后端服务' };
   },
 
   /**
    * Get single user by ID
    */
   async getUser(id: number | string): Promise<{ success: boolean; data?: AdminUserItem; message?: string }> {
-    const res = await request<AdminUserItem>(`/admin/users/${id}`);
-    if (res.isBackendOnline && res.success && res.data) {
-      return {
-        success: true,
-        data: res.data,
-      };
+    const res = await request<any>(`/admin/users/${id}`);
+    if (res.success && res.data) {
+      return { success: true, data: mapBackendUser(res.data) };
     }
-
-    const localUser = await dbService.getUserById(id);
-    if (localUser) {
-      return { success: true, data: localUser };
-    }
-    return { success: false, message: 'User not found' };
+    return { success: false, message: res.message || '用户不存在' };
   },
 
   /**
    * Create a new user
    */
   async createUser(payload: CreateUserPayload): Promise<{ success: boolean; data?: AdminUserItem; message?: string }> {
-    const res = await request<AdminUserItem>('/admin/users', {
+    const res = await request<any>('/admin/users', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (res.isBackendOnline && res.success && res.data) {
-      // Also cache in local db
-      await dbService.createUser(payload).catch(() => null);
-      return {
-        success: true,
-        data: res.data,
-        message: res.message || '用户创建成功',
-      };
+    if (res.success && res.data) {
+      return { success: true, data: mapBackendUser(res.data), message: res.message || '用户创建成功' };
     }
-
-    if (res.isBackendOnline && !res.success) {
-      throw new Error(res.message || '创建用户失败');
-    }
-
-    // Local fallback
-    try {
-      const created = await dbService.createUser(payload);
-      return {
-        success: true,
-        data: created,
-        message: '用户已保存至本地离线存储',
-      };
-    } catch (err: any) {
-      throw new Error(err.message || '本地创建用户失败');
-    }
+    throw new Error(res.message || '创建用户失败');
   },
 
   /**
@@ -1132,34 +936,23 @@ export const adminApi = {
     id: number | string,
     payload: UpdateUserPayload
   ): Promise<{ success: boolean; data?: AdminUserItem; message?: string }> {
-    const res = await request<AdminUserItem>(`/admin/users/${id}`, {
+    const body: Record<string, any> = {};
+    if (payload.email !== undefined) body.email = payload.email;
+    if (payload.nickname !== undefined) body.nickname = payload.nickname;
+    if (payload.avatar !== undefined) body.avatar = payload.avatar;
+    if (payload.role !== undefined) body.role = payload.role;
+    if (payload.bio !== undefined) body.bio = payload.bio;
+    if (payload.password !== undefined && payload.password !== '') body.password = payload.password;
+
+    const res = await request<any>(`/admin/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
-    if (res.isBackendOnline && res.success && res.data) {
-      await dbService.updateUser(id, payload).catch(() => null);
-      return {
-        success: true,
-        data: res.data,
-        message: res.message || '用户信息已更新',
-      };
+    if (res.success && res.data) {
+      return { success: true, data: mapBackendUser(res.data), message: res.message || '用户信息已更新' };
     }
-
-    if (res.isBackendOnline && !res.success) {
-      throw new Error(res.message || '更新用户失败');
-    }
-
-    try {
-      const updated = await dbService.updateUser(id, payload);
-      return {
-        success: true,
-        data: updated,
-        message: '本地离线数据已更新',
-      };
-    } catch (err: any) {
-      throw new Error(err.message || '本地更新用户失败');
-    }
+    throw new Error(res.message || '更新用户失败');
   },
 
   /**
@@ -1170,27 +963,10 @@ export const adminApi = {
       method: 'DELETE',
     });
 
-    if (res.isBackendOnline && res.success) {
-      await dbService.deleteUser(id).catch(() => null);
-      return {
-        success: true,
-        message: res.message || '用户已删除',
-      };
+    if (res.success) {
+      return { success: true, message: res.message || '用户已删除' };
     }
-
-    if (res.isBackendOnline && !res.success) {
-      throw new Error(res.message || '删除用户失败');
-    }
-
-    try {
-      await dbService.deleteUser(id);
-      return {
-        success: true,
-        message: '本地用户记录已删除',
-      };
-    } catch (err: any) {
-      throw new Error(err.message || '本地删除用户失败');
-    }
+    throw new Error(res.message || '删除用户失败');
   },
 
   /**
@@ -1205,27 +981,10 @@ export const adminApi = {
       body: JSON.stringify({ new_password: newPassword }),
     });
 
-    if (res.isBackendOnline && res.success) {
-      await dbService.resetUserPassword(id, newPassword).catch(() => null);
-      return {
-        success: true,
-        message: res.message || '密码重置成功',
-      };
+    if (res.success) {
+      return { success: true, message: res.message || '密码重置成功' };
     }
-
-    if (res.isBackendOnline && !res.success) {
-      throw new Error(res.message || '重置密码失败');
-    }
-
-    try {
-      await dbService.resetUserPassword(id, newPassword);
-      return {
-        success: true,
-        message: '本地密码已成功更新',
-      };
-    } catch (err: any) {
-      throw new Error(err.message || '本地密码重置失败');
-    }
+    throw new Error(res.message || '重置密码失败');
   },
 };
 

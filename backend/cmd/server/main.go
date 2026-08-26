@@ -31,7 +31,7 @@ func main() {
 	router := routes.SetupRouter()
 
 	// 4. Start HTTP Server with Graceful Shutdown
-	addr := fmt.Sprintf(":%s", cfg.Port)
+	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	srv := &http.Server{
 		Addr:           addr,
 		Handler:        router,
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("🚀 [Wan Pictures Backend] Server running on http://0.0.0.0%s", addr)
+		log.Printf("🚀 [Wan Pictures Backend] Server running on http://%s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server listen error: %s\n", err)
 		}

@@ -7,8 +7,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   backendOnline: boolean;
-  login: (payload: LoginPayload) => Promise<{ success: boolean; message?: string; isLocalFallback?: boolean }>;
-  register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string; isLocalFallback?: boolean }>;
+  login: (payload: LoginPayload) => Promise<{ success: boolean; message?: string }>;
+  register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateProfile: (payload: UpdateProfilePayload) => Promise<{ success: boolean; message?: string }>;
   checkBackend: () => Promise<boolean>;
