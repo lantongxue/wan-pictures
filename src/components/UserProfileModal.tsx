@@ -134,7 +134,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="flex justify-between items-center">
               <span>{t('settings.storageSection.storageType')}:</span>
               <span className="font-medium text-foreground">
-                {backendOnline ? 'Golang+Gin Cloud' : 'Local IndexedDB'}
+                {backendOnline ? 'Golang+Gin Cloud' : 'Backend Offline'}
               </span>
             </div>
             <div className="flex justify-between items-center">

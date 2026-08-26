@@ -19,8 +19,7 @@ import {
   Users,
   Sliders,
 } from 'lucide-react';
-import { UploadSettings, Album, UploadQuotaSettings } from '../../types';
-import { dbService, DEFAULT_SETTINGS, DEFAULT_ALBUMS } from '../../utils/db';
+import { UploadQuotaSettings } from '../../types';
 import { adminApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
@@ -44,7 +43,6 @@ import {
 
 export const AdminSettingsPage: React.FC = () => {
   const { backendOnline } = useAuth();
-  const [settings, setSettings] = useState<UploadSettings>(DEFAULT_SETTINGS);
   const [quotaSettings, setQuotaSettings] = useState<UploadQuotaSettings>({
     allow_anonymous: true,
     anonymous_daily_limit: 20,
@@ -62,7 +60,6 @@ export const AdminSettingsPage: React.FC = () => {
     compress_quality: 85,
     convert_to_webp: false,
   });
-  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Notification feedback
@@ -76,13 +73,7 @@ export const AdminSettingsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [currSettings, currAlbums, quotaRes] = await Promise.all([
-        dbService.getSettings(),
-        dbService.getAllAlbums(),
-        adminApi.getQuotaSettings().catch(() => ({ success: false, data: null })),
-      ]);
-      setSettings(currSettings);
-      setAlbums(currAlbums);
+      const quotaRes = await adminApi.getQuotaSettings().catch(() => ({ success: false, data: null }));
       if (quotaRes.success && quotaRes.data) {
         setQuotaSettings((prev) => ({ ...prev, ...quotaRes.data }));
       }
@@ -100,36 +91,39 @@ export const AdminSettingsPage: React.FC = () => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await Promise.all([
-        dbService.saveSettings(settings),
-        adminApi.saveQuotaSettings(quotaSettings).catch(() => null),
-      ]);
+      await adminApi.saveQuotaSettings(quotaSettings);
       showNotification('全局上传限制与配额策略已成功保存');
     } catch (err: any) {
       showNotification(err.message || '保存设置失败', 'error');
     }
   };
 
-  // Export Full Data Backup (JSON)
+  // Export Full Data Backup (JSON) — pulled live from the backend
   const handleExportBackup = async () => {
     try {
-      const [images, albumsList, tagsList, configs] = await Promise.all([
-        dbService.getAllImages(),
-        dbService.getAllAlbums(),
-        dbService.getAllTags(),
-        dbService.getStorageConfigs(),
+      const [imagesRes, albumsRes, tagsRes, configsRes] = await Promise.all([
+        adminApi.getImages({ pageSize: 100000 }),
+        adminApi.getAlbums(),
+        adminApi.getTags(),
+        adminApi.getStorageConfigs(),
       ]);
 
+      if (!imagesRes.success || !albumsRes.success || !tagsRes.success || !configsRes.success) {
+        showNotification('后端数据拉取失败，无法导出', 'error');
+        return;
+      }
+
       const backupData = {
-        version: '1.1.0',
+        version: '2.0.0',
         exportedAt: new Date().toISOString(),
         appName: 'Wan Pictures (万图)',
+        source: 'backend',
         data: {
-          images,
-          albums: albumsList,
-          tags: tagsList,
-          storageConfigs: configs,
-          settings,
+          images: imagesRes.data.items,
+          albums: albumsRes.data,
+          tags: tagsRes.data,
+          storageConfigs: configsRes.data,
+          quotaSettings,
         },
       };
 
@@ -143,62 +137,9 @@ export const AdminSettingsPage: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
 
-      showNotification('全量数据库备份文件已成功导出下载');
+      showNotification('后端全量数据备份文件已成功导出下载');
     } catch (err: any) {
       showNotification(err.message || '导出失败', 'error');
-    }
-  };
-
-  // Import Backup (JSON)
-  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-
-      if (json.data && json.data.images && json.data.albums) {
-        await dbService.saveImages(json.data.images);
-        for (const alb of json.data.albums) {
-          await dbService.saveAlbum(alb);
-        }
-        if (json.data.tags) {
-          for (const tag of json.data.tags) {
-            await dbService.saveTag(tag);
-          }
-        }
-        if (json.data.settings) {
-          await dbService.saveSettings(json.data.settings);
-        }
-
-        showNotification(`备份数据还原成功！已导入 ${json.data.images.length} 张图片`);
-        loadData();
-      } else {
-        showNotification('备份文件格式不合法', 'error');
-      }
-    } catch (err: any) {
-      showNotification(err.message || '导入还原失败', 'error');
-    } finally {
-      e.target.value = '';
-    }
-  };
-
-  // Clear all data
-  const handleClearDatabase = async () => {
-    if (
-      !confirm(
-        '⚠️ 高危操作：确定要清空数据库中的所有图片与自定义相册吗？此操作不可恢复！'
-      )
-    )
-      return;
-
-    try {
-      await dbService.clearAllData();
-      showNotification('数据库已重置为出厂初始状态');
-      loadData();
-    } catch (err: any) {
-      showNotification(err.message || '清空失败', 'error');
     }
   };
 
@@ -262,7 +203,7 @@ export const AdminSettingsPage: React.FC = () => {
             <Database className="w-4 h-4" />
             <h3 className="text-xs font-bold uppercase tracking-wider">持久化存储 (Database Engine)</h3>
           </div>
-          <p className="text-base font-black font-mono text-foreground">SQLite / IndexedDB v3</p>
+          <p className="text-base font-black font-mono text-foreground">SQLite (Go Backend)</p>
           <p className="text-xs text-muted-foreground">双向离线优先持久化机制与事务保证</p>
         </div>
 
@@ -582,7 +523,6 @@ export const AdminSettingsPage: React.FC = () => {
                     value={quotaSettings.naming_rule === 'original' ? 'original' : 'uuid'}
                     onValueChange={(val: any) => {
                       setQuotaSettings({ ...quotaSettings, naming_rule: val });
-                      setSettings({ ...settings, namingRule: val });
                     }}
                   >
                     <SelectTrigger id="sys-naming-rule" className="w-full text-xs h-9 rounded-xl">
@@ -595,24 +535,7 @@ export const AdminSettingsPage: React.FC = () => {
                   </Select>
                 </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="sys-default-album">默认上传归属相册</FieldLabel>
-                  <Select
-                    value={settings.defaultAlbumId || 'default'}
-                    onValueChange={(val) => setSettings({ ...settings, defaultAlbumId: val })}
-                  >
-                    <SelectTrigger id="sys-default-album" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="选择相册" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {albums.map((alb) => (
-                        <SelectItem key={alb.id} value={alb.id}>
-                          {alb.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
+                <div className="sm:col-span-2" />
               </FieldGroup>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
@@ -622,9 +545,8 @@ export const AdminSettingsPage: React.FC = () => {
                     <p className="text-[11px] text-muted-foreground">上传时自动无损压缩，优化外链速度</p>
                   </div>
                   <Switch
-                    checked={settings.autoCompress}
+                    checked={!!quotaSettings.auto_compress}
                     onCheckedChange={(checked) => {
-                      setSettings({ ...settings, autoCompress: checked });
                       setQuotaSettings({ ...quotaSettings, auto_compress: checked });
                     }}
                   />
@@ -636,9 +558,8 @@ export const AdminSettingsPage: React.FC = () => {
                     <p className="text-[11px] text-muted-foreground">大幅减小体积，兼顾透明通道与画质</p>
                   </div>
                   <Switch
-                    checked={settings.convertToWebP}
+                    checked={!!quotaSettings.convert_to_webp}
                     onCheckedChange={(checked) => {
-                      setSettings({ ...settings, convertToWebP: checked });
                       setQuotaSettings({ ...quotaSettings, convert_to_webp: checked });
                     }}
                   />
@@ -659,76 +580,34 @@ export const AdminSettingsPage: React.FC = () => {
         </form>
       </div>
 
-      {/* 3. Database Backup & Disaster Recovery */}
+      {/* 3. Database Backup */}
       <div className="p-6 rounded-3xl border border-border/80 bg-card space-y-5 shadow-xs">
         <div className="flex items-center gap-2 pb-4 border-b border-border/60">
           <Database className="w-5 h-5 text-amber-500" />
           <div>
-            <h3 className="text-sm font-bold text-foreground">数据备份与灾难恢复中心</h3>
-            <p className="text-xs text-muted-foreground">Full Database Export, Import & Reset</p>
+            <h3 className="text-sm font-bold text-foreground">数据备份中心</h3>
+            <p className="text-xs text-muted-foreground">Full Backend Data Export</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* Export JSON */}
           <div className="p-4 rounded-2xl border border-border/60 bg-muted/20 space-y-3 flex flex-col justify-between">
             <div className="space-y-1">
               <p className="text-xs font-bold text-foreground">全量数据导出备份</p>
               <p className="text-[11px] text-muted-foreground">
-                导出包含图片元数据、相册、标签与存储配置的完整 JSON 文件。
+                实时拉取后端图片、相册、标签、存储配置与配额策略，生成完整 JSON 备份文件。
               </p>
             </div>
             <Button
               size="sm"
               variant="outline"
               onClick={handleExportBackup}
+              disabled={loading}
               className="w-full text-xs rounded-xl gap-1.5 cursor-pointer bg-background"
             >
-              <Download className="w-3.5 h-3.5 text-primary" />
+              <Download className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
               <span>导出 JSON 备份</span>
-            </Button>
-          </div>
-
-          {/* Import JSON */}
-          <div className="p-4 rounded-2xl border border-border/60 bg-muted/20 space-y-3 flex flex-col justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-foreground">从备份文件还原</p>
-              <p className="text-[11px] text-muted-foreground">
-                上传历史 JSON 备份文件，系统将安全合并并恢复已有资产数据。
-              </p>
-            </div>
-            <label className="w-full">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportBackup}
-                className="hidden"
-              />
-              <span className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl border border-border/80 bg-background hover:bg-muted/60 text-xs font-semibold text-foreground cursor-pointer transition-colors">
-                <Upload className="w-3.5 h-3.5 text-indigo-500" />
-                <span>导入还原备份</span>
-              </span>
-            </label>
-          </div>
-
-          {/* Reset / Clear */}
-          <div className="p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 space-y-3 flex flex-col justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                出厂初始化重置
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                清除数据库中所有图片与相册，恢复出厂纯净初始状态。
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleClearDatabase}
-              className="w-full text-xs rounded-xl gap-1.5 cursor-pointer text-rose-500 border-rose-500/30 hover:bg-rose-500/10"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>清空所有数据</span>
             </Button>
           </div>
         </div>

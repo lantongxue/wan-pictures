@@ -32,7 +32,6 @@ import {
 
 interface UploadHeroProps {
   onFilesSelected: (files: File[]) => void;
-  onUrlImport: (url: string) => void;
   albums: Album[];
   selectedAlbumId: string;
   onAlbumChange: (albumId: string) => void;
@@ -40,7 +39,6 @@ interface UploadHeroProps {
 
 export const UploadHero: React.FC<UploadHeroProps> = ({
   onFilesSelected,
-  onUrlImport,
   albums,
   selectedAlbumId,
   onAlbumChange,
@@ -48,8 +46,6 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
   const { t } = useTranslation();
   const { quotaInfo, showToast } = useUser();
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
-  const [remoteUrl, setRemoteUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const notifyRejected = (count: number) => {
@@ -98,15 +94,6 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
         onFilesSelected(validFiles);
       }
       e.target.value = '';
-    }
-  };
-
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (remoteUrl.trim()) {
-      onUrlImport(remoteUrl.trim());
-      setRemoteUrl('');
-      setIsUrlModalOpen(false);
     }
   };
 
@@ -247,71 +234,9 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button
-              id="import-url-trigger"
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsUrlModalOpen(true)}
-              className="rounded-full gap-1.5 cursor-pointer"
-            >
-              <Globe className="w-3.5 h-3.5 text-primary" />
-              <span>{t('hero.importUrl')}</span>
-            </Button>
-          </div>
         </div>
       </div>
 
-      {/* Remote URL Import Dialog */}
-      <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
-              <span>{t('hero.importUrlTitle')}</span>
-            </DialogTitle>
-            <DialogDescription>
-              {t('hero.importUrlDesc')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="remote-url-input">{t('hero.importUrlLabel')}</Label>
-              <Input
-                id="remote-url-input"
-                type="url"
-                required
-                value={remoteUrl}
-                onChange={(e) => setRemoteUrl(e.target.value)}
-                placeholder="https://example.com/photo.jpg"
-                className="font-mono text-xs"
-              />
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
-              <Button
-                id="cancel-url-import-btn"
-                type="button"
-                variant="outline"
-                onClick={() => setIsUrlModalOpen(false)}
-                className="rounded-full cursor-pointer"
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                id="confirm-url-import-btn"
-                type="submit"
-                className="rounded-full cursor-pointer"
-              >
-                {t('hero.startImport')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

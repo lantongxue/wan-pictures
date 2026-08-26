@@ -162,11 +162,15 @@ export const AdminImagesPage: React.FC = () => {
         .map((t) => t.trim().toUpperCase())
         .filter(Boolean);
 
-      await adminApi.updateImage(editingImage.id, {
+      const res = await adminApi.updateImage(editingImage.id, {
         name: editName.trim() || editingImage.name,
         albumId: editAlbum,
         tags: parsedTags,
       });
+      if (!res.success) {
+        showNotification(res.message || '保存失败', 'error');
+        return;
+      }
 
       showNotification('图片属性已保存');
       setEditingImage(null);
@@ -179,7 +183,11 @@ export const AdminImagesPage: React.FC = () => {
   const handleDeleteImage = async (id: string, name: string) => {
     if (!confirm(`确定要彻底删除图片 "${name}" 吗？此操作无法撤销。`)) return;
     try {
-      await adminApi.deleteImage(id);
+      const res = await adminApi.deleteImage(id);
+      if (!res.success) {
+        showNotification(res.message || '删除失败', 'error');
+        return;
+      }
       showNotification('图片已删除');
       setSelectedIds((prev) => prev.filter((i) => i !== id));
       loadData();

@@ -21,7 +21,6 @@ export const UserWorkspacePage: React.FC = () => {
     uploadTargetAlbumId,
     setUploadTargetAlbumId,
     handleFilesSelected,
-    handleUrlImport,
     handleToggleSelect,
     handleSelectAll,
     handleClearSelection,
@@ -48,7 +47,6 @@ export const UserWorkspacePage: React.FC = () => {
       {/* Grand Hero Upload Zone */}
       <UploadHero
         onFilesSelected={handleFilesSelected}
-        onUrlImport={handleUrlImport}
         albums={albums}
         selectedAlbumId={uploadTargetAlbumId}
         onAlbumChange={setUploadTargetAlbumId}

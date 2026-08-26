@@ -109,7 +109,11 @@ export const AdminAlbumsPage: React.FC = () => {
         color: createColor,
         createdAt: Date.now(),
       };
-      await adminApi.saveAlbum(newAlbum);
+      const res = await adminApi.saveAlbum(newAlbum);
+      if (!res.success) {
+        showNotification(res.message || '创建失败', 'error');
+        return;
+      }
       showNotification(`相册 "${newAlbum.name}" 创建成功`);
       setCreateName('');
       setCreateDesc('');
@@ -139,7 +143,11 @@ export const AdminAlbumsPage: React.FC = () => {
         color: editColor,
         coverImageUrl: editCoverUrl.trim(),
       };
-      await adminApi.saveAlbum(updated);
+      const res = await adminApi.updateAlbum(updated);
+      if (!res.success) {
+        showNotification(res.message || '保存失败', 'error');
+        return;
+      }
       showNotification(`相册 "${updated.name}" 已更新`);
       setEditingAlbum(null);
       loadData();
@@ -161,7 +169,11 @@ export const AdminAlbumsPage: React.FC = () => {
       return;
 
     try {
-      await adminApi.deleteAlbum(alb.id);
+      const res = await adminApi.deleteAlbum(alb.id);
+      if (!res.success) {
+        showNotification(res.message || '删除相册失败', 'error');
+        return;
+      }
       showNotification(`相册 "${alb.name}" 已删除，图片已转入默认相册`);
       loadData();
     } catch (err: any) {

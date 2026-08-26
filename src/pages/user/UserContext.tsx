@@ -5,27 +5,21 @@ import { useTranslation } from 'react-i18next';
 import {
   ImageItem,
   Album,
-  UploadSettings,
   UploadQueueItem,
   UploadQuotaInfo,
   FilterOptions,
   ToastMessage,
 } from '../../types';
-import { uploadApi } from '../../services/api';
-import { dbService, DEFAULT_ALBUMS, DEFAULT_SETTINGS } from '../../utils/db';
-import { processImageUpload, getImageMetadata, partitionAllowedImages, isAllowedImageType, extractExtension } from '../../utils/imageProcessing';
-import { INITIAL_SAMPLE_IMAGES } from '../../data/sampleImages';
+import { uploadApi, publicApi, adminApi } from '../../services/api';
+import { partitionAllowedImages, isAllowedImageType, extractExtension } from '../../utils/imageProcessing';
 import { useAuth } from '../../context/AuthContext';
 
 export interface UserContextType {
-  // Database States
+  // Data States (served live by the Go backend)
   images: ImageItem[];
   setImages: React.Dispatch<React.SetStateAction<ImageItem[]>>;
   albums: Album[];
   setAlbums: React.Dispatch<React.SetStateAction<Album[]>>;
-  settings: UploadSettings;
-  setSettings: React.Dispatch<React.SetStateAction<UploadSettings>>;
-  isDbLoaded: boolean;
 
   // Navigation / Tabs
   currentTab: 'workspace' | 'plaza';
@@ -76,8 +70,9 @@ export interface UserContextType {
   dismissToast: (id: string) => void;
 
   // Handlers
+  refreshImages: () => Promise<void>;
+  refreshAlbums: () => Promise<void>;
   handleFilesSelected: (files: File[]) => Promise<void>;
-  handleUrlImport: (url: string) => Promise<void>;
   handleDeleteImage: (id: string) => Promise<void>;
   handleToggleFavorite: (id: string) => Promise<void>;
   handleUpdateImage: (id: string, updates: Partial<ImageItem>) => Promise<void>;
@@ -95,8 +90,8 @@ export interface UserContextType {
   handleOpenUpload: () => void;
   handleOpenAlbums: () => void;
   handleOpenSettings: () => void;
-  handleOpenAuth: (mode?: 'login' | 'register') => void;
   handleOpenProfile: () => void;
+  handleOpenAuth: (mode?: 'login' | 'register') => void;
 }
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -121,11 +116,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [navigate]
   );
 
-  // Database States
+  // Data States (live from backend)
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [albums, setAlbums] = useState<Album[]>(DEFAULT_ALBUMS);
-  const [settings, setSettings] = useState<UploadSettings>(DEFAULT_SETTINGS);
-  const [isDbLoaded, setIsDbLoaded] = useState(false);
+  const [albums, setAlbums] = useState<Album[]>([]);
 
   // Upload States
   const [uploadTargetAlbumId, setUploadTargetAlbumId] = useState<string>('default');
@@ -181,38 +174,35 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return next;
   }, []);
 
+  // Live data loaders — single source of truth is the Go backend
+  const refreshImages = useCallback(async () => {
+    const res = await publicApi.getImages({ pageSize: 5000 });
+    if (res.success) {
+      setImages(res.data.items);
+    } else {
+      showToast(t('common.error'), res.message || '图片列表加载失败', 'error');
+    }
+  }, [showToast, t]);
+
+  const refreshAlbums = useCallback(async () => {
+    const res = await publicApi.getAlbums();
+    if (res.success) {
+      setAlbums(res.data);
+    } else {
+      showToast(t('common.error'), res.message || '相册列表加载失败', 'error');
+    }
+  }, [showToast, t]);
+
   // Keep quota in sync with login state (anonymous vs user/vip/admin policy)
   useEffect(() => {
     refreshQuota();
   }, [refreshQuota, isAuthenticated]);
 
-  // Initialize DB and load initial data
+  // Initialize data from backend
   useEffect(() => {
-    async function init() {
-      try {
-        await dbService.initDefaults();
-        const loadedAlbums = await dbService.getAllAlbums();
-        let loadedImages = await dbService.getAllImages();
-        const loadedSettings = await dbService.getSettings();
-
-        // If fresh database with no images, load sample showcase images
-        if (loadedImages.length === 0) {
-          await dbService.saveImages(INITIAL_SAMPLE_IMAGES);
-          loadedImages = INITIAL_SAMPLE_IMAGES;
-        }
-
-        setAlbums(loadedAlbums.length > 0 ? loadedAlbums : DEFAULT_ALBUMS);
-        setImages(loadedImages);
-        setSettings(loadedSettings);
-        setUploadTargetAlbumId(loadedSettings.defaultAlbumId || 'default');
-      } catch (err) {
-        console.error('Failed to initialize database:', err);
-        setImages(INITIAL_SAMPLE_IMAGES);
-      } finally {
-        setIsDbLoaded(true);
-      }
-    }
-    init();
+    refreshImages();
+    refreshAlbums();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter & Search Logic
@@ -313,6 +303,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return images.filter((i) => selectedIds.has(i.id));
   }, [images, selectedIds]);
 
+  // Merge freshly uploaded/created images into the in-memory list (newest first)
+  const mergeNewImages = useCallback((incoming: ImageItem[]) => {
+    if (incoming.length === 0) return;
+    setImages((prev) => [...incoming, ...prev]);
+  }, []);
+
   // Handle Files Selected / Dragged — real upload pipeline against the Go backend
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
@@ -331,14 +327,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Only used to guide UX (e.g. anonymous gate); the backend remains the
       // single source of truth for every restriction.
       const quotaRes = await uploadApi.getQuota().catch(() => null);
-      if (quotaRes?.data) {
-        setQuotaInfo(quotaRes.data);
-        if (!isAuthenticated && !quotaRes.data.allow_anonymous) {
-          showToast(t('albums.authRequiredTitle'), '管理员已关闭匿名上传，请先登录账号后再上传图片', 'warning');
-          setAuthModalMode('login');
-          setIsAuthModalOpen(true);
-          return;
-        }
+      if (!quotaRes?.data) {
+        showToast(t('common.error'), '无法连接服务器，请检查网络或稍后再试', 'error');
+        return;
+      }
+      setQuotaInfo(quotaRes.data);
+      if (!isAuthenticated && !quotaRes.data.allow_anonymous) {
+        showToast(t('albums.authRequiredTitle'), '管理员已关闭匿名上传，请先登录账号后再上传图片', 'warning');
+        setAuthModalMode('login');
+        setIsAuthModalOpen(true);
+        return;
       }
 
       const newQueueItems: UploadQueueItem[] = validFiles.map((file) => ({
@@ -394,7 +392,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             checkRes.image
           ) {
             // Instant Deduplication Success! (⚡ 秒传触发)
-            await dbService.saveImage(checkRes.image);
             processedResults.push(checkRes.image);
             instantCount++;
 
@@ -424,7 +421,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
 
           if (uploadRes.success && uploadRes.image) {
-            await dbService.saveImage(uploadRes.image);
             processedResults.push(uploadRes.image);
             if (uploadRes.isInstant) instantCount++;
 
@@ -445,30 +441,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           // Step 4: Failure — every limit decision comes from the backend
-          if (uploadRes.isBackendOnline) {
-            setUploadQueue((prev) =>
-              prev.map((item) =>
-                item.id === qItem.id
-                  ? { ...item, status: 'error', error: uploadRes.message }
-                  : item
-              )
-            );
-            showToast('上传受阻', uploadRes.message, 'warning');
-            continue;
-          }
-
-          // Backend unreachable → offline fallback caches the asset locally
-          const processedImage = await processImageUpload(qItem.file, settings, uploadTargetAlbumId);
-          await dbService.saveImage(processedImage);
-          processedResults.push(processedImage);
-
           setUploadQueue((prev) =>
             prev.map((item) =>
               item.id === qItem.id
-                ? { ...item, status: 'done', resultItem: processedImage, progress: 100 }
+                ? { ...item, status: 'error', error: uploadRes.isBackendOnline ? uploadRes.message : '无法连接服务器' }
                 : item
             )
           );
+          showToast('上传受阻', uploadRes.isBackendOnline ? uploadRes.message! : '无法连接服务器', 'warning');
         } catch (err: any) {
           console.error('Failed to process image:', err);
           setUploadQueue((prev) =>
@@ -481,9 +461,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Refresh images in state
-      const allImages = await dbService.getAllImages();
-      setImages(allImages);
+      mergeNewImages(processedResults);
 
       if (processedResults.length > 0) {
         confetti({
@@ -506,7 +484,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Sync latest quota counters from backend after the batch
       refreshQuota();
     },
-    [isAuthenticated, uploadTargetAlbumId, settings, showToast, t, refreshQuota]
+    [isAuthenticated, uploadTargetAlbumId, showToast, t, refreshQuota, mergeNewImages]
   );
 
   // Global Clipboard Paste Listener (Ctrl+V / Cmd+V)
@@ -544,58 +522,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [uploadTargetAlbumId, settings, t, showToast, handleFilesSelected]);
+  }, [uploadTargetAlbumId, t, showToast, handleFilesSelected]);
 
-  // Handle URL Import
-  const handleUrlImport = useCallback(
-    async (url: string) => {
-      if (!isAuthenticated) {
-        showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
-        setAuthModalMode('login');
-        setIsAuthModalOpen(true);
-        return;
-      }
-      showToast(t('hero.importUrl'), url, 'info');
-      try {
-        const meta = await getImageMetadata(url);
-        const extMatch = url.match(/\.([a-zA-Z0-9]+)(\?|$)/);
-        const ext = extMatch ? extMatch[1] : 'jpg';
-        const filename = `remote_${Date.now()}.${ext}`;
-
-        const newImage: ImageItem = {
-          id: 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-          name: filename,
-          originalName: filename,
-          size: 350000,
-          type: `image/${ext}`,
-          extension: ext,
-          width: meta.width,
-          height: meta.height,
-          aspectRatio: meta.aspectRatio,
-          dataUrl: meta.dataUrl,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          albumId: uploadTargetAlbumId || 'default',
-          tags: ['REMOTE', ext.toUpperCase()],
-          favorite: false,
-          colorPalette: meta.colors,
-        };
-
-        await dbService.saveImage(newImage);
-        const all = await dbService.getAllImages();
-        setImages(all);
-        setLinkModalImages([newImage]);
-        setIsLinkModalOpen(true);
-        showToast(t('common.success'), newImage.name, 'success');
-      } catch (err) {
-        console.error(err);
-        showToast(t('common.error'), 'Failed to import remote URL', 'error');
-      }
-    },
-    [isAuthenticated, showToast, t, uploadTargetAlbumId]
-  );
-
-  // Image CRUD actions
+  // Image CRUD actions (persisted by the backend, reflected in memory)
   const handleDeleteImage = useCallback(
     async (id: string) => {
       if (!isAuthenticated) {
@@ -604,7 +533,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthModalOpen(true);
         return;
       }
-      await dbService.deleteImage(id);
+      const res = await adminApi.deleteImage(id);
+      if (!res.success) {
+        showToast(t('common.error'), res.message || '删除失败', 'error');
+        return;
+      }
       setImages((prev) => prev.filter((img) => img.id !== id));
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -627,7 +560,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const target = images.find((i) => i.id === id);
       if (!target) return;
-      const updated = await dbService.updateImage(id, { favorite: !target.favorite });
+      const res = await adminApi.updateImage(id, { favorite: !target.favorite });
+      if (!res.success || !res.data) {
+        showToast(t('common.error'), res.message || '操作失败', 'error');
+        return;
+      }
+      const updated = res.data;
       setImages((prev) => prev.map((img) => (img.id === id ? updated : img)));
       setPreviewImage((prev) => (prev?.id === id ? updated : prev));
       showToast(updated.favorite ? t('card.favorite') : t('card.unfavorite'), target.name, 'info');
@@ -643,7 +581,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthModalOpen(true);
         return;
       }
-      const updated = await dbService.updateImage(id, updates);
+      const res = await adminApi.updateImage(id, updates);
+      if (!res.success || !res.data) {
+        showToast(t('common.error'), res.message || '更新失败', 'error');
+        return;
+      }
+      const updated = res.data;
       setImages((prev) => prev.map((img) => (img.id === id ? updated : img)));
       setPreviewImage((prev) => (prev?.id === id ? updated : prev));
     },
@@ -659,11 +602,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthModalOpen(true);
         return;
       }
-      await dbService.saveAlbum(album);
-      const all = await dbService.getAllAlbums();
-      setAlbums(all);
+      const res = await adminApi.saveAlbum(album);
+      if (!res.success) {
+        showToast(t('common.error'), res.message || '相册创建失败', 'error');
+        return;
+      }
+      await refreshAlbums();
     },
-    [isAuthenticated, showToast, t]
+    [isAuthenticated, showToast, t, refreshAlbums]
   );
 
   const handleUpdateAlbum = useCallback(
@@ -674,11 +620,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthModalOpen(true);
         return;
       }
-      await dbService.saveAlbum(album);
-      const all = await dbService.getAllAlbums();
-      setAlbums(all);
+      const res = await adminApi.updateAlbum(album);
+      if (!res.success) {
+        showToast(t('common.error'), res.message || '相册更新失败', 'error');
+        return;
+      }
+      await refreshAlbums();
     },
-    [isAuthenticated, showToast, t]
+    [isAuthenticated, showToast, t, refreshAlbums]
   );
 
   const handleDeleteAlbum = useCallback(
@@ -689,19 +638,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthModalOpen(true);
         return;
       }
-      await dbService.deleteAlbum(id);
-      const [allAlbums, allImages] = await Promise.all([
-        dbService.getAllAlbums(),
-        dbService.getAllImages(),
-      ]);
-      setAlbums(allAlbums);
-      setImages(allImages);
+      const res = await adminApi.deleteAlbum(id);
+      if (!res.success) {
+        showToast(t('common.error'), res.message || '相册删除失败', 'error');
+        return;
+      }
+      // Backend reassigns the album's images to 'default' — reload both lists
+      await Promise.all([refreshAlbums(), refreshImages()]);
       setFilters((prev) => (prev.albumId === id ? { ...prev, albumId: 'all' } : prev));
     },
-    [isAuthenticated, showToast, t]
+    [isAuthenticated, showToast, t, refreshAlbums, refreshImages]
   );
 
-  // Batch actions
+  // Batch actions (looped single-item calls through the user workspace route)
   const handleToggleSelect = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedIds((prev) => {
@@ -729,11 +678,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       const selectedList = images.filter((i) => selectedIds.has(i.id));
+      let failed = 0;
       for (const item of selectedList) {
-        await dbService.updateImage(item.id, { albumId: targetAlbumId });
+        const res = await adminApi.updateImage(item.id, { albumId: targetAlbumId });
+        if (!res.success || !res.data) failed++;
       }
-      const all = await dbService.getAllImages();
-      setImages(all);
+      if (failed > 0) {
+        showToast(t('common.warning'), `${failed} 张图片移动失败`, 'warning');
+      }
+      if (failed < selectedList.length) {
+        const movedIds = new Set(selectedList.map((i) => i.id));
+        setImages((prev) =>
+          prev.map((img) => (movedIds.has(img.id) ? { ...img, albumId: targetAlbumId } : img))
+        );
+      }
       setSelectedIds(new Set());
     },
     [isAuthenticated, images, selectedIds, showToast, t]
@@ -748,10 +706,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     const ids: string[] = Array.from(selectedIds);
     if (window.confirm(`Confirm batch delete ${ids.length} images?`)) {
-      await dbService.deleteImages(ids);
-      setImages((prev) => prev.filter((img) => !selectedIds.has(img.id)));
+      let failed = 0;
+      for (const id of ids) {
+        const res = await adminApi.deleteImage(id);
+        if (!res.success) failed++;
+      }
+      if (failed > 0) {
+        showToast(t('common.warning'), `${failed} 张图片删除失败`, 'warning');
+      }
+      const deletedIds = new Set(ids);
+      setImages((prev) => prev.filter((img) => !deletedIds.has(img.id)));
       setSelectedIds(new Set());
-      showToast(t('toast.batchDeleteSuccess', { count: ids.length }), undefined, 'info');
+      showToast(t('toast.batchDeleteSuccess', { count: ids.length - failed }), undefined, 'info');
     }
   }, [isAuthenticated, selectedIds, showToast, t]);
 
@@ -794,13 +760,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSettingsModalOpen(true);
   }, []);
 
+  const handleOpenProfile = useCallback(() => {
+    setIsProfileModalOpen(true);
+  }, []);
+
   const handleOpenAuth = useCallback((mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
-  }, []);
-
-  const handleOpenProfile = useCallback(() => {
-    setIsProfileModalOpen(true);
   }, []);
 
   const value: UserContextType = {
@@ -808,9 +774,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setImages,
     albums,
     setAlbums,
-    settings,
-    setSettings,
-    isDbLoaded,
     currentTab,
     handleTabChange,
     uploadTargetAlbumId,
@@ -847,8 +810,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toasts,
     showToast,
     dismissToast,
+    refreshImages,
+    refreshAlbums,
     handleFilesSelected,
-    handleUrlImport,
     handleDeleteImage,
     handleToggleFavorite,
     handleUpdateImage,
@@ -864,8 +828,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleOpenUpload,
     handleOpenAlbums,
     handleOpenSettings,
-    handleOpenAuth,
     handleOpenProfile,
+    handleOpenAuth,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

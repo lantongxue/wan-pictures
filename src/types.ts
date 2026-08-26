@@ -177,17 +177,6 @@ export interface UploadQueueItem {
   height?: number;
 }
 
-export interface UploadSettings {
-  autoCompress: boolean;
-  compressQuality: number; // 0.1 to 1.0
-  maxWidth: number;
-  convertToWebP: boolean;
-  defaultAlbumId: string;
-  namingRule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
-  customPrefix?: string;
-  theme?: 'dark' | 'light';
-}
-
 export type ViewMode = 'masonry' | 'grid' | 'list';
 
 export type SortOption =

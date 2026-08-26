@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { UserProvider, useUser } from './UserContext';
-import { dbService, DEFAULT_ALBUMS } from '../../utils/db';
 
 import { Navbar } from '../../components/Navbar';
 import { ToastContainer } from '../../components/Toast';
@@ -25,11 +24,7 @@ const UserLayoutContent: React.FC = () => {
 
   const {
     images,
-    setImages,
     albums,
-    setAlbums,
-    settings,
-    setSettings,
     currentTab,
     handleTabChange,
     uploadQueue,
@@ -73,7 +68,6 @@ const UserLayoutContent: React.FC = () => {
     handleOpenSettings,
     handleOpenAuth,
     handleOpenProfile,
-    setSelectedIds,
   } = useUser();
 
   return (
@@ -191,31 +185,8 @@ const UserLayoutContent: React.FC = () => {
       {/* Settings & Storage Modal */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
-        settings={settings}
-        albums={albums}
-        images={images}
         onClose={() => setIsSettingsModalOpen(false)}
-        onSaveSettings={(s) => {
-          setSettings(s);
-          dbService.saveSettings(s);
-        }}
-        onRestoreData={async (restoredImages, restoredAlbums) => {
-          await dbService.saveImages(restoredImages);
-          for (const alb of restoredAlbums) {
-            await dbService.saveAlbum(alb);
-          }
-          setImages(restoredImages);
-          setAlbums(restoredAlbums);
-        }}
-        onClearAll={async () => {
-          await dbService.clearAllData();
-          setImages([]);
-          setAlbums(DEFAULT_ALBUMS);
-          setSelectedIds(new Set());
-          showToast(t('settings.backupSection.clearedSuccess'), undefined, 'info');
-        }}
         onShowToast={showToast}
-        onOpenAuth={handleOpenAuth}
       />
 
       {/* User Login & Register Modal */}

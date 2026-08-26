@@ -21,7 +21,6 @@ import {
   StorageTestResult,
   UploadQuotaInfo,
 } from '../types';
-import { dbService } from '../utils/db';
 import { sha256 } from 'js-sha256';
 
 // API Base URL (same-origin /api/v1 via dev proxy, or override with VITE_API_BASE_URL)
@@ -226,6 +225,89 @@ function mapBackendUser(u: any): AdminUserItem {
   };
 }
 
+/**
+ * Public read-only API (anonymous accessible): GET /images, /albums, /tags
+ */
+export const publicApi = {
+  /**
+   * Get Images List (public route, no auth required)
+   */
+  async getImages(params: {
+    q?: string;
+    albumId?: string;
+    tag?: string;
+    storageDriver?: string;
+    sortBy?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ success: boolean; data: { items: ImageItem[]; total: number }; message?: string }> {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.albumId && params.albumId !== 'all') query.set('album_id', params.albumId);
+    if (params.tag) query.set('tag', params.tag);
+    if (params.storageDriver && params.storageDriver !== 'all') query.set('storage_driver', params.storageDriver);
+    if (params.sortBy) query.set('sort_by', params.sortBy);
+    if (params.page) query.set('page', String(params.page));
+    if (params.pageSize) query.set('page_size', String(params.pageSize));
+
+    return request<any>(`/images?${query.toString()}`).then((res) => {
+      if (res.success && res.data) {
+        const d = res.data as any;
+        const items = ((d.items || []) as any[]).map((img) => ({
+          id: img.id,
+          name: img.name,
+          originalName: img.original_name || img.name,
+          size: img.size,
+          type: img.type,
+          extension: img.extension,
+          width: img.width,
+          height: img.height,
+          aspectRatio: img.aspect_ratio,
+          dataUrl: img.data_url || img.url,
+          url: img.url,
+          createdAt: new Date(img.created_at).getTime() || Date.now(),
+          updatedAt: new Date(img.updated_at).getTime() || Date.now(),
+          albumId: img.album_id || 'default',
+          tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
+          favorite: img.favorite,
+          colorPalette: typeof img.color_palette === 'string' ? JSON.parse(img.color_palette || '[]') : img.color_palette,
+          storageDriver: img.storage_driver || 'local',
+        }));
+        return {
+          success: true,
+          data: { items, total: Number(d.total || items.length) },
+          message: res.message,
+        };
+      }
+      return { success: false, data: { items: [], total: 0 }, message: res.message };
+    });
+  },
+
+  /**
+   * Get Albums List (public route, no auth required)
+   */
+  async getAlbums(): Promise<{ success: boolean; data: Album[]; message?: string }> {
+    return request<any[]>('/albums').then((res) => {
+      if (res.success && Array.isArray(res.data)) {
+        const albums: Album[] = res.data.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          color: a.color || '#6366F1',
+          coverImageUrl: a.cover_image_url,
+          coverImageId: a.cover_image_id,
+          isDefault: a.is_default,
+          createdAt: new Date(a.created_at).getTime() || Date.now(),
+          imageCount: a.image_count,
+          totalSize: a.total_size,
+        }));
+        return { success: true, data: albums, message: res.message };
+      }
+      return { success: false, data: [], message: res.message };
+    });
+  },
+};
+
 export const adminApi = {
   /**
    * Get Admin Overview Metrics & Storage Usage
@@ -286,7 +368,7 @@ export const adminApi = {
     sortBy?: string;
     page?: number;
     pageSize?: number;
-  }): Promise<{ success: boolean; data: { items: ImageItem[]; total: number } }> {
+  }): Promise<{ success: boolean; data: { items: ImageItem[]; total: number }; message?: string }> {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
     if (params.albumId) query.set('album_id', params.albumId);
@@ -327,133 +409,68 @@ export const adminApi = {
       };
     }
 
-    // Local IndexedDB Fallback
-    let images = await dbService.getAllImages();
-    if (params.q) {
-      const qLower = params.q.toLowerCase();
-      images = images.filter(
-        (img) =>
-          img.name.toLowerCase().includes(qLower) ||
-          img.tags.some((t) => t.toLowerCase().includes(qLower))
-      );
-    }
-    if (params.albumId && params.albumId !== 'all') {
-      images = images.filter((img) => img.albumId === params.albumId);
-    }
-    if (params.tag) {
-      const tagUpper = params.tag.toUpperCase();
-      images = images.filter((img) => img.tags.some((t) => t.toUpperCase() === tagUpper));
-    }
-    if (params.storageDriver && params.storageDriver !== 'all') {
-      images = images.filter((img) => (img.storageDriver || 'local') === params.storageDriver);
-    }
-
     return {
-      success: true,
-      data: {
-        items: images,
-        total: images.length,
-      },
+      success: false,
+      data: { items: [], total: 0 },
+      message: res.message || '无法连接后端服务',
     };
   },
 
   /**
-   * Save / Sync Image to Backend & Local DB
-   */
-  async saveImage(img: ImageItem): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
-    // 1. Sync to local IndexedDB
-    await dbService.saveImage(img);
-
-    // 2. Try sync to Go Backend
-    const payload = {
-      id: img.id,
-      name: img.name,
-      original_name: img.originalName,
-      size: img.size,
-      type: img.type,
-      extension: img.extension,
-      width: img.width,
-      height: img.height,
-      aspect_ratio: img.aspectRatio,
-      data_url: img.dataUrl,
-      url: img.url || '',
-      album_id: img.albumId || 'default',
-      tags: img.tags || [],
-      favorite: !!img.favorite,
-      color_palette: img.colorPalette || [],
-      storage_driver: img.storageDriver || 'local',
-      compressed: !!img.compressed,
-      original_size: img.originalSize || img.size,
-    };
-
-    const res = await request<any>('/admin/images', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-
-    if (res.isBackendOnline && res.success) {
-      return { success: true, data: img, message: 'Saved to Go backend' };
-    }
-
-    return { success: true, data: img, message: 'Saved to local database' };
-  },
-
-  /**
-   * Update Image Metadata
+   * Update Image Metadata (requires JWT; goes through the user workspace route)
    */
   async updateImage(id: string, updates: Partial<ImageItem>): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
-    const updated = await dbService.updateImage(id, updates);
-
     const payload: Record<string, any> = {};
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.albumId !== undefined) payload.album_id = updates.albumId;
-    if (updates.tags !== undefined) payload.tags = updates.tags;
+    if (updates.tags !== undefined) payload.tags = JSON.stringify(updates.tags);
     if (updates.favorite !== undefined) payload.favorite = updates.favorite;
     if (updates.storageDriver !== undefined) payload.storage_driver = updates.storageDriver;
 
-    await request(`/admin/images/${id}`, {
+    const res = await request<any>(`/user/images/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
 
-    return { success: true, data: updated };
+    if (res.success && res.data) {
+      const img = res.data as any;
+      const updated: ImageItem = {
+        id: img.id,
+        name: img.name,
+        originalName: img.original_name || img.name,
+        size: img.size,
+        type: img.type,
+        extension: img.extension,
+        width: img.width,
+        height: img.height,
+        aspectRatio: img.aspect_ratio,
+        dataUrl: img.data_url || img.url,
+        url: img.url,
+        createdAt: new Date(img.created_at).getTime() || Date.now(),
+        updatedAt: new Date(img.updated_at).getTime() || Date.now(),
+        albumId: img.album_id || 'default',
+        tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
+        favorite: img.favorite,
+        storageDriver: img.storage_driver || 'local',
+      };
+      return { success: true, data: updated, message: res.message };
+    }
+    return { success: false, message: res.message || '更新失败' };
   },
 
   /**
-   * Delete Image
+   * Delete Image (requires JWT; goes through the user workspace route)
    */
   async deleteImage(id: string): Promise<{ success: boolean; message?: string }> {
-    await dbService.deleteImage(id);
-    await request(`/admin/images/${id}`, { method: 'DELETE' });
-    return { success: true, message: 'Image deleted' };
+    const res = await request(`/user/images/${id}`, { method: 'DELETE' });
+    return { success: res.success, message: res.message };
   },
 
   /**
-   * Batch Operation on Images
+   * Batch Operation on Images (admin only)
    */
   async batchImageAction(ids: string[], action: 'delete' | 'move' | 'tag', extra?: { albumId?: string; tagToAdd?: string }): Promise<{ success: boolean; message?: string }> {
-    if (action === 'delete') {
-      await dbService.deleteImages(ids);
-    } else if (action === 'move' && extra?.albumId) {
-      for (const id of ids) {
-        await dbService.updateImage(id, { albumId: extra.albumId });
-      }
-    } else if (action === 'tag' && extra?.tagToAdd) {
-      const tagUpper = extra.tagToAdd.toUpperCase().trim();
-      for (const id of ids) {
-        const images = await dbService.getAllImages();
-        const found = images.find((i) => i.id === id);
-        if (found) {
-          const currentTags = found.tags || [];
-          if (!currentTags.some((t) => t.toUpperCase() === tagUpper)) {
-            await dbService.updateImage(id, { tags: [...currentTags, tagUpper] });
-          }
-        }
-      }
-    }
-
-    // Try Go backend batch endpoint
-    await request('/admin/images/batch', {
+    const res = await request('/admin/images/batch', {
       method: 'POST',
       body: JSON.stringify({
         ids,
@@ -462,14 +479,13 @@ export const adminApi = {
         tag_to_add: extra?.tagToAdd || '',
       }),
     });
-
-    return { success: true, message: 'Batch action completed' };
+    return { success: res.success, message: res.message };
   },
 
   /**
    * Get Albums List with metrics
    */
-  async getAlbums(): Promise<{ success: boolean; data: Album[] }> {
+  async getAlbums(): Promise<{ success: boolean; data: Album[]; message?: string }> {
     const res = await request<any[]>('/admin/albums');
     if (res.isBackendOnline && res.success && Array.isArray(res.data)) {
       const albums: Album[] = res.data.map((a) => ({
@@ -487,57 +503,72 @@ export const adminApi = {
       return { success: true, data: albums };
     }
 
-    // Local IndexedDB fallback
-    const albums = await dbService.getAllAlbums();
-    const images = await dbService.getAllImages();
-    for (const alb of albums) {
-      const matched = images.filter((img) => img.albumId === alb.id);
-      alb.imageCount = matched.length;
-      alb.totalSize = matched.reduce((acc, curr) => acc + (curr.size || 0), 0);
-    }
-    return { success: true, data: albums };
+    return {
+      success: false,
+      data: [],
+      message: res.message || '无法连接后端服务',
+    };
   },
 
   /**
-   * Create or Save Album
+   * Create Album (requires JWT; goes through the user workspace route)
    */
   async saveAlbum(album: Album): Promise<{ success: boolean; data?: Album; message?: string }> {
-    await dbService.saveAlbum(album);
-
-    const payload = {
-      id: album.id,
-      name: album.name,
-      description: album.description || '',
-      color: album.color || '#6366F1',
-      cover_image_url: album.coverImageUrl || '',
-      cover_image_id: album.coverImageId || '',
-      is_default: !!album.isDefault,
-    };
-
-    await request('/admin/albums', {
+    const res = await request<any>('/user/albums', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        id: album.id,
+        name: album.name,
+        description: album.description || '',
+        color: album.color || '#6366F1',
+        cover_image_url: album.coverImageUrl || '',
+        cover_image_id: album.coverImageId || '',
+        is_default: !!album.isDefault,
+      }),
     });
 
-    return { success: true, data: album, message: 'Album saved' };
+    if (res.success) {
+      return { success: true, data: album, message: res.message || 'Album created' };
+    }
+    return { success: false, message: res.message || '相册创建失败' };
   },
 
   /**
-   * Delete Album
+   * Update Album (requires JWT; goes through the user workspace route)
+   */
+  async updateAlbum(album: Album): Promise<{ success: boolean; data?: Album; message?: string }> {
+    const res = await request<any>(`/user/albums/${album.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: album.name,
+        description: album.description || '',
+        color: album.color,
+        cover_image_url: album.coverImageUrl || '',
+        cover_image_id: album.coverImageId || '',
+      }),
+    });
+
+    if (res.success) {
+      return { success: true, data: album, message: res.message || 'Album updated' };
+    }
+    return { success: false, message: res.message || '相册更新失败' };
+  },
+
+  /**
+   * Delete Album (requires JWT; backend reassigns its images to 'default')
    */
   async deleteAlbum(id: string): Promise<{ success: boolean; message?: string }> {
     if (id === 'default') {
       return { success: false, message: '默认相册不可删除' };
     }
-    await dbService.deleteAlbum(id);
-    await request(`/admin/albums/${id}`, { method: 'DELETE' });
-    return { success: true, message: 'Album deleted' };
+    const res = await request(`/user/albums/${id}`, { method: 'DELETE' });
+    return { success: res.success, message: res.message };
   },
 
   /**
    * Get Tags List with image counts
    */
-  async getTags(): Promise<{ success: boolean; data: TagItem[] }> {
+  async getTags(): Promise<{ success: boolean; data: TagItem[]; message?: string }> {
     const res = await request<any[]>('/admin/tags');
     if (res.isBackendOnline && res.success && Array.isArray(res.data)) {
       const tags: TagItem[] = res.data.map((t) => ({
@@ -551,8 +582,11 @@ export const adminApi = {
       return { success: true, data: tags };
     }
 
-    const tags = await dbService.getAllTags();
-    return { success: true, data: tags };
+    return {
+      success: false,
+      data: [],
+      message: res.message || '无法连接后端服务',
+    };
   },
 
   /**
@@ -560,15 +594,6 @@ export const adminApi = {
    */
   async createTag(tag: { name: string; color?: string; description?: string }): Promise<{ success: boolean; data?: TagItem; message?: string }> {
     const tagName = tag.name.toUpperCase().trim();
-    const tagItem: TagItem = {
-      id: Date.now(),
-      name: tagName,
-      color: tag.color || '#3B82F6',
-      description: tag.description || '',
-      imageCount: 0,
-    };
-
-    await dbService.saveTag(tagItem);
 
     const res = await request<any>('/admin/tags', {
       method: 'POST',
@@ -579,27 +604,25 @@ export const adminApi = {
       }),
     });
 
-    if (res.isBackendOnline && !res.success) {
-      return { success: false, message: res.message };
+    if (res.success && res.data) {
+      const t = res.data as any;
+      const created: TagItem = {
+        id: t.id ?? Date.now(),
+        name: t.name || tagName,
+        color: t.color || tag.color || '#3B82F6',
+        description: t.description || '',
+        imageCount: 0,
+      };
+      return { success: true, data: created, message: res.message || 'Tag created' };
     }
-
-    return { success: true, data: tagItem, message: 'Tag created' };
+    return { success: false, message: res.message || '标签创建失败' };
   },
 
   /**
    * Update Tag
    */
   async updateTag(id: number | string, tag: { name: string; color?: string; description?: string }): Promise<{ success: boolean; message?: string }> {
-    const tagItem: TagItem = {
-      id,
-      name: tag.name.toUpperCase().trim(),
-      color: tag.color || '#3B82F6',
-      description: tag.description || '',
-      imageCount: 0,
-    };
-    await dbService.saveTag(tagItem);
-
-    await request(`/admin/tags/${id}`, {
+    const res = await request(`/admin/tags/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
         name: tag.name,
@@ -607,38 +630,40 @@ export const adminApi = {
         description: tag.description,
       }),
     });
-
-    return { success: true, message: 'Tag updated' };
+    return { success: res.success, message: res.success ? 'Tag updated' : res.message };
   },
 
   /**
    * Delete Tag
    */
-  async deleteTag(id: number | string, name: string): Promise<{ success: boolean; message?: string }> {
-    await dbService.deleteTag(name);
-    await request(`/admin/tags/${id}`, { method: 'DELETE' });
-    return { success: true, message: 'Tag deleted' };
+  async deleteTag(id: number | string, _name: string): Promise<{ success: boolean; message?: string }> {
+    const res = await request(`/admin/tags/${id}`, { method: 'DELETE' });
+    return { success: res.success, message: res.success ? 'Tag deleted' : res.message };
   },
 
   /**
    * Merge Tags
    */
   async mergeTags(sourceTag: string, targetTag: string): Promise<{ success: boolean; count: number; message?: string }> {
-    const count = await dbService.mergeTags(sourceTag, targetTag);
-    await request('/admin/tags/merge', {
+    const res = await request<any>('/admin/tags/merge', {
       method: 'POST',
       body: JSON.stringify({
         source_tag: sourceTag,
         target_tag: targetTag,
       }),
     });
-    return { success: true, count, message: `已将标签 ${sourceTag} 合并至 ${targetTag} (${count} 个图片)` };
+
+    if (res.success) {
+      const count = Number((res.data as any)?.moved ?? (res.data as any)?.count ?? 0);
+      return { success: true, count, message: `已将标签 ${sourceTag} 合并至 ${targetTag}` };
+    }
+    return { success: false, count: 0, message: res.message || '标签合并失败' };
   },
 
   /**
    * Get Storage Configurations
    */
-  async getStorageConfigs(): Promise<{ success: boolean; data: StorageConfigItem[] }> {
+  async getStorageConfigs(): Promise<{ success: boolean; data: StorageConfigItem[]; message?: string }> {
     const res = await request<any[]>('/admin/storage');
     if (res.isBackendOnline && res.success && Array.isArray(res.data)) {
       const list: StorageConfigItem[] = res.data.map((item) => ({
@@ -654,17 +679,18 @@ export const adminApi = {
       return { success: true, data: list };
     }
 
-    const configs = await dbService.getStorageConfigs();
-    return { success: true, data: configs };
+    return {
+      success: false,
+      data: [],
+      message: res.message || '无法连接后端服务',
+    };
   },
 
   /**
    * Save Storage Config
    */
   async saveStorageConfig(item: StorageConfigItem): Promise<{ success: boolean; message?: string }> {
-    await dbService.saveStorageConfig(item);
-
-    await request('/admin/storage', {
+    const res = await request('/admin/storage', {
       method: 'POST',
       body: JSON.stringify({
         driver: item.driver,
@@ -675,25 +701,23 @@ export const adminApi = {
       }),
     });
 
-    return { success: true, message: 'Storage config saved' };
+    return { success: res.success, message: res.success ? 'Storage config saved' : res.message };
   },
 
   /**
    * Switch Active Storage Engine
    */
   async setActiveStorage(driver: StorageDriverType): Promise<{ success: boolean; message?: string }> {
-    await dbService.setActiveStorage(driver);
-
     const res = await request('/admin/storage/active', {
       method: 'POST',
       body: JSON.stringify({ driver }),
     });
 
-    if (res.isBackendOnline && !res.success) {
-      throw new Error(res.message || '切换主存储失败');
+    if (!res.success) {
+      return { success: false, message: res.message || '切换主存储失败' };
     }
 
-    return { success: true, message: `Active storage driver switched to ${driver.toUpperCase()}` };
+    return { success: true, message: res.message || `Active storage driver switched to ${driver.toUpperCase()}` };
   },
 
   /**
