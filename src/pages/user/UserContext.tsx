@@ -79,7 +79,7 @@ export interface UserContextType {
   handleSaveUploadMetadata: (
     queueItemId: string,
     imageId: number,
-    updates: { tags?: string[]; colorPalette?: string[] }
+    updates: { tags?: string[] }
   ) => Promise<boolean>;
   handleCreateAlbum: (album: Omit<Album, 'id'>) => Promise<void>;
   handleUpdateAlbum: (album: Album) => Promise<void>;
@@ -599,12 +599,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Post-upload metadata editing from the Upload Modal.
-  // The backend endpoint only accepts tags & color_palette (strict whitelist).
+  // The backend endpoint only accepts tags (strict whitelist).
   const handleSaveUploadMetadata = useCallback(
     async (
       queueItemId: string,
       imageId: number,
-      updates: { tags?: string[]; colorPalette?: string[] }
+      updates: { tags?: string[] }
     ): Promise<boolean> => {
       if (!isAuthenticated) {
         showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');

@@ -10,9 +10,6 @@ import {
   FileImage,
   Copy,
   Tag,
-  Palette,
-  Plus,
-  Save,
 } from 'lucide-react';
 import { UploadQueueItem } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
@@ -31,27 +28,6 @@ import { ScrollArea } from './ui/scroll-area';
 
 const MAX_TAGS = 20;
 const MAX_TAG_LENGTH = 32;
-const MAX_PALETTE_COLORS = 12;
-
-// Preset swatch board for quick color-tone selection
-const PRESET_PALETTE: string[] = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#84cc16',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#3b82f6',
-  '#6366f1',
-  '#a855f7',
-  '#ec4899',
-  '#f43f5e',
-  '#94a3b8',
-  '#64748b',
-  '#334155',
-  '#0f172a',
-];
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -62,13 +38,12 @@ interface UploadModalProps {
   onSaveMetadata: (
     queueItemId: string,
     imageId: number,
-    updates: { tags?: string[]; colorPalette?: string[] }
+    updates: { tags?: string[] }
   ) => Promise<boolean>;
 }
 
 interface MetaDraft {
   tags: string[];
-  colorPalette: string[];
   tagInput: string;
 }
 
@@ -85,8 +60,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [drafts, setDrafts] = useState<Record<string, MetaDraft>>({});
-  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
   if (!isOpen) return null;
 
@@ -99,7 +72,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     if (drafts[item.id]) return drafts[item.id];
     return {
       tags: [...(item.resultItem?.tags || [])],
-      colorPalette: [...(item.resultItem?.colorPalette || [])],
       tagInput: '',
     };
   };
@@ -109,18 +81,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       ...prev,
       [itemId]: { ...getDraftById(itemId), ...patch },
     }));
-    setSavedIds((prev) => {
-      if (!prev.has(itemId)) return prev;
-      const next = new Set(prev);
-      next.delete(itemId);
-      return next;
-    });
   };
 
   // Resolve the latest draft without stale-closure issues inside callbacks
   const getDraftById = (itemId: string): MetaDraft => {
     const item = queue.find((i) => i.id === itemId);
-    if (!item) return { tags: [], colorPalette: [], tagInput: '' };
+    if (!item) return { tags: [], tagInput: '' };
     return drafts[itemId] || getDraft(item);
   };
 
@@ -148,50 +114,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     updateDraft(item.id, { tags: draft.tags.filter((tg) => tg !== tag) });
   };
 
-  const toggleColor = (item: UploadQueueItem, hex: string) => {
-    const draft = getDraft(item);
-    if (draft.colorPalette.includes(hex)) {
-      updateDraft(item.id, { colorPalette: draft.colorPalette.filter((c) => c !== hex) });
-    } else if (draft.colorPalette.length < MAX_PALETTE_COLORS) {
-      updateDraft(item.id, { colorPalette: [...draft.colorPalette, hex] });
-    }
-  };
-
-  const addCustomColor = (item: UploadQueueItem, hex: string) => {
-    const draft = getDraft(item);
-    if (!draft.colorPalette.includes(hex) && draft.colorPalette.length < MAX_PALETTE_COLORS) {
-      updateDraft(item.id, { colorPalette: [...draft.colorPalette, hex] });
-    }
-  };
-
   const isDirty = (item: UploadQueueItem) => {
     if (!item.resultItem) return false;
     const draft = getDraft(item);
-    return (
-      !arraysEqual(draft.tags, item.resultItem.tags || []) ||
-      !arraysEqual(draft.colorPalette, item.resultItem.colorPalette || [])
-    );
+    return !arraysEqual(draft.tags, item.resultItem.tags || []);
   };
 
-  const handleSave = async (item: UploadQueueItem) => {
-    if (!item.resultItem || savingIds.has(item.id)) return;
-    const draft = getDraft(item);
-    setSavingIds((prev) => new Set(prev).add(item.id));
-    try {
-      const ok = await onSaveMetadata(item.id, item.resultItem.id, {
-        tags: draft.tags,
-        colorPalette: draft.colorPalette,
-      });
-      if (ok) {
-        setSavedIds((prev) => new Set(prev).add(item.id));
+  // Finish: close the modal and asynchronously submit every dirty tag draft.
+  // The saves run in the background; their results surface via toasts.
+  const handleFinish = () => {
+    for (const item of queue) {
+      if (item.status === 'done' && item.resultItem && isDirty(item)) {
+        const draft = getDraft(item);
+        void onSaveMetadata(item.id, item.resultItem.id, { tags: draft.tags });
       }
-    } finally {
-      setSavingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
     }
+    onClose();
   };
 
   return (
@@ -231,9 +169,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           <div className="p-6 space-y-3">
             <AnimatePresence>
               {queue.map((item) => {
-                const isSaving = savingIds.has(item.id);
-                const isSaved = savedIds.has(item.id);
-                const dirty = isDirty(item);
                 const draft = getDraft(item);
 
                 return (
@@ -363,107 +298,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Color Palette (色系) */}
-                        <div>
-                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
-                            <Palette className="w-3 h-3" />
-                            <span>{t('uploadModal.metaPaletteLabel')}</span>
-                            <span className="font-mono normal-case tracking-normal">
-                              ({draft.colorPalette.length}/{MAX_PALETTE_COLORS})
-                            </span>
-                          </label>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {PRESET_PALETTE.map((hex) => {
-                              const selected = draft.colorPalette.includes(hex);
-                              return (
-                                <button
-                                  key={`swatch-${item.id}-${hex}`}
-                                  id={`swatch-${item.id}-${hex.replace('#', '')}`}
-                                  type="button"
-                                  title={hex}
-                                  onClick={() => toggleColor(item, hex)}
-                                  className={`w-6 h-6 rounded-lg border transition-all cursor-pointer hover:scale-110 ${
-                                    selected
-                                      ? 'ring-2 ring-primary ring-offset-1 ring-offset-background scale-110'
-                                      : 'border-black/10 dark:border-white/10 opacity-80 hover:opacity-100'
-                                  }`}
-                                  style={{ backgroundColor: hex }}
-                                />
-                              );
-                            })}
-
-                            {/* Custom color picker */}
-                            <label
-                              className="relative w-6 h-6 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary hover:text-primary text-muted-foreground transition-colors overflow-hidden"
-                              title={t('uploadModal.metaCustomColor')}
-                            >
-                              <Plus className="w-3 h-3 pointer-events-none" />
-                              <input
-                                type="color"
-                                value="#3b82f6"
-                                onChange={(e) => addCustomColor(item, e.target.value.toUpperCase())}
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                              />
-                            </label>
-                          </div>
-
-                          {/* Selected colors summary */}
-                          {draft.colorPalette.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1 mt-2">
-                              {draft.colorPalette.map((hex) => (
-                                <span
-                                  key={`sel-${item.id}-${hex}`}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-muted/70 border border-border/60 text-muted-foreground"
-                                >
-                                  <span
-                                    className="w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/10"
-                                    style={{ backgroundColor: hex }}
-                                  />
-                                  {hex}
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleColor(item, hex)}
-                                    className="hover:text-destructive cursor-pointer"
-                                  >
-                                    <X className="w-2.5 h-2.5" />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Save row */}
-                        <div className="flex items-center justify-end gap-2">
-                          {isSaved && !dirty && (
-                            <span className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium mr-auto">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              {t('uploadModal.metaSaved')}
-                            </span>
-                          )}
-                          <Button
-                            size="sm"
-                            disabled={!dirty || isSaving}
-                            onClick={() => handleSave(item)}
-                            className={`h-7 rounded-full px-4 text-xs font-semibold gap-1.5 ${
-                              dirty
-                                ? 'cursor-pointer shadow-md'
-                                : 'cursor-not-allowed opacity-50'
-                            }`}
-                          >
-                            {isSaving ? (
-                              <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                {t('uploadModal.metaSavingBtn')}
-                              </>
-                            ) : (
-                              <>
-                                <Save className="w-3 h-3" />
-                                {t('uploadModal.metaSaveBtn')}
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                        {/* Hint: tags are saved when the dialog is finished */}
+                        <p className="text-[10px] text-muted-foreground">
+                          {t('uploadModal.metaSaveHint')}
+                        </p>
                       </div>
                     )}
                   </motion.div>
@@ -484,7 +322,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               id="cancel-all-upload-btn"
               variant="outline"
               size="sm"
-              onClick={onClose}
+              onClick={handleFinish}
               className="rounded-full px-5 text-xs font-mono cursor-pointer"
             >
               {isAllDone ? t('common.done') : t('uploadModal.backgroundBtn')}

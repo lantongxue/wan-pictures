@@ -13,7 +13,6 @@ import {
   Info,
   Heart,
   Trash2,
-  Palette,
 } from 'lucide-react';
 import { ImageItem, Album, LinkFormatType } from '../types';
 import { formatFileSize, formatDate } from '../utils/imageProcessing';
@@ -412,7 +411,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       </div>
                     </div>
                   </div>
-
                   {/* Tags */}
                   <div>
                     <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2.5 text-muted-foreground">
@@ -435,32 +433,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Color Palette */}
-                  {image.colorPalette && image.colorPalette.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-1.5 text-muted-foreground">
-                        <Palette className="w-3 h-3 text-primary" />
-                        <span>{t('lightbox.colorPalette')}</span>
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        {image.colorPalette.map((color, idx) => (
-                          <div
-                            key={idx}
-                            onClick={async () => {
-                              await copyToClipboard(color);
-                              onShowToast(t('lightbox.copiedColor'), color, 'success');
-                            }}
-                            className="flex-1 h-8 rounded-xl cursor-pointer border border-border flex items-center justify-center text-[9px] font-mono font-bold text-white shadow-xs hover:scale-105 transition-transform"
-                            style={{ backgroundColor: color }}
-                            title={`${t('lightbox.copyColor')} ${color}`}
-                          >
-                            {color}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </ScrollArea>
 

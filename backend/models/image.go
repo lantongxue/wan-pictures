@@ -17,13 +17,11 @@ type Image struct {
 	Width         int            `gorm:"type:int" json:"width"`
 	Height        int            `gorm:"type:int" json:"height"`
 	AspectRatio   float64        `gorm:"type:decimal(6,3)" json:"aspect_ratio"`
-	DataUrl       string         `gorm:"type:longtext" json:"data_url,omitempty"`
 	Url           string         `gorm:"type:varchar(1024)" json:"url"`
 	AlbumID       uint           `gorm:"index;default:1" json:"album_id"`
 	UserID        uint           `gorm:"type:bigint;index;default:1" json:"user_id"`
-	Tags          string         `gorm:"type:text" json:"tags"` // JSON array or comma separated: ["WALLPAPER","4K"]
+	Tags          []string       `gorm:"type:json;serializer:json" json:"tags"` // JSON array of strings: ["WALLPAPER","4K"]
 	Favorite      bool           `gorm:"type:boolean;default:false;index" json:"favorite"`
-	ColorPalette  string         `gorm:"type:text" json:"color_palette"` // JSON array of hex colors
 	StorageDriver string         `gorm:"type:varchar(32);default:'local';index" json:"storage_driver"` // 'local', 'webdav', 's3'
 	FileAssetID   uint           `gorm:"type:bigint;index" json:"file_asset_id"`                       // Foreign key to FileAsset
 	FileHash      string         `gorm:"type:varchar(64);index" json:"file_hash"`                      // SHA-256

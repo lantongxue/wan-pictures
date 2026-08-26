@@ -269,14 +269,13 @@ export const publicApi = {
           width: img.width,
           height: img.height,
           aspectRatio: img.aspect_ratio,
-          dataUrl: img.data_url || img.url,
+          dataUrl: img.url,
           url: img.url,
           createdAt: new Date(img.created_at).getTime() || Date.now(),
           updatedAt: new Date(img.updated_at).getTime() || Date.now(),
           albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
           tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
           favorite: img.favorite,
-          colorPalette: typeof img.color_palette === 'string' ? JSON.parse(img.color_palette || '[]') : img.color_palette,
           storageDriver: img.storage_driver || 'local',
         }));
         return {
@@ -347,7 +346,7 @@ export const adminApi = {
             width: img.width,
             height: img.height,
             aspectRatio: img.aspect_ratio,
-            dataUrl: img.data_url || img.url,
+            dataUrl: img.url,
             url: img.url,
             createdAt: new Date(img.created_at).getTime() || Date.now(),
             updatedAt: new Date(img.updated_at).getTime() || Date.now(),
@@ -396,14 +395,13 @@ export const adminApi = {
         width: img.width,
         height: img.height,
         aspectRatio: img.aspect_ratio,
-        dataUrl: img.data_url || img.url,
+        dataUrl: img.url,
         url: img.url,
         createdAt: new Date(img.created_at).getTime() || Date.now(),
         updatedAt: new Date(img.updated_at).getTime() || Date.now(),
         albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
-        colorPalette: typeof img.color_palette === 'string' ? JSON.parse(img.color_palette || '[]') : img.color_palette,
         storageDriver: img.storage_driver || 'local',
       }));
       return {
@@ -450,17 +448,13 @@ export const adminApi = {
         width: img.width,
         height: img.height,
         aspectRatio: img.aspect_ratio,
-        dataUrl: img.data_url || img.url,
+        dataUrl: img.url,
         url: img.url,
         createdAt: new Date(img.created_at).getTime() || Date.now(),
         updatedAt: new Date(img.updated_at).getTime() || Date.now(),
         albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
-        colorPalette:
-          typeof img.color_palette === 'string'
-            ? JSON.parse(img.color_palette || '[]')
-            : img.color_palette,
         storageDriver: img.storage_driver || 'local',
       };
       return { success: true, data: updated, message: res.message };
@@ -469,16 +463,15 @@ export const adminApi = {
   },
 
   /**
-   * Update post-upload image metadata (tags & color palette ONLY).
+   * Update post-upload image metadata (tags ONLY).
    * The backend strictly rejects any other field on this endpoint.
    */
   async updateImageMetadata(
     id: number,
-    updates: { tags?: string[]; colorPalette?: string[] }
+    updates: { tags?: string[] }
   ): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
     const payload: Record<string, any> = {};
     if (updates.tags !== undefined) payload.tags = updates.tags;
-    if (updates.colorPalette !== undefined) payload.color_palette = updates.colorPalette;
 
     const res = await request<any>(`/user/images/${id}/metadata`, {
       method: 'PUT',
@@ -497,17 +490,13 @@ export const adminApi = {
         width: img.width,
         height: img.height,
         aspectRatio: img.aspect_ratio,
-        dataUrl: img.data_url || img.url,
+        dataUrl: img.url,
         url: img.url,
         createdAt: new Date(img.created_at).getTime() || Date.now(),
         updatedAt: new Date(img.updated_at).getTime() || Date.now(),
         albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
-        colorPalette:
-          typeof img.color_palette === 'string'
-            ? JSON.parse(img.color_palette || '[]')
-            : img.color_palette,
         storageDriver: img.storage_driver || 'local',
       };
       return { success: true, data: updated, message: res.message };
@@ -1151,17 +1140,13 @@ export const uploadApi = {
             width: d.image.width,
             height: d.image.height,
             aspectRatio: d.image.aspect_ratio,
-            dataUrl: d.image.data_url || d.image.url,
+            dataUrl: d.image.url,
             url: d.image.url,
             createdAt: new Date(d.image.created_at).getTime() || Date.now(),
             updatedAt: new Date(d.image.updated_at).getTime() || Date.now(),
             albumId: Number(d.image.album_id) || DEFAULT_ALBUM_ID,
             tags: typeof d.image.tags === 'string' ? JSON.parse(d.image.tags || '[]') : d.image.tags || [],
             favorite: d.image.favorite,
-            colorPalette:
-              typeof d.image.color_palette === 'string'
-                ? JSON.parse(d.image.color_palette || '[]')
-                : d.image.color_palette,
             storageDriver: d.image.storage_driver || 'local',
           };
           return { success: true, exists: true, isInstant: true, image: img, message: res.message, isBackendOnline: true };
@@ -1216,17 +1201,13 @@ export const uploadApi = {
               width: raw.width,
               height: raw.height,
               aspectRatio: raw.aspect_ratio,
-              dataUrl: raw.data_url || raw.url,
+              dataUrl: raw.url,
               url: raw.url,
               createdAt: new Date(raw.created_at).getTime() || Date.now(),
               updatedAt: new Date(raw.updated_at).getTime() || Date.now(),
               albumId: Number(raw.album_id) || DEFAULT_ALBUM_ID,
               tags: typeof raw.tags === 'string' ? JSON.parse(raw.tags || '[]') : raw.tags || [],
               favorite: raw.favorite,
-              colorPalette:
-                typeof raw.color_palette === 'string'
-                  ? JSON.parse(raw.color_palette || '[]')
-                  : raw.color_palette,
               storageDriver: raw.storage_driver || 'local',
             };
             resolve({

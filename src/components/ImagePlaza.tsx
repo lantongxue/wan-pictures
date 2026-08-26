@@ -9,7 +9,6 @@ import {
   Download,
   Maximize2,
   Check,
-  Palette,
   Tag,
   Upload,
   RefreshCw,
@@ -44,25 +43,6 @@ interface ImagePlazaProps {
   onOpenUpload: () => void;
 }
 
-type ColorToneFilter = 'all' | 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'neutral';
-
-interface ColorFilterOption {
-  key: string;
-  value: ColorToneFilter;
-  color: string;
-  bgClass: string;
-}
-
-const COLOR_FILTERS: ColorFilterOption[] = [
-  { key: 'allColors', value: 'all', color: '#94a3b8', bgClass: 'bg-muted-foreground/30' },
-  { key: 'yellowTone', value: 'yellow', color: '#eab308', bgClass: 'bg-amber-400' },
-  { key: 'redTone', value: 'red', color: '#ef4444', bgClass: 'bg-rose-500' },
-  { key: 'blueTone', value: 'blue', color: '#3b82f6', bgClass: 'bg-blue-500' },
-  { key: 'greenTone', value: 'green', color: '#10b981', bgClass: 'bg-emerald-500' },
-  { key: 'purpleTone', value: 'purple', color: '#a855f7', bgClass: 'bg-purple-500' },
-  { key: 'neutralTone', value: 'neutral', color: '#64748b', bgClass: 'bg-slate-500' },
-];
-
 export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   images,
   albums,
@@ -75,7 +55,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [selectedColor, setSelectedColor] = useState<ColorToneFilter>('all');
   const [minWidth, setMinWidth] = useState<number | undefined>(undefined);
   const [maxWidth, setMaxWidth] = useState<number | undefined>(undefined);
   const [minHeight, setMinHeight] = useState<number | undefined>(undefined);
@@ -100,35 +79,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     return Array.from(tagSet);
   }, [images]);
 
-  // Helper to test if hex matches color tone
-  const matchesColorTone = (hexColors: string[] | undefined, tone: ColorToneFilter): boolean => {
-    if (tone === 'all' || !hexColors || hexColors.length === 0) return true;
-
-    for (const hex of hexColors) {
-      const cleanHex = hex.replace('#', '');
-      if (cleanHex.length !== 6) continue;
-      const r = parseInt(cleanHex.substring(0, 2), 16);
-      const g = parseInt(cleanHex.substring(2, 4), 16);
-      const b = parseInt(cleanHex.substring(4, 6), 16);
-
-      if (tone === 'neutral') {
-        const diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-        if (diff < 25) return true; // Greyscale / desaturated
-      } else if (tone === 'red') {
-        if (r > 130 && r > g * 1.2 && r > b * 1.2) return true;
-      } else if (tone === 'yellow' || tone === 'orange') {
-        if (r > 120 && g > 90 && b < r * 0.8) return true;
-      } else if (tone === 'green') {
-        if (g > 100 && g > r * 0.9 && g > b * 0.9) return true;
-      } else if (tone === 'blue' || tone === 'cyan') {
-        if (b > 110 && (b > r * 1.1 || g > 110)) return true;
-      } else if (tone === 'purple') {
-        if (r > 80 && b > 100 && g < Math.max(r, b) * 0.8) return true;
-      }
-    }
-    return false;
-  };
-
   // Filtered & Sorted Images for Plaza
   const plazaImages = useMemo(() => {
     let result = [...images];
@@ -138,11 +88,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
       result = result.filter(
         (img) => img.tags && img.tags.some((t) => t.toLowerCase() === selectedTag.toLowerCase())
       );
-    }
-
-    // Filter by Color Tone
-    if (selectedColor !== 'all') {
-      result = result.filter((img) => matchesColorTone(img.colorPalette, selectedColor));
     }
 
     // Filter by Dimension: Width
@@ -209,7 +154,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
     });
 
     return result;
-  }, [images, selectedTag, selectedColor, minWidth, maxWidth, minHeight, maxHeight, aspectRatioFilter, searchQuery, sortBy]);
+  }, [images, selectedTag, minWidth, maxWidth, minHeight, maxHeight, aspectRatioFilter, searchQuery, sortBy]);
 
   const handleCopyLink = async (img: ImageItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -247,7 +192,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedTag('all');
-    setSelectedColor('all');
     setMinWidth(undefined);
     setMaxWidth(undefined);
     setMinHeight(undefined);
@@ -469,42 +413,17 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
             ))}
           </div>
 
-          {/* Color Tone Filter Pills Row */}
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-            <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
-              <Palette className="w-3 h-3" />
-              <span>{t('plaza.colorTone')}</span>
-            </div>
-
-            {COLOR_FILTERS.map((c) => (
-              <button
-                key={c.value}
-                id={`color-filter-${c.value}`}
-                onClick={() => setSelectedColor(selectedColor === c.value ? 'all' : c.value)}
-                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer ${
-                  selectedColor === c.value
-                    ? 'ring-2 ring-primary bg-background text-foreground font-semibold shadow-xs'
-                    : 'bg-muted/50 text-muted-foreground hover:text-foreground border border-border/40'
-                }`}
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: c.color }}
-                />
-                <span>{t(`plaza.${c.key}`)}</span>
-              </button>
-            ))}
-
-            {(selectedTag !== 'all' || selectedColor !== 'all' || searchQuery || minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
+          {(selectedTag !== 'all' || searchQuery || minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
+            <div className="mt-3 flex items-center justify-end">
               <button
                 onClick={handleResetFilters}
-                className="ml-auto text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
               >
                 <RefreshCw className="w-3 h-3" />
                 <span>{t('plaza.resetFilters')}</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Results Counter Sub-header */}
@@ -514,11 +433,6 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
             {selectedTag !== 'all' && (
               <Badge variant="subtle" className="text-[10px]">
                 {t('plaza.tags')} #{selectedTag}
-              </Badge>
-            )}
-            {selectedColor !== 'all' && (
-              <Badge variant="subtle" className="text-[10px]">
-                {t('plaza.colorTone')} {t(`plaza.${COLOR_FILTERS.find((c) => c.value === selectedColor)?.key}`)}
               </Badge>
             )}
             {(minWidth || maxWidth || minHeight || maxHeight || (aspectRatioFilter && aspectRatioFilter !== 'all')) && (
@@ -709,37 +623,20 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                       )}
                     </div>
 
-                    {/* Tags & Color Palette Strip */}
-                    <div className="flex items-center justify-between gap-2 pt-0.5">
-                      {/* Tags */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
-                        {img.tags && img.tags.slice(0, 3).map((tag, tagIdx) => (
-                          <span
-                            key={`plaza-card-${img.id}-tag-${tag}-${tagIdx}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTag(tag);
-                            }}
-                            className="text-[10px] font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Dominant Color Palette Pill */}
-                      {img.colorPalette && img.colorPalette.length > 0 && (
-                        <div className="flex items-center -space-x-1 shrink-0">
-                          {img.colorPalette.slice(0, 3).map((hex, i) => (
-                            <span
-                              key={`plaza-card-${img.id}-hex-${hex}-${i}`}
-                              className="w-2.5 h-2.5 rounded-full border border-background shadow-2xs"
-                              style={{ backgroundColor: hex }}
-                              title={hex}
-                            />
-                          ))}
-                        </div>
-                      )}
+                    {/* Tags Strip */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+                      {img.tags && img.tags.slice(0, 3).map((tag, tagIdx) => (
+                        <span
+                          key={`plaza-card-${img.id}-tag-${tag}-${tagIdx}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTag(tag);
+                          }}
+                          className="text-[10px] font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>

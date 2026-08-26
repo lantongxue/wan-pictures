@@ -56,9 +56,6 @@ func (ctrl *UserController) CreateImage(c *gin.Context) {
 		return
 	}
 
-	tagsJSON, _ := json.Marshal(req.Tags)
-	paletteJSON, _ := json.Marshal(req.ColorPalette)
-
 	storageDriver := req.StorageDriver
 	if storageDriver == "" {
 		storageDriver = "local"
@@ -78,13 +75,11 @@ func (ctrl *UserController) CreateImage(c *gin.Context) {
 		Width:         req.Width,
 		Height:        req.Height,
 		AspectRatio:   req.AspectRatio,
-		DataUrl:       req.DataUrl,
 		Url:           req.Url,
 		AlbumID:       albumID,
 		UserID:        currentUserID(c),
-		Tags:          string(tagsJSON),
+		Tags:          req.Tags,
 		Favorite:      req.Favorite,
-		ColorPalette:  string(paletteJSON),
 		StorageDriver: storageDriver,
 		Compressed:    req.Compressed,
 		OriginalSize:  req.OriginalSize,
@@ -148,21 +143,7 @@ func (ctrl *UserController) UpdateImage(c *gin.Context) {
 	c.JSON(http.StatusOK, models.SuccessResponse(img, "Image updated successfully"))
 }
 
-// isValidHexColor validates "#RGB" / "#RRGGBB" hex color strings
-func isValidHexColor(s string) bool {
-	hexPart := strings.TrimPrefix(strings.TrimSpace(s), "#")
-	if len(hexPart) != 3 && len(hexPart) != 6 {
-		return false
-	}
-	for _, ch := range hexPart {
-		if !strings.ContainsRune("0123456789abcdefABCDEF", ch) {
-			return false
-		}
-	}
-	return true
-}
-
-// UpdateImageMetadata updates ONLY tags and color_palette of an image.
+// UpdateImageMetadata updates ONLY tags of an image.
 // Any other field present in the payload is rejected with a 400 error.
 // PUT /api/v1/user/images/:id/metadata
 func (ctrl *UserController) UpdateImageMetadata(c *gin.Context) {
@@ -183,19 +164,19 @@ func (ctrl *UserController) UpdateImageMetadata(c *gin.Context) {
 		return
 	}
 
-	// Strict field whitelist inspection: reject everything except the two
-	// editable metadata fields (tags, color_palette)
+	// Strict field whitelist inspection: reject everything except the single
+	// editable metadata field (tags)
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid JSON payload"))
 		return
 	}
-	allowedFields := map[string]bool{"tags": true, "color_palette": true}
+	allowedFields := map[string]bool{"tags": true}
 	for key := range fields {
 		if !allowedFields[key] {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse(
 				http.StatusBadRequest,
-				fmt.Sprintf("字段 %q 不允许修改：该接口仅支持修改 tags 与 color_palette", key),
+				fmt.Sprintf("字段 %q 不允许修改：该接口仅支持修改 tags", key),
 			))
 			return
 		}
@@ -229,23 +210,8 @@ func (ctrl *UserController) UpdateImageMetadata(c *gin.Context) {
 		updates["tags"] = string(tagsJSON)
 	}
 
-	if req.ColorPalette != nil {
-		if len(*req.ColorPalette) > 12 {
-			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "色系颜色数量不能超过 12 个"))
-			return
-		}
-		for _, hex := range *req.ColorPalette {
-			if !isValidHexColor(hex) {
-				c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, fmt.Sprintf("无效的颜色值 %q：仅支持 #RGB 或 #RRGGBB 格式", hex)))
-				return
-			}
-		}
-		paletteJSON, _ := json.Marshal(*req.ColorPalette)
-		updates["color_palette"] = string(paletteJSON)
-	}
-
 	if len(updates) == 0 {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "请求体为空：仅支持修改 tags 与 color_palette 字段"))
+		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "请求体为空：仅支持修改 tags 字段"))
 		return
 	}
 	updates["updated_at"] = time.Now()

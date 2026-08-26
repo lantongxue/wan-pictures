@@ -28,7 +28,6 @@ export interface ImageItem {
   albumId: number;
   tags: string[];
   favorite?: boolean;
-  colorPalette?: string[];
   compressed?: boolean;
   originalSize?: number;
   storageDriver?: 'local' | 'webdav' | 's3' | string;

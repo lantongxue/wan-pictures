@@ -122,12 +122,10 @@ type SaveImageRequest struct {
 	Width         int      `json:"width"`
 	Height        int      `json:"height"`
 	AspectRatio   float64  `json:"aspect_ratio"`
-	DataUrl       string   `json:"data_url"`
 	Url           string   `json:"url"`
 	AlbumID       uint     `json:"album_id"`
 	Tags          []string `json:"tags"`
 	Favorite      bool     `json:"favorite"`
-	ColorPalette  []string `json:"color_palette"`
 	StorageDriver string   `json:"storage_driver"`
 	Compressed    bool     `json:"compressed"`
 	OriginalSize  int64    `json:"original_size"`
@@ -142,10 +140,9 @@ type UpdateImageRequest struct {
 }
 
 // UpdateImageMetadataRequest is the strict payload for post-upload metadata
-// editing: ONLY tags and color_palette may be modified through this endpoint.
+// editing: ONLY tags may be modified through this endpoint.
 type UpdateImageMetadataRequest struct {
-	Tags         *[]string `json:"tags"`
-	ColorPalette *[]string `json:"color_palette"`
+	Tags *[]string `json:"tags"`
 }
 
 type BatchImageActionRequest struct {

@@ -125,7 +125,7 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 	// Search
 	if q := strings.TrimSpace(c.Query("q")); q != "" {
 		searchPattern := "%" + q + "%"
-		query = query.Where("name LIKE ? OR original_name LIKE ? OR tags LIKE ?", searchPattern, searchPattern, searchPattern)
+		query = query.Where("name LIKE ? OR original_name LIKE ? OR CAST(tags AS CHAR) LIKE ?", searchPattern, searchPattern, searchPattern)
 	}
 
 	// Album filter
@@ -135,9 +135,9 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 		}
 	}
 
-	// Tag filter
+	// Tag filter (tags is a MySQL JSON column)
 	if tag := strings.TrimSpace(c.Query("tag")); tag != "" {
-		query = query.Where("tags LIKE ?", "%\""+tag+"\"%")
+		query = query.Where("JSON_CONTAINS(tags, JSON_QUOTE(?))", tag)
 	}
 
 	// Storage driver filter
@@ -227,9 +227,6 @@ func (ctrl *AdminController) CreateImage(c *gin.Context) {
 		return
 	}
 
-	tagsJSON, _ := json.Marshal(req.Tags)
-	paletteJSON, _ := json.Marshal(req.ColorPalette)
-
 	storageDriver := req.StorageDriver
 	if storageDriver == "" {
 		storageDriver = "local"
@@ -249,13 +246,11 @@ func (ctrl *AdminController) CreateImage(c *gin.Context) {
 		Width:         req.Width,
 		Height:        req.Height,
 		AspectRatio:   req.AspectRatio,
-		DataUrl:       req.DataUrl,
 		Url:           req.Url,
 		AlbumID:       albumID,
 		UserID:        1,
-		Tags:          string(tagsJSON),
+		Tags:          req.Tags,
 		Favorite:      req.Favorite,
-		ColorPalette:  string(paletteJSON),
 		StorageDriver: storageDriver,
 		Compressed:    req.Compressed,
 		OriginalSize:  req.OriginalSize,
@@ -372,20 +367,18 @@ func (ctrl *AdminController) BatchImageAction(c *gin.Context) {
 		var images []models.Image
 		database.DB.Where("id IN ?", req.IDs).Find(&images)
 		for _, img := range images {
-			var currentTags []string
-			json.Unmarshal([]byte(img.Tags), &currentTags)
 			hasTag := false
-			for _, t := range currentTags {
+			for _, t := range img.Tags {
 				if strings.EqualFold(t, req.TagToAdd) {
 					hasTag = true
 					break
 				}
 			}
 			if !hasTag {
-				currentTags = append(currentTags, req.TagToAdd)
-				newJSON, _ := json.Marshal(currentTags)
+				nextTags := append(img.Tags, req.TagToAdd)
+				tagsJSON, _ := json.Marshal(nextTags)
 				database.DB.Model(&img).Updates(map[string]interface{}{
-					"tags":       string(newJSON),
+					"tags":       string(tagsJSON),
 					"updated_at": time.Now(),
 				})
 			}
@@ -532,7 +525,7 @@ func (ctrl *AdminController) ListTags(c *gin.Context) {
 	// Calculate usage count for each tag
 	for i := range tags {
 		var count int64
-		database.DB.Model(&models.Image{}).Where("tags LIKE ?", "%\""+tags[i].Name+"\"%").Count(&count)
+		database.DB.Model(&models.Image{}).Where("JSON_CONTAINS(tags, JSON_QUOTE(?))", tags[i].Name).Count(&count)
 		tags[i].ImageCount = count
 	}
 
@@ -598,20 +591,22 @@ func (ctrl *AdminController) UpdateTag(c *gin.Context) {
 	// If renamed, update all images containing oldName
 	if oldName != newName {
 		var images []models.Image
-		database.DB.Where("tags LIKE ?", "%\""+oldName+"\"%").Find(&images)
+		database.DB.Where("JSON_CONTAINS(tags, JSON_QUOTE(?))", oldName).Find(&images)
 		for _, img := range images {
-			var currentTags []string
-			json.Unmarshal([]byte(img.Tags), &currentTags)
-			for i, t := range currentTags {
+			changed := false
+			for i, t := range img.Tags {
 				if strings.EqualFold(t, oldName) {
-					currentTags[i] = newName
+					img.Tags[i] = newName
+					changed = true
 				}
 			}
-			newJSON, _ := json.Marshal(currentTags)
-			database.DB.Model(&img).Updates(map[string]interface{}{
-				"tags":       string(newJSON),
-				"updated_at": time.Now(),
-			})
+			if changed {
+				tagsJSON, _ := json.Marshal(img.Tags)
+				database.DB.Model(&img).Updates(map[string]interface{}{
+					"tags":       string(tagsJSON),
+					"updated_at": time.Now(),
+				})
+			}
 		}
 	}
 
@@ -639,19 +634,17 @@ func (ctrl *AdminController) DeleteTag(c *gin.Context) {
 
 	// Remove tag from images
 	var images []models.Image
-	database.DB.Where("tags LIKE ?", "%\""+tag.Name+"\"%").Find(&images)
+	database.DB.Where("JSON_CONTAINS(tags, JSON_QUOTE(?))", tag.Name).Find(&images)
 	for _, img := range images {
-		var currentTags []string
-		json.Unmarshal([]byte(img.Tags), &currentTags)
 		var filtered []string
-		for _, t := range currentTags {
+		for _, t := range img.Tags {
 			if !strings.EqualFold(t, tag.Name) {
 				filtered = append(filtered, t)
 			}
 		}
-		newJSON, _ := json.Marshal(filtered)
+		tagsJSON, _ := json.Marshal(filtered)
 		database.DB.Model(&img).Updates(map[string]interface{}{
-			"tags":       string(newJSON),
+			"tags":       string(tagsJSON),
 			"updated_at": time.Now(),
 		})
 	}
@@ -678,13 +671,11 @@ func (ctrl *AdminController) MergeTags(c *gin.Context) {
 	}
 
 	var images []models.Image
-	database.DB.Where("tags LIKE ?", "%\""+source+"\"%").Find(&images)
+	database.DB.Where("JSON_CONTAINS(tags, JSON_QUOTE(?))", source).Find(&images)
 	for _, img := range images {
-		var tags []string
-		json.Unmarshal([]byte(img.Tags), &tags)
 		hasTarget := false
 		var newTags []string
-		for _, t := range tags {
+		for _, t := range img.Tags {
 			if strings.EqualFold(t, target) {
 				hasTarget = true
 			}
@@ -695,9 +686,9 @@ func (ctrl *AdminController) MergeTags(c *gin.Context) {
 		if !hasTarget {
 			newTags = append(newTags, target)
 		}
-		newJSON, _ := json.Marshal(newTags)
+		tagsJSON, _ := json.Marshal(newTags)
 		database.DB.Model(&img).Updates(map[string]interface{}{
-			"tags":       string(newJSON),
+			"tags":       string(tagsJSON),
 			"updated_at": time.Now(),
 		})
 	}

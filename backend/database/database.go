@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -78,6 +79,41 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.UploadLog{},
 	); err != nil {
 		return err
+	}
+
+	// Drop the unused legacy data_url column (GORM never drops columns on its own).
+	// The images table now serves asset URLs purely via the `url` column.
+	if db.Migrator().HasColumn(&models.Image{}, "data_url") {
+		if err := db.Migrator().DropColumn(&models.Image{}, "data_url"); err != nil {
+			return fmt.Errorf("failed to drop images.data_url column: %w", err)
+		}
+		log.Printf("[Database] Dropped unused images.data_url column")
+	}
+
+	// Drop the removed color_palette (色系) columns from images & file_assets
+	for _, m := range []interface{}{&models.Image{}, &models.FileAsset{}} {
+		if db.Migrator().HasColumn(m, "color_palette") {
+			if err := db.Migrator().DropColumn(m, "color_palette"); err != nil {
+				return fmt.Errorf("failed to drop color_palette column: %w", err)
+			}
+			log.Printf("[Database] Dropped removed color_palette column")
+		}
+	}
+
+	// Multi-valued index on the tags JSON array, enabling indexed tag
+	// membership queries (JSON_CONTAINS / =) in MySQL.
+	if db.Dialector.Name() == "mysql" {
+		if !db.Migrator().HasIndex(&models.Image{}, "idx_images_tags_mv") {
+			if err := db.Exec("CREATE INDEX idx_images_tags_mv ON images ((CAST(tags AS CHAR(64) ARRAY)))").Error; err != nil {
+				// GORM may translate MySQL 1061 into gorm.ErrDuplicatedKey;
+				// treat a concurrently-created duplicate as a no-op.
+				if !errors.Is(err, gorm.ErrDuplicatedKey) {
+					return fmt.Errorf("failed to create multi-valued index on images.tags: %w", err)
+				}
+			} else {
+				log.Printf("[Database] Created multi-valued index idx_images_tags_mv on images.tags")
+			}
+		}
 	}
 
 	PurgeOrphanSoftDeletedAssets(db)
