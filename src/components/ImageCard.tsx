@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { ImageItem, Album } from '../types';
 import { formatFileSize, formatDate } from '../utils/imageProcessing';
-import { copyToClipboard } from '../utils/linkFormatter';
+import { copyToClipboard, toAbsoluteImageUrl } from '../utils/linkFormatter';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
@@ -43,7 +43,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
 
   const handleCopyLink = async (e: React.MouseEvent, type: 'url' | 'markdown') => {
     e.stopPropagation();
-    const text = type === 'markdown' ? `![${image.name}](${image.dataUrl})` : image.dataUrl;
+    const absUrl = toAbsoluteImageUrl(image.dataUrl);
+    const text = type === 'markdown' ? `![${image.name}](${absUrl})` : absUrl;
     const ok = await copyToClipboard(text);
     if (ok) {
       setCopiedFormat(type);

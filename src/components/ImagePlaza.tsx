@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { ImageItem, Album, SortOption, AspectRatioFilter } from '../types';
-import { copyToClipboard } from '../utils/linkFormatter';
+import { copyToClipboard, toAbsoluteImageUrl } from '../utils/linkFormatter';
 import { DimensionFilterPopover } from './DimensionFilterPopover';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -213,7 +213,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
 
   const handleCopyLink = async (img: ImageItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const success = await copyToClipboard(img.dataUrl);
+    const success = await copyToClipboard(toAbsoluteImageUrl(img.dataUrl));
     if (success) {
       setCopiedId(img.id);
       onShowToast(t('card.copyUrlSuccess'), img.name, 'success');
@@ -223,7 +223,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
 
   const handleCopyMarkdown = async (img: ImageItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    const md = `![${img.name}](${img.dataUrl})`;
+    const md = `![${img.name}](${toAbsoluteImageUrl(img.dataUrl)})`;
     const success = await copyToClipboard(md);
     if (success) {
       setCopiedId(img.id);

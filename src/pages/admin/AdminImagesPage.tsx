@@ -27,6 +27,7 @@ import {
 import { ImageItem, Album, TagItem, StorageDriverType } from '../../types';
 import { adminApi } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
+import { toAbsoluteImageUrl } from '../../utils/linkFormatter';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -140,7 +141,7 @@ export const AdminImagesPage: React.FC = () => {
 
   // Actions
   const handleCopyLink = (img: ImageItem) => {
-    const url = img.url || img.dataUrl;
+    const url = toAbsoluteImageUrl(img.url || img.dataUrl);
     navigator.clipboard.writeText(url);
     setCopiedId(img.id);
     showNotification(`已复制 "${img.name}" 直链`);

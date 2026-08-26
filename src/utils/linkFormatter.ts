@@ -1,5 +1,36 @@
 import { ImageItem, LinkFormatType } from '../types';
 
+/**
+ * Resolve the origin that serves uploaded files:
+ * - absolute VITE_API_BASE_URL -> its own origin
+ * - relative base (same-origin /api/v1 via dev proxy) -> current page origin
+ */
+function getApiOrigin(): string {
+  const base = ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/v1';
+  if (/^https?:\/\//i.test(base)) {
+    try {
+      return new URL(base).origin;
+    } catch {
+      // fall through
+    }
+  }
+  return window.location.origin;
+}
+
+/**
+ * Convert a possibly-relative image URL into a fully-qualified link
+ * (protocol + domain + path) so copied links work outside this site.
+ * data:/blob:/absolute URLs are returned untouched.
+ */
+export function toAbsoluteImageUrl(url?: string | null): string {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+  const origin = getApiOrigin();
+  return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
+}
+
 export interface FormattedLinkOption {
   type: LinkFormatType;
   label: string;
@@ -12,31 +43,34 @@ export const LINK_FORMAT_OPTIONS: FormattedLinkOption[] = [
     type: 'raw',
     label: '原始直链 (URL)',
     syntaxExample: 'https://example.com/image.png',
-    format: (item, customUrl) => customUrl || item.dataUrl,
+    format: (item, customUrl) => toAbsoluteImageUrl(customUrl || item.dataUrl),
   },
   {
     type: 'markdown',
     label: 'Markdown 语法',
     syntaxExample: '![name](https://...)',
-    format: (item, customUrl) => `![${item.name}](${customUrl || item.dataUrl})`,
+    format: (item, customUrl) => `![${item.name}](${toAbsoluteImageUrl(customUrl || item.dataUrl)})`,
   },
   {
     type: 'html',
     label: 'HTML 代码',
     syntaxExample: '<img src="..." alt="name" />',
-    format: (item, customUrl) => `<img src="${customUrl || item.dataUrl}" alt="${item.name}" />`,
+    format: (item, customUrl) => `<img src="${toAbsoluteImageUrl(customUrl || item.dataUrl)}" alt="${item.name}" />`,
   },
   {
     type: 'bbcode',
     label: 'BBCode 论坛代码',
     syntaxExample: '[img]https://...[/img]',
-    format: (item, customUrl) => `[img]${customUrl || item.dataUrl}[/img]`,
+    format: (item, customUrl) => `[img]${toAbsoluteImageUrl(customUrl || item.dataUrl)}[/img]`,
   },
   {
     type: 'markdown_link',
     label: 'Markdown 带点击链接',
     syntaxExample: '[![name](url)](url)',
-    format: (item, customUrl) => `[![${item.name}](${customUrl || item.dataUrl})](${customUrl || item.dataUrl})`,
+    format: (item, customUrl) => {
+      const abs = toAbsoluteImageUrl(customUrl || item.dataUrl);
+      return `[![${item.name}](${abs})](${abs})`;
+    },
   },
   {
     type: 'data_uri',
@@ -55,7 +89,7 @@ export function formatSingleImageLink(
   if (option) {
     return option.format(item, customUrl);
   }
-  return item.dataUrl;
+  return toAbsoluteImageUrl(item.dataUrl);
 }
 
 export function formatBatchImageLinks(
