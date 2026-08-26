@@ -122,7 +122,7 @@ export interface UploadQuotaSettings {
   free_user_max_size_mb: number;
   vip_daily_limit: number;
   vip_max_size_mb: number;
-  naming_rule: 'original' | 'timestamp' | 'random' | 'custom';
+  naming_rule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
   custom_prefix?: string;
   auto_compress?: boolean;
   compress_quality?: number;
@@ -179,7 +179,7 @@ export interface UploadSettings {
   maxWidth: number;
   convertToWebP: boolean;
   defaultAlbumId: string;
-  namingRule: 'original' | 'timestamp' | 'random' | 'custom';
+  namingRule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
   customPrefix?: string;
   theme?: 'dark' | 'light';
 }

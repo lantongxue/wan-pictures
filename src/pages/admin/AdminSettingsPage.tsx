@@ -53,8 +53,7 @@ export const AdminSettingsPage: React.FC = () => {
     free_user_max_size_mb: 10,
     vip_daily_limit: 500,
     vip_max_size_mb: 50,
-    naming_rule: 'timestamp',
-    custom_prefix: 'pic_',
+    naming_rule: 'uuid',
     auto_compress: false,
     compress_quality: 85,
     convert_to_webp: false,
@@ -494,7 +493,7 @@ export const AdminSettingsPage: React.FC = () => {
                 <Field>
                   <FieldLabel htmlFor="sys-naming-rule">系统重命名策略</FieldLabel>
                   <Select
-                    value={quotaSettings.naming_rule || 'timestamp'}
+                    value={quotaSettings.naming_rule === 'original' ? 'original' : 'uuid'}
                     onValueChange={(val: any) => {
                       setQuotaSettings({ ...quotaSettings, naming_rule: val });
                       setSettings({ ...settings, namingRule: val });
@@ -504,29 +503,11 @@ export const AdminSettingsPage: React.FC = () => {
                       <SelectValue placeholder="命名规则" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="uuid">UUID 自动命名 (唯一标识)</SelectItem>
                       <SelectItem value="original">保留原始文件名 (Original)</SelectItem>
-                      <SelectItem value="timestamp">规范时间戳 (YYYYMMDD_HHMMSS)</SelectItem>
-                      <SelectItem value="random">随机哈希值 (Random Hash)</SelectItem>
-                      <SelectItem value="custom">自定义前缀格式 (Custom Prefix)</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
-
-                {quotaSettings.naming_rule === 'custom' && (
-                  <Field>
-                    <FieldLabel htmlFor="sys-custom-prefix">自定义前缀 (Custom Prefix)</FieldLabel>
-                    <Input
-                      id="sys-custom-prefix"
-                      type="text"
-                      placeholder="e.g. pic_"
-                      value={quotaSettings.custom_prefix || ''}
-                      onChange={(e) =>
-                        setQuotaSettings({ ...quotaSettings, custom_prefix: e.target.value })
-                      }
-                      className="h-9 text-xs rounded-xl"
-                    />
-                  </Field>
-                )}
 
                 <Field>
                   <FieldLabel htmlFor="sys-default-album">默认上传归属相册</FieldLabel>

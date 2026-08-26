@@ -730,8 +730,8 @@ export const adminApi = {
         free_user_max_size_mb: 10,
         vip_daily_limit: 500,
         vip_max_size_mb: 50,
-        naming_rule: 'timestamp',
-        custom_prefix: 'pic_',
+        naming_rule: 'uuid',
+        custom_prefix: '',
         auto_compress: false,
         compress_quality: 85,
         convert_to_webp: false,
@@ -1173,7 +1173,7 @@ export const uploadApi = {
           single_max_size_mb: Number(d.single_max_size_mb || 0),
           single_max_size_bytes: Number(d.single_max_size_bytes || 0),
           allow_anonymous: !!d.allow_anonymous,
-          naming_rule: d.naming_rule || 'timestamp',
+          naming_rule: d.naming_rule || 'uuid',
         },
       };
     }

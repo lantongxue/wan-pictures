@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"wanpictures-backend/database"
 	"wanpictures-backend/models"
 	"wanpictures-backend/services/storage"
@@ -157,42 +157,25 @@ func (ctrl *UploadController) checkUploadQuota(role string, userID uint, clientI
 	return nil
 }
 
-// generateRandomString generates a random hex string of specified byte length
-func generateRandomString(n int) string {
-	b := make([]byte, n)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-// formatFileNameBySystemRule applies the system-level naming policy
+// formatFileNameBySystemRule applies the system-level naming policy.
+// Renamed files always use a UUID (v4) — random-string / timestamp names
+// are no longer produced.
 func formatFileNameBySystemRule(originalName string, rule, prefix string) string {
 	ext := filepath.Ext(originalName)
 	if ext == "" {
 		ext = ".png"
 	}
-	baseName := strings.TrimSuffix(originalName, ext)
 
-	switch rule {
-	case "timestamp":
-		now := time.Now()
-		randPart := generateRandomString(3)
-		return fmt.Sprintf("%s_%s%s", now.Format("20060102_150405"), randPart, ext)
-	case "random":
-		return fmt.Sprintf("img_%s%s", generateRandomString(6), ext)
-	case "custom":
-		if prefix == "" {
-			prefix = "pic_"
-		}
-		return fmt.Sprintf("%s%s%s", prefix, generateRandomString(4), ext)
-	case "original":
-		fallthrough
-	default:
-		// Safe original
+	if rule == "original" {
+		baseName := strings.TrimSuffix(originalName, ext)
 		safe := strings.ReplaceAll(baseName, " ", "_")
 		safe = strings.ReplaceAll(safe, "/", "_")
 		safe = strings.ReplaceAll(safe, "\\", "_")
 		return fmt.Sprintf("%s%s", safe, ext)
 	}
+
+	// 'uuid' and any legacy rules ('timestamp' / 'random' / 'custom') -> UUID
+	return uuid.NewString() + ext
 }
 
 // generateStoragePath partitions storage keys by date (uploads/YYYY/MM/DD/filename)
@@ -247,7 +230,7 @@ func (ctrl *UploadController) CheckHash(c *gin.Context) {
 		albumID = "default"
 	}
 
-	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, generateRandomString(3))
+	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
 
 	newImage := models.Image{
 		ID:            imageID,
@@ -346,7 +329,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		database.DB.Model(&existingAsset).Update("ref_count", existingAsset.RefCount+1)
 
 		formattedName := formatFileNameBySystemRule(fileHeader.Filename, quotas.NamingRule, quotas.CustomPrefix)
-		imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, generateRandomString(3))
+		imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
 
 		newImage := models.Image{
 			ID:            imageID,
@@ -456,7 +439,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 	}
 
 	// 10. Insert Image
-	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, generateRandomString(3))
+	imageID := fmt.Sprintf("img_%d_%s", time.Now().UnixNano()/1e6, uuid.NewString()[:8])
 	newImage := models.Image{
 		ID:            imageID,
 		Name:          formattedName,

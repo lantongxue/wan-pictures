@@ -81,34 +81,36 @@ export function extractExtension(filename: string, mimeType: string): string {
   return mimeMap[mimeType] || 'png';
 }
 
+/**
+ * UUID v4 generator. Prefers native crypto.randomUUID; falls back to
+ * crypto.getRandomValues formatting on insecure contexts (plain HTTP).
+ */
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export function generateFormattedName(
   originalName: string,
   rule: UploadSettings['namingRule'],
   customPrefix?: string
 ): string {
   const ext = extractExtension(originalName, '');
-  const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
-  switch (rule) {
-    case 'timestamp': {
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const timeStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-      return `${timeStr}.${ext}`;
-    }
-    case 'random': {
-      const rand = Math.random().toString(36).substring(2, 10);
-      return `img_${rand}.${ext}`;
-    }
-    case 'custom': {
-      const prefix = customPrefix || 'pic_';
-      const rand = Math.random().toString(36).substring(2, 8);
-      return `${prefix}${rand}.${ext}`;
-    }
-    case 'original':
-    default:
-      return `${baseName}.${ext}`;
+  // System renames are UUID-only ('uuid' plus legacy rules map to UUID)
+  if (rule !== 'original') {
+    return `${generateUUID()}.${ext}`;
   }
+
+  const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+  void customPrefix;
+  return `${baseName}.${ext}`;
 }
 
 /**

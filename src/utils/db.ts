@@ -106,8 +106,8 @@ export const DEFAULT_SETTINGS: UploadSettings = {
   maxWidth: 2560,
   convertToWebP: false,
   defaultAlbumId: 'default',
-  namingRule: 'original',
-  customPrefix: 'wan_',
+  namingRule: 'uuid',
+  customPrefix: '',
   theme: 'dark',
 };
 

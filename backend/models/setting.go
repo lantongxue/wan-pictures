@@ -24,8 +24,8 @@ type UploadQuotaSettings struct {
 	FreeUserMaxSizeMB   int    `json:"free_user_max_size_mb"`   // e.g. 10
 	VIPDailyLimit       int    `json:"vip_daily_limit"`        // e.g. 500
 	VIPMaxSizeMB        int    `json:"vip_max_size_mb"`         // e.g. 50
-	NamingRule          string `json:"naming_rule"`            // 'timestamp', 'random', 'original', 'custom'
-	CustomPrefix        string `json:"custom_prefix"`          // 'pic_'
+	NamingRule          string `json:"naming_rule"`            // 'uuid', 'original'
+	CustomPrefix        string `json:"custom_prefix"`          // legacy, kept for compat (unused by uuid naming)
 	AutoCompress        bool   `json:"auto_compress"`
 	CompressQuality     int    `json:"compress_quality"`
 	ConvertToWebP       bool   `json:"convert_to_webp"`
@@ -41,7 +41,7 @@ func DefaultUploadQuotaSettings() UploadQuotaSettings {
 		FreeUserMaxSizeMB:   10,
 		VIPDailyLimit:       500,
 		VIPMaxSizeMB:        50,
-		NamingRule:          "timestamp",
+		NamingRule:          "uuid",
 		CustomPrefix:        "pic_",
 		AutoCompress:        false,
 		CompressQuality:     85,
