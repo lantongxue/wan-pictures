@@ -457,6 +457,57 @@ export const adminApi = {
         albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
+        colorPalette:
+          typeof img.color_palette === 'string'
+            ? JSON.parse(img.color_palette || '[]')
+            : img.color_palette,
+        storageDriver: img.storage_driver || 'local',
+      };
+      return { success: true, data: updated, message: res.message };
+    }
+    return { success: false, message: res.message || '更新失败' };
+  },
+
+  /**
+   * Update post-upload image metadata (tags & color palette ONLY).
+   * The backend strictly rejects any other field on this endpoint.
+   */
+  async updateImageMetadata(
+    id: number,
+    updates: { tags?: string[]; colorPalette?: string[] }
+  ): Promise<{ success: boolean; data?: ImageItem; message?: string }> {
+    const payload: Record<string, any> = {};
+    if (updates.tags !== undefined) payload.tags = updates.tags;
+    if (updates.colorPalette !== undefined) payload.color_palette = updates.colorPalette;
+
+    const res = await request<any>(`/user/images/${id}/metadata`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    if (res.success && res.data) {
+      const img = res.data as any;
+      const updated: ImageItem = {
+        id: Number(img.id),
+        name: img.name,
+        originalName: img.original_name || img.name,
+        size: img.size,
+        type: img.type,
+        extension: img.extension,
+        width: img.width,
+        height: img.height,
+        aspectRatio: img.aspect_ratio,
+        dataUrl: img.data_url || img.url,
+        url: img.url,
+        createdAt: new Date(img.created_at).getTime() || Date.now(),
+        updatedAt: new Date(img.updated_at).getTime() || Date.now(),
+        albumId: Number(img.album_id) || DEFAULT_ALBUM_ID,
+        tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
+        favorite: img.favorite,
+        colorPalette:
+          typeof img.color_palette === 'string'
+            ? JSON.parse(img.color_palette || '[]')
+            : img.color_palette,
         storageDriver: img.storage_driver || 'local',
       };
       return { success: true, data: updated, message: res.message };
@@ -1107,6 +1158,10 @@ export const uploadApi = {
             albumId: Number(d.image.album_id) || DEFAULT_ALBUM_ID,
             tags: typeof d.image.tags === 'string' ? JSON.parse(d.image.tags || '[]') : d.image.tags || [],
             favorite: d.image.favorite,
+            colorPalette:
+              typeof d.image.color_palette === 'string'
+                ? JSON.parse(d.image.color_palette || '[]')
+                : d.image.color_palette,
             storageDriver: d.image.storage_driver || 'local',
           };
           return { success: true, exists: true, isInstant: true, image: img, message: res.message, isBackendOnline: true };
@@ -1168,6 +1223,10 @@ export const uploadApi = {
               albumId: Number(raw.album_id) || DEFAULT_ALBUM_ID,
               tags: typeof raw.tags === 'string' ? JSON.parse(raw.tags || '[]') : raw.tags || [],
               favorite: raw.favorite,
+              colorPalette:
+                typeof raw.color_palette === 'string'
+                  ? JSON.parse(raw.color_palette || '[]')
+                  : raw.color_palette,
               storageDriver: raw.storage_driver || 'local',
             };
             resolve({

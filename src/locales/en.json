@@ -318,7 +318,14 @@
     "allDonePrompt": "All images ready. Click below to copy links.",
     "waitingPrompt": "Please wait, processing files...",
     "backgroundBtn": "Run in Background",
-    "viewLinksBtn": "View & Copy Links"
+    "viewLinksBtn": "View & Copy Links",
+    "metaTagsLabel": "Tags",
+    "metaTagsPlaceholder": "Type a tag and press Enter",
+    "metaPaletteLabel": "Color Palette",
+    "metaCustomColor": "Custom color",
+    "metaSaveBtn": "Save Info",
+    "metaSavingBtn": "Saving...",
+    "metaSaved": "Image info saved"
   },
   "guard": {
     "badge": "Private Storage & Albums are Protected",

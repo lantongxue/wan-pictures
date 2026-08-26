@@ -56,6 +56,7 @@ const UserLayoutContent: React.FC = () => {
     handleUpdateImage,
     handleDeleteImage,
     handleToggleFavorite,
+    handleSaveUploadMetadata,
     handleCreateAlbum,
     handleUpdateAlbum,
     handleDeleteAlbum,
@@ -141,6 +142,7 @@ const UserLayoutContent: React.FC = () => {
         isOpen={isUploadModalOpen}
         queue={uploadQueue}
         onClose={() => setIsUploadModalOpen(false)}
+        onSaveMetadata={handleSaveUploadMetadata}
         onViewLinks={() => {
           setIsUploadModalOpen(false);
           setIsLinkModalOpen(true);

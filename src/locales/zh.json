@@ -318,7 +318,14 @@
     "allDonePrompt": "所有图片已就绪，可一键复制外链",
     "waitingPrompt": "请稍候，系统正在极速处理中...",
     "backgroundBtn": "后台运行",
-    "viewLinksBtn": "查看与复制外链"
+    "viewLinksBtn": "查看与复制外链",
+    "metaTagsLabel": "标签",
+    "metaTagsPlaceholder": "输入标签后回车添加",
+    "metaPaletteLabel": "色系",
+    "metaCustomColor": "自定义颜色",
+    "metaSaveBtn": "保存信息",
+    "metaSavingBtn": "保存中...",
+    "metaSaved": "图片信息已保存"
   },
   "guard": {
     "badge": "私有存储空间与相册已受权限保护",

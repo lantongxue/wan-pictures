@@ -76,6 +76,11 @@ export interface UserContextType {
   handleDeleteImage: (id: number) => Promise<void>;
   handleToggleFavorite: (id: number) => Promise<void>;
   handleUpdateImage: (id: number, updates: Partial<ImageItem>) => Promise<void>;
+  handleSaveUploadMetadata: (
+    queueItemId: string,
+    imageId: number,
+    updates: { tags?: string[]; colorPalette?: string[] }
+  ) => Promise<boolean>;
   handleCreateAlbum: (album: Omit<Album, 'id'>) => Promise<void>;
   handleUpdateAlbum: (album: Album) => Promise<void>;
   handleDeleteAlbum: (id: number) => Promise<void>;
@@ -593,6 +598,40 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [isAuthenticated, showToast, t]
   );
 
+  // Post-upload metadata editing from the Upload Modal.
+  // The backend endpoint only accepts tags & color_palette (strict whitelist).
+  const handleSaveUploadMetadata = useCallback(
+    async (
+      queueItemId: string,
+      imageId: number,
+      updates: { tags?: string[]; colorPalette?: string[] }
+    ): Promise<boolean> => {
+      if (!isAuthenticated) {
+        showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
+        setAuthModalMode('login');
+        setIsAuthModalOpen(true);
+        return false;
+      }
+      const res = await adminApi.updateImageMetadata(imageId, updates);
+      if (!res.success || !res.data) {
+        showToast(t('common.error'), res.message || '保存失败', 'error');
+        return false;
+      }
+      const updated = res.data;
+      setUploadQueue((prev) =>
+        prev.map((item) => (item.id === queueItemId ? { ...item, resultItem: updated } : item))
+      );
+      setImages((prev) =>
+        prev.some((img) => img.id === updated.id)
+          ? prev.map((img) => (img.id === updated.id ? updated : img))
+          : [updated, ...prev]
+      );
+      showToast(t('uploadModal.metaSaved'), updated.name, 'success');
+      return true;
+    },
+    [isAuthenticated, showToast, t]
+  );
+
   // Album actions
   const handleCreateAlbum = useCallback(
     async (album: Omit<Album, 'id'>) => {
@@ -816,6 +855,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleDeleteImage,
     handleToggleFavorite,
     handleUpdateImage,
+    handleSaveUploadMetadata,
     handleCreateAlbum,
     handleUpdateAlbum,
     handleDeleteAlbum,

@@ -141,6 +141,13 @@ type UpdateImageRequest struct {
 	StorageDriver *string   `json:"storage_driver"`
 }
 
+// UpdateImageMetadataRequest is the strict payload for post-upload metadata
+// editing: ONLY tags and color_palette may be modified through this endpoint.
+type UpdateImageMetadataRequest struct {
+	Tags         *[]string `json:"tags"`
+	ColorPalette *[]string `json:"color_palette"`
+}
+
 type BatchImageActionRequest struct {
 	IDs      []uint  `json:"ids" binding:"required,min=1"`
 	Action   string  `json:"action" binding:"required"` // "delete", "move", "tag"

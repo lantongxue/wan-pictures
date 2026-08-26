@@ -34,6 +34,7 @@ func SetupRouter() *gin.Engine {
 	// Controllers
 	authCtrl := controllers.NewAuthController()
 	adminCtrl := controllers.NewAdminController()
+	userCtrl := controllers.NewUserController()
 	uploadCtrl := controllers.NewUploadController()
 
 	// Static route to serve uploaded local image assets
@@ -70,16 +71,19 @@ func SetupRouter() *gin.Engine {
 		v1.GET("/albums", adminCtrl.ListAlbums)
 		v1.GET("/tags", adminCtrl.ListTags)
 
-		// Protected Workspace User Actions (Requires JWT)
+		// Protected Workspace User Actions (Requires JWT) — served by the
+		// dedicated UserController, fully separated from admin management
 		userSpace := v1.Group("/user")
 		userSpace.Use(middleware.JWTAuthMiddleware())
 		{
-			userSpace.POST("/images", adminCtrl.CreateImage)
-			userSpace.PUT("/images/:id", adminCtrl.UpdateImage)
-			userSpace.DELETE("/images/:id", adminCtrl.DeleteImage)
-			userSpace.POST("/albums", adminCtrl.CreateAlbum)
-			userSpace.PUT("/albums/:id", adminCtrl.UpdateAlbum)
-			userSpace.DELETE("/albums/:id", adminCtrl.DeleteAlbum)
+			userSpace.POST("/images", userCtrl.CreateImage)
+			userSpace.PUT("/images/:id", userCtrl.UpdateImage)
+			// Post-upload metadata editing: strictly limited to tags & color palette
+			userSpace.PUT("/images/:id/metadata", userCtrl.UpdateImageMetadata)
+			userSpace.DELETE("/images/:id", userCtrl.DeleteImage)
+			userSpace.POST("/albums", userCtrl.CreateAlbum)
+			userSpace.PUT("/albums/:id", userCtrl.UpdateAlbum)
+			userSpace.DELETE("/albums/:id", userCtrl.DeleteAlbum)
 		}
 
 		// Admin Management Module Routes (Requires JWT + Admin role)
