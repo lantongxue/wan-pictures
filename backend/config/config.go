@@ -20,6 +20,10 @@ type Config struct {
         JWTExpireHours int
         CorsOrigins    []string
 
+        RedisAddr     string
+        RedisPassword string
+        RedisDB       int
+
         AdminUsername string
         AdminEmail    string
         AdminPassword string
@@ -69,6 +73,13 @@ func LoadConfig() *Config {
         adminEmail := getEnv("ADMIN_EMAIL", "admin@wanpictures.dev")
         adminPassword := getEnv("ADMIN_PASSWORD", "admin123456")
 
+        redisAddr := getEnv("REDIS_ADDR", "127.0.0.1:6379")
+        redisPassword := getEnv("REDIS_PASSWORD", "")
+        redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+        if err != nil || redisDB < 0 {
+                redisDB = 0
+        }
+
         AppConfig = &Config{
                 Host:           host,
                 Port:           port,
@@ -83,6 +94,9 @@ func LoadConfig() *Config {
                         "http://localhost:5173",
                         "*",
                 },
+                RedisAddr:     redisAddr,
+                RedisPassword: redisPassword,
+                RedisDB:       redisDB,
                 AdminUsername: adminUsername,
                 AdminEmail:    adminEmail,
                 AdminPassword: adminPassword,

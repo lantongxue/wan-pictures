@@ -58,9 +58,10 @@ func SetupRouter() *gin.Engine {
 			protectedAuth.POST("/password", authCtrl.ChangePassword)
 		}
 
-		// Public Upload & Instant Deduplication APIs
-		v1.POST("/upload/check-hash", uploadCtrl.CheckHash)
-		v1.POST("/upload", uploadCtrl.UploadFile)
+		// Public Upload & Instant Deduplication APIs (Redis sliding-window QPS limit)
+		uploadRateLimit := middleware.UploadRateLimit()
+		v1.POST("/upload/check-hash", uploadRateLimit, uploadCtrl.CheckHash)
+		v1.POST("/upload", uploadRateLimit, uploadCtrl.UploadFile)
 		v1.GET("/upload/quota", uploadCtrl.GetQuota)
 
 		// Public Read & Workspace APIs

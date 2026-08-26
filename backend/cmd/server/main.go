@@ -27,10 +27,15 @@ func main() {
 	}
 	_ = db
 
-	// 3. Initialize Router
+	// 3. Initialize Redis (required by fail-closed upload rate limiter)
+	if err := database.InitRedis(); err != nil {
+		log.Fatalf("[Redis] Initialization failed: %v (upload rate limiting is fail-closed)", err)
+	}
+
+	// 4. Initialize Router
 	router := routes.SetupRouter()
 
-	// 4. Start HTTP Server with Graceful Shutdown
+	// 5. Start HTTP Server with Graceful Shutdown
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	srv := &http.Server{
 		Addr:           addr,
@@ -52,6 +57,8 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down server...")
+
+	database.CloseRedis()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

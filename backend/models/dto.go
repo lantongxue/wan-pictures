@@ -173,22 +173,24 @@ type MergeTagsRequest struct {
 
 // User Management Request & Response DTOs
 type AdminCreateUserRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=32"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6,max=64"`
-	Nickname string `json:"nickname" binding:"omitempty,max=32"`
-	Avatar   string `json:"avatar" binding:"omitempty"`
-	Role     string `json:"role" binding:"omitempty,oneof=user admin vip"`
-	Bio      string `json:"bio" binding:"omitempty,max=255"`
+	Username  string `json:"username" binding:"required,min=3,max=32"`
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=6,max=64"`
+	Nickname  string `json:"nickname" binding:"omitempty,max=32"`
+	Avatar    string `json:"avatar" binding:"omitempty"`
+	Role      string `json:"role" binding:"omitempty,oneof=user admin vip"`
+	Bio       string `json:"bio" binding:"omitempty,max=255"`
+	UploadQPS *int   `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
 }
 
 type AdminUpdateUserRequest struct {
-	Email    *string `json:"email" binding:"omitempty,email"`
-	Nickname *string `json:"nickname" binding:"omitempty,max=32"`
-	Avatar   *string `json:"avatar"`
-	Role     *string `json:"role" binding:"omitempty,oneof=user admin vip"`
-	Bio      *string `json:"bio" binding:"omitempty,max=255"`
-	Password *string `json:"password" binding:"omitempty,min=6,max=64"`
+	Email     *string `json:"email" binding:"omitempty,email"`
+	Nickname  *string `json:"nickname" binding:"omitempty,max=32"`
+	Avatar    *string `json:"avatar"`
+	Role      *string `json:"role" binding:"omitempty,oneof=user admin vip"`
+	Bio       *string `json:"bio" binding:"omitempty,max=255"`
+	Password  *string `json:"password" binding:"omitempty,min=6,max=64"`
+	UploadQPS *int    `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
 }
 
 type AdminResetPasswordRequest struct {
@@ -203,6 +205,7 @@ type AdminUserItemResponse struct {
 	Avatar     string    `json:"avatar"`
 	Role       string    `json:"role"`
 	Bio        string    `json:"bio"`
+	UploadQPS  *int      `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
 	ImageCount int64     `json:"image_count"`
 	AlbumCount int64     `json:"album_count"`
 	CreatedAt  time.Time `json:"created_at"`

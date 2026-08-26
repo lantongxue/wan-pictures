@@ -1066,6 +1066,7 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 			Avatar:     u.Avatar,
 			Role:       u.Role,
 			Bio:        u.Bio,
+			UploadQPS:  u.UploadQPS,
 			ImageCount: imgCount,
 			AlbumCount: albCount,
 			CreatedAt:  u.CreatedAt,
@@ -1111,6 +1112,7 @@ func (ctrl *AdminController) GetUser(c *gin.Context) {
 		Avatar:     user.Avatar,
 		Role:       user.Role,
 		Bio:        user.Bio,
+		UploadQPS:  user.UploadQPS,
 		ImageCount: imgCount,
 		AlbumCount: albCount,
 		CreatedAt:  user.CreatedAt,
@@ -1174,6 +1176,11 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
+	// Per-account upload QPS override (-1/NULL=follow global, 0=unlimited, >0=custom)
+	if req.UploadQPS != nil && *req.UploadQPS >= 0 {
+		newUser.UploadQPS = req.UploadQPS
+	}
+
 	if err := database.DB.Create(&newUser).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create user: "+err.Error()))
 		return
@@ -1187,6 +1194,7 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 		Avatar:     newUser.Avatar,
 		Role:       newUser.Role,
 		Bio:        newUser.Bio,
+		UploadQPS:  newUser.UploadQPS,
 		ImageCount: 0,
 		AlbumCount: 0,
 		CreatedAt:  newUser.CreatedAt,
@@ -1255,6 +1263,16 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 		user.Password = hashed
 	}
 
+	// Per-account upload QPS override (-1=follow global/NULL, 0=unlimited, >0=custom)
+	if req.UploadQPS != nil {
+		if *req.UploadQPS < 0 {
+			user.UploadQPS = nil
+		} else {
+			qps := *req.UploadQPS
+			user.UploadQPS = &qps
+		}
+	}
+
 	user.UpdatedAt = time.Now()
 	if err := database.DB.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to update user: "+err.Error()))
@@ -1274,6 +1292,7 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 		Avatar:     user.Avatar,
 		Role:       user.Role,
 		Bio:        user.Bio,
+		UploadQPS:  user.UploadQPS,
 		ImageCount: imgCount,
 		AlbumCount: albCount,
 		CreatedAt:  user.CreatedAt,

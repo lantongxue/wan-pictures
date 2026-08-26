@@ -122,6 +122,8 @@ export interface UploadQuotaSettings {
   free_user_max_size_mb: number;
   vip_daily_limit: number;
   vip_max_size_mb: number;
+  anonymous_upload_qps?: number; // 匿名上传 QPS（Redis 滑动窗口），<=0 表示不限流
+  user_upload_qps?: number;      // 登录用户上传 QPS（Redis 滑动窗口），<=0 表示不限流
   naming_rule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
   custom_prefix?: string;
   auto_compress?: boolean;
@@ -236,6 +238,7 @@ export interface User {
 export interface AdminUserItem extends User {
   imageCount?: number;
   albumCount?: number;
+  uploadQps?: number | null; // null=跟随全局, 0=不限流, >0=自定义 QPS
 }
 
 export interface CreateUserPayload {
@@ -246,6 +249,7 @@ export interface CreateUserPayload {
   avatar?: string;
   role?: 'user' | 'admin' | 'vip';
   bio?: string;
+  uploadQps?: number | null;
 }
 
 export interface UpdateUserPayload {
@@ -255,6 +259,7 @@ export interface UpdateUserPayload {
   role?: 'user' | 'admin' | 'vip';
   bio?: string;
   password?: string;
+  uploadQps?: number | null;
 }
 
 export interface ResetUserPasswordPayload {

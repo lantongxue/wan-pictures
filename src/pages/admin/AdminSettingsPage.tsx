@@ -53,6 +53,8 @@ export const AdminSettingsPage: React.FC = () => {
     free_user_max_size_mb: 10,
     vip_daily_limit: 500,
     vip_max_size_mb: 50,
+    anonymous_upload_qps: 2,
+    user_upload_qps: 10,
     naming_rule: 'uuid',
     auto_compress: false,
     compress_quality: 85,
@@ -348,11 +350,32 @@ export const AdminSettingsPage: React.FC = () => {
                         className="h-8 text-xs rounded-xl"
                       />
                     </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="guest-upload-qps" className="text-[11px]">
+                        匿名上传频率 QPS (次/秒)
+                      </FieldLabel>
+                      <Input
+                        id="guest-upload-qps"
+                        type="number"
+                        min={0}
+                        max={1000}
+                        value={quotaSettings.anonymous_upload_qps ?? 2}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            anonymous_upload_qps: Math.max(0, parseInt(e.target.value) || 0),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
                   </FieldGroup>
                 </div>
 
                 <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                  按客户端 IP 统计每日上传次数，超出限制将提示登录或明日再试。
+                  按客户端 IP 统计每日上传次数，超出限制将提示登录或明日再试。QPS 基于 Redis
+                  滑动窗口按 IP 限流，0 表示不限流。
                 </p>
               </div>
 
@@ -409,11 +432,32 @@ export const AdminSettingsPage: React.FC = () => {
                         className="h-8 text-xs rounded-xl"
                       />
                     </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="user-upload-qps" className="text-[11px]">
+                        登录用户上传频率 QPS (次/秒)
+                      </FieldLabel>
+                      <Input
+                        id="user-upload-qps"
+                        type="number"
+                        min={0}
+                        max={1000}
+                        value={quotaSettings.user_upload_qps ?? 10}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            user_upload_qps: Math.max(0, parseInt(e.target.value) || 0),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
                   </FieldGroup>
                 </div>
 
                 <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                  登录后按账号 ID 统计每日限额，提供更高并发与秒传去重保障。
+                  登录后按账号 ID 统计每日限额，提供更高并发与秒传去重保障。QPS 基于 Redis
+                  滑动窗口按账号限流（对全体登录角色生效），0 表示不限流，可在用户管理中单独覆盖。
                 </p>
               </div>
 

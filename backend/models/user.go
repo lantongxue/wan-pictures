@@ -16,6 +16,7 @@ type User struct {
 	Avatar    string         `gorm:"type:varchar(255)" json:"avatar"`
 	Role        string         `gorm:"type:varchar(32);default:'user'" json:"role"` // 'user', 'admin', 'vip'
 	VIPExpireAt *time.Time     `json:"vip_expire_at,omitempty"`
+	UploadQPS   *int           `gorm:"column:upload_qps" json:"upload_qps"` // per-account upload QPS override: NULL=follow global, 0=unlimited, >0=custom
 	Bio         string         `gorm:"type:varchar(255)" json:"bio"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`

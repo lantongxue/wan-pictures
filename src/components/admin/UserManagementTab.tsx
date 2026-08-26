@@ -23,6 +23,7 @@ import {
   EyeOff,
   Dice5,
   CheckCircle2,
+  Gauge,
 } from 'lucide-react';
 import { AdminUserItem, CreateUserPayload, UpdateUserPayload, User } from '../../types';
 import { adminApi } from '../../services/api';
@@ -104,6 +105,13 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     bio: '',
   });
 
+  // Per-account upload QPS override states (create & edit)
+  type QpsMode = 'global' | 'unlimited' | 'custom';
+  const [createQpsMode, setCreateQpsMode] = useState<QpsMode>('global');
+  const [createQpsCustom, setCreateQpsCustom] = useState('5');
+  const [editQpsMode, setEditQpsMode] = useState<QpsMode>('global');
+  const [editQpsCustom, setEditQpsCustom] = useState('5');
+
   // Form States - Reset Password
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -167,6 +175,13 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     }
   };
 
+  const resolveQpsPayload = (mode: QpsMode, custom: string): number => {
+    // -1=follow global, 0=unlimited, >0=custom QPS
+    if (mode === 'global') return -1;
+    if (mode === 'unlimited') return 0;
+    return Math.max(1, parseInt(custom) || 1);
+  };
+
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.username || !createForm.email || !createForm.password) {
@@ -180,7 +195,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await adminApi.createUser(createForm);
+      const res = await adminApi.createUser({
+        ...createForm,
+        uploadQps: resolveQpsPayload(createQpsMode, createQpsCustom),
+      });
       if (res.success) {
         onShowToast('用户创建成功', `用户 @${createForm.username} 已成功添加`, 'success');
         setIsCreateOpen(false);
@@ -205,6 +223,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
       avatar: u.avatar || '',
       bio: u.bio || '',
     });
+    if (u.uploadQps === null || u.uploadQps === undefined) {
+      setEditQpsMode('global');
+    } else if (Number(u.uploadQps) === 0) {
+      setEditQpsMode('unlimited');
+    } else {
+      setEditQpsMode('custom');
+      setEditQpsCustom(String(u.uploadQps));
+    }
   };
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
@@ -213,7 +239,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await adminApi.updateUser(editingUser.id, editForm);
+      const res = await adminApi.updateUser(editingUser.id, {
+        ...editForm,
+        uploadQps: resolveQpsPayload(editQpsMode, editQpsCustom),
+      });
       if (res.success) {
         onShowToast('用户信息更新成功', `用户 @${editingUser.username} 的资料已保存`, 'success');
         setEditingUser(null);
@@ -575,6 +604,21 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         </span>
                         <span>相册</span>
                       </span>
+                      <span
+                        className={`flex items-center gap-1 text-[11px] font-medium ${u.uploadQps !== null && u.uploadQps !== undefined ? 'text-indigo-500' : 'text-muted-foreground/60'}`}
+                        title={
+                          u.uploadQps === null || u.uploadQps === undefined
+                            ? '上传QPS: 跟随全局默认'
+                            : u.uploadQps === 0
+                            ? '上传QPS: 不限流'
+                            : `单账号上传QPS: ${u.uploadQps} 次/秒`
+                        }
+                      >
+                        <Gauge className="w-3.5 h-3.5" />
+                        <span className="font-mono font-bold">
+                          QPS {u.uploadQps === null || u.uploadQps === undefined ? '全局' : u.uploadQps === 0 ? '∞' : u.uploadQps}
+                        </span>
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70" title="注册时间">
@@ -723,6 +767,40 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   </Select>
                 </Field>
               </FieldGroup>
+
+              {/* Upload QPS Override */}
+              <Field>
+                <FieldLabel htmlFor="create-user-qps-mode">上传频率 QPS 限制</FieldLabel>
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    value={createQpsMode}
+                    onValueChange={(val: QpsMode) => setCreateQpsMode(val)}
+                  >
+                    <SelectTrigger id="create-user-qps-mode" className="w-full text-xs h-9 rounded-xl">
+                      <SelectValue placeholder="限流策略" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">跟随全局默认</SelectItem>
+                      <SelectItem value="unlimited">不限流</SelectItem>
+                      <SelectItem value="custom">自定义阈值</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="create-user-qps-custom"
+                    type="number"
+                    min={1}
+                    max={1000}
+                    disabled={createQpsMode !== 'custom'}
+                    value={createQpsCustom}
+                    onChange={(e) => setCreateQpsCustom(e.target.value)}
+                    placeholder="次/秒"
+                    className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                  />
+                </div>
+                <FieldDescription>
+                  基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局 QPS
+                </FieldDescription>
+              </Field>
 
               {/* Password */}
               <Field>
@@ -947,6 +1025,40 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       超级管理员 (Root) 拥有永久管理权限，不可更改角色
                     </FieldDescription>
                   )}
+                </Field>
+
+                {/* Upload QPS Override */}
+                <Field>
+                  <FieldLabel htmlFor="edit-user-qps-mode">上传频率 QPS 限制</FieldLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select
+                      value={editQpsMode}
+                      onValueChange={(val: QpsMode) => setEditQpsMode(val)}
+                    >
+                      <SelectTrigger id="edit-user-qps-mode" className="w-full text-xs h-9 rounded-xl">
+                        <SelectValue placeholder="限流策略" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">跟随全局默认</SelectItem>
+                        <SelectItem value="unlimited">不限流</SelectItem>
+                        <SelectItem value="custom">自定义阈值</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="edit-user-qps-custom"
+                      type="number"
+                      min={1}
+                      max={1000}
+                      disabled={editQpsMode !== 'custom'}
+                      value={editQpsCustom}
+                      onChange={(e) => setEditQpsCustom(e.target.value)}
+                      placeholder="次/秒"
+                      className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                    />
+                  </div>
+                  <FieldDescription>
+                    基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局 QPS
+                  </FieldDescription>
                 </Field>
 
                 {/* Avatar Selector */}
