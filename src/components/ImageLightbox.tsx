@@ -413,6 +413,29 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                     </div>
                   </div>
 
+                  {/* Tags */}
+                  <div>
+                    <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-2.5 text-muted-foreground">
+                      {t('lightbox.tags')}
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5 border border-border/80 rounded-2xl p-3.5 bg-background/80 min-h-[2.25rem]">
+                      {image.tags && image.tags.length > 0 ? (
+                        image.tags.map((tag, idx) => (
+                          <span
+                            key={`lightbox-tag-${tag}-${idx}`}
+                            className="px-2.5 py-1 rounded-full text-[11px] font-mono border border-border/60 bg-muted/40 text-foreground transition-colors"
+                          >
+                            #{tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-mono text-muted-foreground/60">
+                          {t('lightbox.noTags')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Color Palette */}
                   {image.colorPalette && image.colorPalette.length > 0 && (
                     <div>

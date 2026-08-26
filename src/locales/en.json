@@ -253,7 +253,9 @@
     "formatType": "Format",
     "copiedColor": "Color Hex Copied",
     "copySuccess": "Copied Successfully",
-    "renameSuccess": "Renamed Successfully"
+    "renameSuccess": "Renamed Successfully",
+    "tags": "Image Tags",
+    "noTags": "No tags"
   },
   "links": {
     "modalTitle": "Link Generator & Extraction Center",
