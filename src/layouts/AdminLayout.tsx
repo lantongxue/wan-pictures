@@ -100,54 +100,54 @@ export const AdminLayout: React.FC = () => {
   const navItems: NavItem[] = [
     {
       to: '/admin/overview',
-      label: '系统概览',
+      label: t('admin.layout.navOverview'),
       icon: LayoutDashboard,
       group: 'dashboard',
     },
     {
       to: '/admin/images',
-      label: '图片资产管理',
+      label: t('admin.layout.navImages'),
       icon: ImageIcon,
       badge: stats?.totalImages,
       group: 'assets',
     },
     {
       to: '/admin/albums',
-      label: '相册空间管理',
+      label: t('admin.layout.navAlbums'),
       icon: FolderKanban,
       badge: stats?.totalAlbums,
       group: 'assets',
     },
     {
       to: '/admin/tags',
-      label: '标签体系与合并',
+      label: t('admin.layout.navTags'),
       icon: TagIcon,
       badge: stats?.totalTags,
       group: 'assets',
     },
     {
       to: '/admin/storage',
-      label: '多云存储引擎',
+      label: t('admin.layout.navStorage'),
       icon: HardDrive,
       badge: stats?.activeStorage ? stats.activeStorage.toUpperCase() : 'LOCAL',
       group: 'infrastructure',
     },
     {
       to: '/admin/users',
-      label: '用户与权限管理',
+      label: t('admin.layout.navUsers'),
       icon: Users,
       badge: stats?.totalUsers,
       group: 'security',
     },
     {
       to: '/admin/settings',
-      label: '系统维护与备份',
+      label: t('admin.layout.navSettings'),
       icon: Settings,
       group: 'system',
     },
     {
       to: '/admin/logs',
-      label: '操作与审计日志',
+      label: t('admin.layout.navLogs'),
       icon: FileText,
       group: 'system',
     },
@@ -165,7 +165,9 @@ export const AdminLayout: React.FC = () => {
 
   // Get current page title for breadcrumbs
   const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.to));
-  const currentPageTitle = currentNavItem ? currentNavItem.label : '控制中心';
+  const currentPageTitle = currentNavItem
+    ? currentNavItem.label
+    : t('admin.layout.defaultPageTitle');
 
   const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-card text-card-foreground">
@@ -184,7 +186,7 @@ export const AdminLayout: React.FC = () => {
                 ADMIN
               </Badge>
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium">万图 · 后台管理系统</p>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('admin.layout.brandSubtitle')}</p>
           </div>
         </Link>
 
@@ -202,7 +204,7 @@ export const AdminLayout: React.FC = () => {
         {/* Group 1: 控制面板 */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            控制中心 (Control Plane)
+            {t('admin.layout.groupDashboard')}
           </div>
           {navItems
             .filter((item) => item.group === 'dashboard')
@@ -240,7 +242,7 @@ export const AdminLayout: React.FC = () => {
         {/* Group 2: 资产管理 */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            图床资产管理 (Assets)
+            {t('admin.layout.groupAssets')}
           </div>
           {navItems
             .filter((item) => item.group === 'assets')
@@ -278,7 +280,7 @@ export const AdminLayout: React.FC = () => {
         {/* Group 3: 基础设施 */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            存储基础设施 (Infrastructure)
+            {t('admin.layout.groupInfrastructure')}
           </div>
           {navItems
             .filter((item) => item.group === 'infrastructure')
@@ -314,7 +316,7 @@ export const AdminLayout: React.FC = () => {
         {/* Group 4: 安全与权限 */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            安全与权限 (Security)
+            {t('admin.layout.groupSecurity')}
           </div>
           {navItems
             .filter((item) => item.group === 'security')
@@ -352,7 +354,7 @@ export const AdminLayout: React.FC = () => {
         {/* Group 5: 系统运维 */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            系统运维 (Operations)
+            {t('admin.layout.groupSystem')}
           </div>
           {navItems
             .filter((item) => item.group === 'system')
@@ -386,7 +388,7 @@ export const AdminLayout: React.FC = () => {
           <div className="flex items-center justify-between text-xs">
             <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
               <Cloud className="w-3.5 h-3.5 text-primary" />
-              <span>存储总容量</span>
+              <span>{t('admin.layout.footerStorageTotal')}</span>
             </span>
             <span className="font-mono font-bold text-foreground text-[11px]">
               {stats ? formatFileSize(stats.totalSize) : '0 B'}
@@ -412,7 +414,11 @@ export const AdminLayout: React.FC = () => {
                   backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
                 }`}
               />
-              <span>{backendOnline ? 'Go API 运行中' : '离线存储就绪'}</span>
+              <span>
+                {backendOnline
+                  ? t('admin.layout.footerBackendOnline')
+                  : t('admin.layout.footerBackendOffline')}
+              </span>
             </span>
             <span className="font-mono text-muted-foreground/60">v1.1.0</span>
           </div>
@@ -424,7 +430,7 @@ export const AdminLayout: React.FC = () => {
           className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl border border-border/80 bg-muted/40 hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>返回图床前台</span>
+          <span>{t('admin.layout.backWorkspace')}</span>
         </Link>
       </div>
     </div>
@@ -486,14 +492,14 @@ export const AdminLayout: React.FC = () => {
                 to="/"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium flex items-center gap-1"
               >
-                <span>万图首页</span>
+                <span>{t('admin.layout.breadcrumbHome')}</span>
               </Link>
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
               <Link
                 to="/admin/overview"
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
-                <span>管理中心</span>
+                <span>{t('admin.layout.breadcrumbAdmin')}</span>
               </Link>
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
               <span className="font-bold text-foreground">{currentPageTitle}</span>
@@ -508,7 +514,7 @@ export const AdminLayout: React.FC = () => {
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-primary" />
-              <span>前台工作区</span>
+              <span>{t('admin.layout.frontWorkspace')}</span>
             </Link>
 
             {/* Backend Health Badge */}
@@ -520,7 +526,11 @@ export const AdminLayout: React.FC = () => {
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{backendOnline ? 'Golang API 在线' : '本地存储模式'}</span>
+              <span>
+                {backendOnline
+                  ? t('admin.layout.statusOnline')
+                  : t('admin.layout.statusOffline')}
+              </span>
             </div>
 
             {/* Language Switcher */}
@@ -529,7 +539,7 @@ export const AdminLayout: React.FC = () => {
               size="icon"
               onClick={handleToggleLang}
               className="h-9 w-9 rounded-xl cursor-pointer"
-              title="切换语言 (Language)"
+              title={t('admin.layout.langTooltip')}
             >
               <Languages className="w-4 h-4" />
             </Button>
@@ -540,7 +550,7 @@ export const AdminLayout: React.FC = () => {
               size="icon"
               onClick={toggleTheme}
               className="h-9 w-9 rounded-xl cursor-pointer"
-              title="切换外观主题"
+              title={t('admin.layout.themeTooltip')}
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
             </Button>
@@ -579,14 +589,14 @@ export const AdminLayout: React.FC = () => {
                   className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl cursor-pointer"
                 >
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span>用户管理中心</span>
+                  <span>{t('admin.layout.menuUserManagement')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => navigate('/admin/settings')}
                   className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl cursor-pointer"
                 >
                   <Settings className="w-4 h-4 text-muted-foreground" />
-                  <span>系统偏好配置</span>
+                  <span>{t('admin.layout.menuSettings')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -594,7 +604,7 @@ export const AdminLayout: React.FC = () => {
                   className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>退出登录</span>
+                  <span>{t('admin.layout.menuLogout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

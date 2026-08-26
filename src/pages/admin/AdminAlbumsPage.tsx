@@ -14,6 +14,7 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Album, ImageItem } from '../../types';
 import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
@@ -50,6 +51,7 @@ const COLOR_PRESETS = [
 ];
 
 export const AdminAlbumsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,7 @@ export const AdminAlbumsPage: React.FC = () => {
       if (albRes.success) setAlbums(albRes.data);
       if (imgRes.success) setImages(imgRes.data.items);
     } catch (err: any) {
-      showNotification(err.message || '加载相册失败', 'error');
+      showNotification(err.message || t('adminAlbums.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -110,16 +112,16 @@ export const AdminAlbumsPage: React.FC = () => {
       };
       const res = await adminApi.saveAlbum(newAlbum);
       if (!res.success) {
-        showNotification(res.message || '创建失败', 'error');
+        showNotification(res.message || t('adminAlbums.createFailed'), 'error');
         return;
       }
-      showNotification(`相册 "${newAlbum.name}" 创建成功`);
+      showNotification(t('adminAlbums.createSuccess', { name: newAlbum.name }));
       setCreateName('');
       setCreateDesc('');
       setIsCreateOpen(false);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '创建失败', 'error');
+      showNotification(err.message || t('adminAlbums.createFailed'), 'error');
     }
   };
 
@@ -144,25 +146,25 @@ export const AdminAlbumsPage: React.FC = () => {
       };
       const res = await adminApi.updateAlbum(updated);
       if (!res.success) {
-        showNotification(res.message || '保存失败', 'error');
+        showNotification(res.message || t('adminAlbums.saveFailed'), 'error');
         return;
       }
-      showNotification(`相册 "${updated.name}" 已更新`);
+      showNotification(t('adminAlbums.updateSuccess', { name: updated.name }));
       setEditingAlbum(null);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '保存失败', 'error');
+      showNotification(err.message || t('adminAlbums.saveFailed'), 'error');
     }
   };
 
   const handleDeleteAlbum = async (alb: Album) => {
     if (alb.isDefault || alb.id === DEFAULT_ALBUM_ID) {
-      showNotification('系统默认相册不可删除', 'error');
+      showNotification(t('adminAlbums.defaultAlbumNotDeletable'), 'error');
       return;
     }
     if (
       !confirm(
-        `确定要删除相册 "${alb.name}" 吗？相册内的图片将被安全移动至系统默认相册。`
+        t('adminAlbums.confirmDelete', { name: alb.name })
       )
     )
       return;
@@ -170,13 +172,13 @@ export const AdminAlbumsPage: React.FC = () => {
     try {
       const res = await adminApi.deleteAlbum(alb.id);
       if (!res.success) {
-        showNotification(res.message || '删除相册失败', 'error');
+        showNotification(res.message || t('adminAlbums.deleteFailed'), 'error');
         return;
       }
-      showNotification(`相册 "${alb.name}" 已删除，图片已转入默认相册`);
+      showNotification(t('adminAlbums.deletedSuccess', { name: alb.name }));
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '删除相册失败', 'error');
+      showNotification(err.message || t('adminAlbums.deleteFailed'), 'error');
     }
   };
 
@@ -205,14 +207,14 @@ export const AdminAlbumsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              相册空间与归档管理
+              {t('adminAlbums.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
-              {albums.length} 个空间
+              {t('adminAlbums.count', { count: albums.length })}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            分类管理视觉资产相册空间、自定义封面色彩与容量统计
+            {t('adminAlbums.subtitle')}
           </p>
         </div>
 
@@ -225,7 +227,7 @@ export const AdminAlbumsPage: React.FC = () => {
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新</span>
+            <span>{t('adminAlbums.refresh')}</span>
           </Button>
 
           <Button
@@ -234,7 +236,7 @@ export const AdminAlbumsPage: React.FC = () => {
             className="h-9 px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>新建相册空间</span>
+            <span>{t('adminAlbums.create')}</span>
           </Button>
         </div>
       </div>
@@ -243,7 +245,7 @@ export const AdminAlbumsPage: React.FC = () => {
       {loading ? (
         <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-xs text-muted-foreground">正在加载相册空间数据...</p>
+          <p className="text-xs text-muted-foreground">{t('adminAlbums.loading')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -321,7 +323,7 @@ export const AdminAlbumsPage: React.FC = () => {
                       {alb.name}
                     </h3>
                     <p className="text-xs text-muted-foreground line-clamp-2 min-h-[32px]">
-                      {alb.description || '暂无详细描述，属于自定义主题归档空间。'}
+                      {alb.description || t('adminAlbums.noDesc')}
                     </p>
                   </div>
 
@@ -331,7 +333,7 @@ export const AdminAlbumsPage: React.FC = () => {
                       <span className="flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5 text-primary" />
                         <span className="font-mono font-bold text-foreground">{count}</span>
-                        <span>张图片</span>
+                        <span>{t('adminAlbums.imageUnit')}</span>
                       </span>
 
                       <span className="flex items-center gap-1.5">
@@ -351,7 +353,7 @@ export const AdminAlbumsPage: React.FC = () => {
                         className="h-8 px-2.5 text-xs rounded-xl gap-1 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
-                        <span>编辑</span>
+                        <span>{t('adminAlbums.edit')}</span>
                       </Button>
 
                       {!alb.isDefault && alb.id !== DEFAULT_ALBUM_ID && (
@@ -362,7 +364,7 @@ export const AdminAlbumsPage: React.FC = () => {
                           className="h-8 px-2.5 text-xs rounded-xl gap-1 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>删除</span>
+                          <span>{t('adminAlbums.delete')}</span>
                         </Button>
                       )}
                     </div>
@@ -382,10 +384,10 @@ export const AdminAlbumsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <FolderKanban className="w-4 h-4 text-primary" />
-              <span>创建相册空间</span>
+              <span>{t('adminAlbums.createDialogTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              新建专属主题图片空间，支持自定义主题色与归档分类
+              {t('adminAlbums.createDialogDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -393,12 +395,12 @@ export const AdminAlbumsPage: React.FC = () => {
             <FieldSet className="gap-4">
               <FieldGroup className="gap-3.5">
                 <Field>
-                  <FieldLabel htmlFor="create-album-name" required>相册名称</FieldLabel>
+                  <FieldLabel htmlFor="create-album-name" required>{t('adminAlbums.nameLabel')}</FieldLabel>
                   <Input
                     id="create-album-name"
                     type="text"
                     required
-                    placeholder="例如: 手机与桌面高清壁纸"
+                    placeholder={t('adminAlbums.namePlaceholder')}
                     value={createName}
                     onChange={(e) => setCreateName(e.target.value)}
                     className="text-xs h-9 rounded-xl font-medium"
@@ -406,11 +408,11 @@ export const AdminAlbumsPage: React.FC = () => {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="create-album-desc">描述说明 (选填)</FieldLabel>
+                  <FieldLabel htmlFor="create-album-desc">{t('adminAlbums.descLabel')}</FieldLabel>
                   <Input
                     id="create-album-desc"
                     type="text"
-                    placeholder="简要说明此相册空间归纳的图片类型"
+                    placeholder={t('adminAlbums.descPlaceholder')}
                     value={createDesc}
                     onChange={(e) => setCreateDesc(e.target.value)}
                     className="text-xs h-9 rounded-xl"
@@ -419,7 +421,7 @@ export const AdminAlbumsPage: React.FC = () => {
 
                 {/* Color preset picker */}
                 <Field>
-                  <FieldLabel>相册主题色</FieldLabel>
+                  <FieldLabel>{t('adminAlbums.colorLabel')}</FieldLabel>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {COLOR_PRESETS.map((color) => (
                       <button
@@ -446,14 +448,14 @@ export const AdminAlbumsPage: React.FC = () => {
                   onClick={() => setIsCreateOpen(false)}
                   className="text-xs rounded-xl"
                 >
-                  取消
+                  {t('adminAlbums.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
                 >
-                  立即创建
+                  {t('adminAlbums.createSubmit')}
                 </Button>
               </DialogFooter>
             </FieldSet>
@@ -469,10 +471,10 @@ export const AdminAlbumsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Edit3 className="w-4 h-4 text-primary" />
-              <span>编辑相册空间</span>
+              <span>{t('adminAlbums.editDialogTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              修改相册名称、描述、封面链接及主题色标
+              {t('adminAlbums.editDialogDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -481,7 +483,7 @@ export const AdminAlbumsPage: React.FC = () => {
               <FieldSet className="gap-4">
                 <FieldGroup className="gap-3.5">
                   <Field>
-                    <FieldLabel htmlFor="edit-album-name" required>相册名称</FieldLabel>
+                    <FieldLabel htmlFor="edit-album-name" required>{t('adminAlbums.editNameLabel')}</FieldLabel>
                     <Input
                       id="edit-album-name"
                       type="text"
@@ -493,7 +495,7 @@ export const AdminAlbumsPage: React.FC = () => {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="edit-album-desc">相册描述</FieldLabel>
+                    <FieldLabel htmlFor="edit-album-desc">{t('adminAlbums.editDescLabel')}</FieldLabel>
                     <Input
                       id="edit-album-desc"
                       type="text"
@@ -505,24 +507,24 @@ export const AdminAlbumsPage: React.FC = () => {
 
                   <Field>
                     <FieldLabel htmlFor="edit-album-cover">
-                      封面图片地址 (URL / DataURI)
+                      {t('adminAlbums.coverUrlLabel')}
                     </FieldLabel>
                     <Input
                       id="edit-album-cover"
                       type="text"
-                      placeholder="https://... 或留空自动采用第一张图片"
+                      placeholder={t('adminAlbums.coverUrlPlaceholder')}
                       value={editCoverUrl}
                       onChange={(e) => setEditCoverUrl(e.target.value)}
                       className="text-xs h-9 rounded-xl font-mono"
                     />
                     <FieldDescription>
-                      留空将自动采用该空间内第一张图片作为封面
+                      {t('adminAlbums.coverUrlHint')}
                     </FieldDescription>
                   </Field>
 
                   {/* Color picker */}
                   <Field>
-                    <FieldLabel>主题色标</FieldLabel>
+                    <FieldLabel>{t('adminAlbums.editColorLabel')}</FieldLabel>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {COLOR_PRESETS.map((color) => (
                         <button
@@ -551,14 +553,14 @@ export const AdminAlbumsPage: React.FC = () => {
               onClick={() => setEditingAlbum(null)}
               className="text-xs rounded-xl"
             >
-              取消
+              {t('adminAlbums.cancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleSaveEdit}
               className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
             >
-              保存相册
+              {t('adminAlbums.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

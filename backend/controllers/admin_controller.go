@@ -1049,8 +1049,27 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 		query = query.Where("role = ?", role)
 	}
 
+	var total int64
+	query.Count(&total)
+
+	// Pagination
+	page := 1
+	pageSize := 50
+	if p := c.Query("page"); p != "" {
+		fmt.Sscanf(p, "%d", &page)
+	}
+	if ps := c.Query("page_size"); ps != "" {
+		fmt.Sscanf(ps, "%d", &pageSize)
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 50
+	}
+
 	var users []models.User
-	if err := query.Order("id asc").Find(&users).Error; err != nil {
+	if err := query.Order("id asc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to fetch users: "+err.Error()))
 		return
 	}
@@ -1086,8 +1105,10 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
-		"items": items,
-		"total": len(items),
+		"items":     items,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
 	}))
 }
 

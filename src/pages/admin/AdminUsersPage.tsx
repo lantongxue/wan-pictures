@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, UserPlus, Shield, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { UserManagementTab } from '../../components/admin/UserManagementTab';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 
 export const AdminUsersPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [userCount, setUserCount] = useState<number>(3);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -41,14 +43,14 @@ export const AdminUsersPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              用户与权限体系管理
+              {t('adminUsers.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono bg-indigo-500/10 text-indigo-500">
-              {userCount} 位用户
+              {t('adminUsers.count', { count: userCount })}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            团队租户账号管理、角色权限分配 (Admin / User)、随机强密码重置与安全防护
+            {t('adminUsers.subtitle')}
           </p>
         </div>
       </div>

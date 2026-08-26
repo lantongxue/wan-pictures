@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   Users,
   UserPlus,
@@ -7,7 +6,6 @@ import {
   Shield,
   User as UserIcon,
   Crown,
-  Mail,
   Edit3,
   Trash2,
   KeyRound,
@@ -28,9 +26,11 @@ import {
 import { AdminUserItem, CreateUserPayload, UpdateUserPayload, User } from '../../types';
 import { adminApi } from '../../services/api';
 import { formatDate } from '../../utils/imageProcessing';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
+import { Paginator } from '../ui/pagination';
 import {
   Dialog,
   DialogContent,
@@ -74,10 +74,16 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   onShowToast,
   onUserCountChange,
 }) => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user' | 'vip'>('all');
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [total, setTotal] = useState(0);
 
   // Modal States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -125,7 +131,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
   useEffect(() => {
     loadUsers();
-  }, [roleFilter]);
+  }, [roleFilter, page, pageSize]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -133,15 +139,18 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
       const res = await adminApi.getUsers({
         q: searchQuery,
         role: roleFilter,
+        page,
+        pageSize,
       });
       if (res.success) {
-        setUsers(res.data);
+        setUsers(res.data.items);
+        setTotal(res.data.total || 0);
         if (onUserCountChange) {
-          onUserCountChange(res.data.length);
+          onUserCountChange(res.data.total || 0);
         }
       }
     } catch (err: any) {
-      onShowToast('获取用户列表失败', err.message, 'error');
+      onShowToast(t('adminUsersTab.loadFailed'), err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -149,6 +158,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     loadUsers();
   };
 
@@ -193,7 +203,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   };
 
   const formatLimitLabel = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '全局';
+    if (value === null || value === undefined) return t('adminUsersTab.global');
     if (Number(value) === 0) return '∞';
     return String(value);
   };
@@ -201,11 +211,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.username || !createForm.email || !createForm.password) {
-      onShowToast('请填写必填项', '用户名、邮箱和初始密码不能为空', 'warning');
+      onShowToast(t('adminUsersTab.fillRequired'), t('adminUsersTab.fillRequiredDesc'), 'warning');
       return;
     }
     if (createForm.password.length < 6) {
-      onShowToast('密码太短', '密码长度至少需 6 位字符', 'warning');
+      onShowToast(t('adminUsersTab.pwdTooShort'), t('adminUsersTab.pwdTooShortDesc'), 'warning');
       return;
     }
 
@@ -217,12 +227,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
         uploadRpm: resolveLimitPayload(createRpmMode, createRpmCustom),
       });
       if (res.success) {
-        onShowToast('用户创建成功', `用户 @${createForm.username} 已成功添加`, 'success');
+        onShowToast(t('adminUsersTab.createSuccess'), t('adminUsersTab.createSuccessDesc', { username: createForm.username }), 'success');
         setIsCreateOpen(false);
         loadUsers();
       }
     } catch (err: any) {
-      onShowToast('创建失败', err.message, 'error');
+      onShowToast(t('adminUsersTab.createFailed'), err.message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -266,12 +276,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
         uploadRpm: resolveLimitPayload(editRpmMode, editRpmCustom),
       });
       if (res.success) {
-        onShowToast('用户信息更新成功', `用户 @${editingUser.username} 的资料已保存`, 'success');
+        onShowToast(t('adminUsersTab.updateSuccess'), t('adminUsersTab.updateSuccessDesc', { username: editingUser.username }), 'success');
         setEditingUser(null);
         loadUsers();
       }
     } catch (err: any) {
-      onShowToast('更新失败', err.message, 'error');
+      onShowToast(t('adminUsersTab.updateFailed'), err.message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -302,11 +312,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     e.preventDefault();
     if (!resetPwdUser) return;
     if (!newPassword || newPassword.length < 6) {
-      onShowToast('密码过短', '新密码长度至少需 6 位字符', 'warning');
+      onShowToast(t('adminUsersTab.pwdTooShort2'), t('adminUsersTab.pwdTooShort2Desc'), 'warning');
       return;
     }
     if (newPassword !== confirmPassword) {
-      onShowToast('密码不匹配', '两次输入的密码不一致', 'warning');
+      onShowToast(t('adminUsersTab.pwdMismatch'), t('adminUsersTab.pwdMismatchDesc'), 'warning');
       return;
     }
 
@@ -314,11 +324,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     try {
       const res = await adminApi.resetUserPassword(resetPwdUser.id, newPassword);
       if (res.success) {
-        onShowToast('密码已重置', `用户 @${resetPwdUser.username} 的登录密码已更新`, 'success');
+        onShowToast(t('adminUsersTab.pwdReset'), t('adminUsersTab.pwdResetDesc', { username: resetPwdUser.username }), 'success');
         setResetPwdUser(null);
       }
     } catch (err: any) {
-      onShowToast('重置密码失败', err.message, 'error');
+      onShowToast(t('adminUsersTab.pwdResetFailed'), err.message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -329,11 +339,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   // -------------------------------------------------------------
   const handleOpenDelete = (u: AdminUserItem) => {
     if (Number(u.id) === 1 || u.username === 'admin') {
-      onShowToast('受保护账户', '不能删除超级管理员 (Root) 账号', 'warning');
+      onShowToast(t('adminUsersTab.protectedAccount'), t('adminUsersTab.protectedAccountDesc'), 'warning');
       return;
     }
     if (currentUser && (u.id === currentUser.id || u.username === currentUser.username)) {
-      onShowToast('无法删除自己', '不能删除当前登录的管理员账号', 'warning');
+      onShowToast(t('adminUsersTab.cannotDeleteSelf'), t('adminUsersTab.cannotDeleteSelfDesc'), 'warning');
       return;
     }
     setDeletingUser(u);
@@ -346,12 +356,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     try {
       const res = await adminApi.deleteUser(deletingUser.id);
       if (res.success) {
-        onShowToast('用户已删除', `用户 @${deletingUser.username} 的账号及关联权限已清除`, 'success');
+        onShowToast(t('adminUsersTab.deletedSuccess'), t('adminUsersTab.deletedSuccessDesc', { username: deletingUser.username }), 'success');
         setDeletingUser(null);
         loadUsers();
       }
     } catch (err: any) {
-      onShowToast('删除失败', err.message, 'error');
+      onShowToast(t('adminUsersTab.deleteFailed'), err.message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -367,7 +377,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="搜索用户名、昵称、邮箱或简介..."
+              placeholder={t('adminUsersTab.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 text-xs h-9 rounded-xl"
@@ -377,6 +387,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
+                  setPage(1);
                   loadUsers();
                 }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
@@ -391,54 +402,66 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             variant="outline"
             className="h-9 px-3 text-xs rounded-xl cursor-pointer"
           >
-            搜索
+            {t('adminUsersTab.search')}
           </Button>
 
           {/* Role Filter Badges */}
           <div className="hidden md:flex items-center gap-1 ml-2 p-1 bg-background/60 border border-border/60 rounded-xl">
             <button
               type="button"
-              onClick={() => setRoleFilter('all')}
+              onClick={() => {
+                setRoleFilter('all');
+                setPage(1);
+              }}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                 roleFilter === 'all'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              全部 ({users.length})
+              {t('adminUsersTab.filterAll', { count: total })}
             </button>
             <button
               type="button"
-              onClick={() => setRoleFilter('admin')}
+              onClick={() => {
+                setRoleFilter('admin');
+                setPage(1);
+              }}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                 roleFilter === 'admin'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              管理员
+              {t('adminUsersTab.roleAdmin')}
             </button>
             <button
               type="button"
-              onClick={() => setRoleFilter('vip')}
+              onClick={() => {
+                setRoleFilter('vip');
+                setPage(1);
+              }}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                 roleFilter === 'vip'
                   ? 'bg-amber-500 text-white shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              VIP 会员
+              {t('adminUsersTab.roleVip')}
             </button>
             <button
               type="button"
-              onClick={() => setRoleFilter('user')}
+              onClick={() => {
+                setRoleFilter('user');
+                setPage(1);
+              }}
               className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
                 roleFilter === 'user'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              普通用户
+              {t('adminUsersTab.roleUser')}
             </button>
           </div>
         </form>
@@ -453,7 +476,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新</span>
+            <span>{t('adminUsersTab.refresh')}</span>
           </Button>
           <Button
             size="sm"
@@ -461,24 +484,24 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             className="h-9 px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>新增用户</span>
+            <span>{t('adminUsersTab.addUser')}</span>
           </Button>
         </div>
       </div>
 
-      {/* User Card Grid */}
+      {/* User Table */}
       {loading ? (
         <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-xs">加载用户数据中...</p>
+          <p className="text-xs">{t('adminUsersTab.loading')}</p>
         </div>
       ) : users.length === 0 ? (
         <div className="py-16 text-center border border-dashed border-border/80 rounded-2xl bg-muted/10 space-y-3">
           <Users className="w-10 h-10 text-muted-foreground/50 mx-auto" />
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">没有找到匹配的用户</p>
+            <p className="text-sm font-semibold text-foreground">{t('adminUsersTab.emptyTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              {searchQuery ? `未找到包含 "${searchQuery}" 的用户` : '系统中暂无用户数据'}
+              {searchQuery ? t('adminUsersTab.emptyDescSearch', { query: searchQuery }) : t('adminUsersTab.emptyDescNone')}
             </p>
           </div>
           <Button
@@ -487,209 +510,237 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
             className="text-xs rounded-xl h-8 px-3 gap-1 cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>创建第一个用户</span>
+            <span>{t('adminUsersTab.createFirst')}</span>
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {users.map((u) => {
-            const isRoot = Number(u.id) === 1 || u.username === 'admin';
-            const isSelf = currentUser && (u.id === currentUser.id || u.username === currentUser.username);
+        <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold">
+                  <th className="p-3.5">{t('adminUsersTab.colUser')}</th>
+                  <th className="p-3.5">{t('adminUsersTab.colRole')}</th>
+                  <th className="p-3.5 min-w-[180px]">{t('adminUsersTab.colEmail')}</th>
+                  <th className="p-3.5">{t('adminUsersTab.colStats')}</th>
+                  <th className="p-3.5">{t('adminUsersTab.colRateLimit')}</th>
+                  <th className="p-3.5 whitespace-nowrap">{t('adminUsersTab.colRegistered')}</th>
+                  <th className="p-3.5 text-right pr-4">{t('adminUsersTab.colAction')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {users.map((u) => {
+                  const isRoot = Number(u.id) === 1 || u.username === 'admin';
+                  const isSelf = currentUser && (u.id === currentUser.id || u.username === currentUser.username);
 
-            return (
-              <motion.div
-                key={u.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group relative flex flex-col justify-between p-4 rounded-2xl border border-border/80 bg-card hover:border-primary/40 hover:shadow-md transition-all space-y-4"
-              >
-                {/* Top User Info */}
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <img
-                          src={
-                            u.avatar ||
-                            `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                              u.username
-                            )}`
-                          }
-                          alt={u.username}
-                          className="w-12 h-12 rounded-xl object-cover border border-border/80 bg-muted shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
-                              u.username
-                            )}`;
-                          }}
-                        />
-                        {u.role === 'admin' ? (
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs border-2 border-card">
-                            <Shield className="w-2.5 h-2.5" />
+                  return (
+                    <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                      {/* User */}
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="relative shrink-0">
+                            <img
+                              src={
+                                u.avatar ||
+                                `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                                  u.username
+                                )}`
+                              }
+                              alt={u.username}
+                              className="w-9 h-9 rounded-lg object-cover border border-border/80 bg-muted"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+                                  u.username
+                                )}`;
+                              }}
+                            />
+                            {u.role === 'admin' ? (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs border-2 border-card">
+                                <Shield className="w-2 h-2" />
+                              </div>
+                            ) : (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs border-2 border-card">
+                                <UserIcon className="w-2 h-2" />
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs border-2 border-card">
-                            <UserIcon className="w-2.5 h-2.5" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-foreground truncate max-w-[140px]">
+                                {u.nickname || u.username}
+                              </span>
+                              {isRoot && (
+                                <Badge
+                                  variant="subtle"
+                                  className="text-[9px] px-1.5 py-0 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-semibold"
+                                >
+                                  ROOT
+                                </Badge>
+                              )}
+                              {isSelf && (
+                                <Badge
+                                  variant="subtle"
+                                  className="text-[9px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                >
+                                  {t('adminUsersTab.selfBadge')}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] font-mono text-muted-foreground truncate">
+                              @{u.username} · #{u.id}
+                            </p>
+                            {u.bio && (
+                              <p className="text-[11px] text-muted-foreground/70 truncate max-w-[220px] italic">
+                                "{u.bio}"
+                              </p>
+                            )}
                           </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-sm font-bold text-foreground truncate max-w-[140px]">
-                            {u.nickname || u.username}
-                          </h4>
-                          {isRoot && (
-                            <Badge
-                              variant="subtle"
-                              className="text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-semibold"
-                            >
-                              ROOT
-                            </Badge>
-                          )}
-                          {isSelf && (
-                            <Badge
-                              variant="subtle"
-                              className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                            >
-                              当前登录
-                            </Badge>
-                          )}
                         </div>
-                        <p className="text-xs font-mono text-muted-foreground truncate">
-                          @{u.username}
-                        </p>
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Role Pill */}
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${
-                        u.role === 'admin'
-                          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
-                          : u.role === 'vip'
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          : 'bg-muted text-muted-foreground border border-border/60'
-                      }`}
-                    >
-                      {u.role === 'admin' ? (
-                        <>
-                          <Shield className="w-3 h-3" />
-                          <span>管理员</span>
-                        </>
-                      ) : u.role === 'vip' ? (
-                        <>
-                          <Crown className="w-3 h-3" />
-                          <span>VIP 会员</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserIcon className="w-3 h-3" />
-                          <span>用户</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Email & Bio */}
-                  <div className="space-y-1.5 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5 text-muted-foreground truncate">
-                      <Mail className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{u.email}</span>
-                    </div>
-
-                    {u.bio ? (
-                      <p className="text-xs text-foreground/80 line-clamp-2 italic bg-muted/20 p-2 rounded-xl border border-border/40">
-                        "{u.bio}"
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground/60 italic">暂无个人签名简介</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stats & Meta Footer */}
-                <div className="space-y-3 pt-3 border-t border-border/60">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-[11px] font-medium" title="该用户图片总数">
-                        <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="font-mono font-bold text-foreground">
-                          {u.imageCount !== undefined ? u.imageCount : 0}
+                      {/* Role */}
+                      <td className="p-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${
+                            u.role === 'admin'
+                              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                              : u.role === 'vip'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-muted text-muted-foreground border border-border/60'
+                          }`}
+                        >
+                          {u.role === 'admin' ? (
+                            <>
+                              <Shield className="w-3 h-3" />
+                              {t('adminUsersTab.roleBadgeAdmin')}
+                            </>
+                          ) : u.role === 'vip' ? (
+                            <>
+                              <Crown className="w-3 h-3" />
+                              {t('adminUsersTab.roleBadgeVip')}
+                            </>
+                          ) : (
+                            <>
+                              <UserIcon className="w-3 h-3" />
+                              {t('adminUsersTab.roleBadgeUser')}
+                            </>
+                          )}
                         </span>
-                        <span>图</span>
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px] font-medium" title="该用户相册总数">
-                        <FolderKanban className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="font-mono font-bold text-foreground">
-                          {u.albumCount !== undefined ? u.albumCount : 0}
+                      </td>
+
+                      {/* Email */}
+                      <td className="p-3.5 text-muted-foreground">
+                        <span className="inline-block truncate max-w-[200px] align-middle" title={u.email}>
+                          {u.email}
                         </span>
-                        <span>相册</span>
-                      </span>
-                      <span
-                        className={`flex items-center gap-1 text-[11px] font-medium ${u.uploadQps !== null && u.uploadQps !== undefined || u.uploadRpm !== null && u.uploadRpm !== undefined ? 'text-indigo-500' : 'text-muted-foreground/60'}`}
-                        title={
-                          `上传QPS: ${formatLimitLabel(u.uploadQps)} · 上传RPM: ${formatLimitLabel(u.uploadRpm)}`
-                        }
-                      >
-                        <Gauge className="w-3.5 h-3.5" />
-                        <span className="font-mono font-bold">
+                      </td>
+
+                      {/* Stats */}
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground whitespace-nowrap">
+                          <span className="flex items-center gap-1" title={t('adminUsersTab.statImagesTitle')}>
+                            <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="font-mono font-bold text-foreground">
+                              {u.imageCount !== undefined ? u.imageCount : 0}
+                            </span>
+                            {t('adminUsersTab.statImages')}
+                          </span>
+                          <span className="flex items-center gap-1" title={t('adminUsersTab.statAlbumsTitle')}>
+                            <FolderKanban className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="font-mono font-bold text-foreground">
+                              {u.albumCount !== undefined ? u.albumCount : 0}
+                            </span>
+                            {t('adminUsersTab.statAlbums')}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* QPS / RPM */}
+                      <td className="p-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[11px] font-mono whitespace-nowrap ${
+                            u.uploadQps !== null && u.uploadQps !== undefined || u.uploadRpm !== null && u.uploadRpm !== undefined
+                              ? 'text-indigo-500'
+                              : 'text-muted-foreground/60'
+                          }`}
+                          title={t('adminUsersTab.qpsTitle', { qps: formatLimitLabel(u.uploadQps), rpm: formatLimitLabel(u.uploadRpm) })}
+                        >
+                          <Gauge className="w-3 h-3" />
                           QPS {formatLimitLabel(u.uploadQps)} · RPM {formatLimitLabel(u.uploadRpm)}
                         </span>
-                      </span>
-                    </div>
+                      </td>
 
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70" title="注册时间">
-                      <Calendar className="w-3 h-3" />
-                      <span>{u.createdAt ? formatDate(new Date(u.createdAt).getTime()) : '近期'}</span>
-                    </div>
-                  </div>
+                      {/* Created */}
+                      <td className="p-3.5 text-muted-foreground whitespace-nowrap">
+                        <span className="flex items-center gap-1 text-[11px]" title={t('adminUsersTab.registeredTitle')}>
+                          <Calendar className="w-3 h-3" />
+                          {u.createdAt ? formatDate(new Date(u.createdAt).getTime()) : t('adminUsersTab.recent')}
+                        </span>
+                      </td>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-1.5 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenResetPwd(u)}
-                      title="重置登录密码"
-                      className="h-8 px-2.5 text-xs rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-                      <span>改密</span>
-                    </Button>
+                      {/* Actions */}
+                      <td className="p-3.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenResetPwd(u)}
+                            title={t('adminUsersTab.resetPwdTitle', { username: u.username })}
+                            className="h-8 px-2.5 text-xs rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                            {t('adminUsersTab.resetPwd')}
+                          </Button>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(u)}
-                      title="编辑用户资料与权限"
-                      className="h-8 px-2.5 text-xs rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-blue-500" />
-                      <span>编辑</span>
-                    </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(u)}
+                            title={t('adminUsersTab.editTitle')}
+                            className="h-8 px-2.5 text-xs rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+                            {t('adminUsersTab.edit')}
+                          </Button>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenDelete(u)}
-                      disabled={isRoot || isSelf}
-                      title={isRoot ? '超级管理员不可删除' : isSelf ? '不能删除自己' : '删除用户账号'}
-                      className={`h-8 px-2.5 text-xs rounded-xl gap-1 cursor-pointer ${
-                        isRoot || isSelf
-                          ? 'opacity-30 cursor-not-allowed text-muted-foreground'
-                          : 'text-rose-500 hover:text-rose-600 hover:bg-rose-500/10'
-                      }`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>删除</span>
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDelete(u)}
+                            disabled={isRoot || isSelf}
+                            title={isRoot ? t('adminUsersTab.deleteTitleRoot') : isSelf ? t('adminUsersTab.deleteTitleSelf') : t('adminUsersTab.deleteTitleNormal')}
+                            className={`h-8 px-2.5 text-xs rounded-xl gap-1 cursor-pointer ${
+                              isRoot || isSelf
+                                ? 'opacity-30 cursor-not-allowed text-muted-foreground'
+                                : 'text-rose-500 hover:text-rose-600 hover:bg-rose-500/10'
+                            }`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {t('adminUsersTab.delete')}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <Paginator
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
       )}
 
       {/* ========================================================= */}
@@ -702,10 +753,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
                 <UserPlus className="w-4 h-4" />
               </div>
-              <span>新增系统用户</span>
+              <span>{t('adminUsersTab.createDialogTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              创建新账户并分配初始角色权限与密码
+              {t('adminUsersTab.createDialogDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -715,25 +766,25 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field>
                   <FieldLabel htmlFor="create-user-username" required>
-                    用户名
+                    {t('adminUsersTab.usernameLabel')}
                   </FieldLabel>
                   <Input
                     id="create-user-username"
                     type="text"
                     required
-                    placeholder="如: designer_alex"
+                    placeholder={t('adminUsersTab.usernamePlaceholder')}
                     value={createForm.username}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, username: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
-                  <FieldDescription>登录唯一账号，支持字母数字</FieldDescription>
+                  <FieldDescription>{t('adminUsersTab.usernameDesc')}</FieldDescription>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="create-user-email" required>
-                    电子邮箱
+                    {t('adminUsersTab.emailLabel')}
                   </FieldLabel>
                   <Input
                     id="create-user-email"
@@ -746,18 +797,18 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     }
                     className="text-xs h-9 rounded-xl"
                   />
-                  <FieldDescription>用于通知与找回凭证</FieldDescription>
+                  <FieldDescription>{t('adminUsersTab.emailDesc')}</FieldDescription>
                 </Field>
               </FieldGroup>
 
               {/* Nickname & Role */}
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field>
-                  <FieldLabel htmlFor="create-user-nickname">展示昵称</FieldLabel>
+                  <FieldLabel htmlFor="create-user-nickname">{t('adminUsersTab.nicknameLabel')}</FieldLabel>
                   <Input
                     id="create-user-nickname"
                     type="text"
-                    placeholder="如: 视觉设计师 Alex"
+                    placeholder={t('adminUsersTab.nicknamePlaceholder')}
                     value={createForm.nickname}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, nickname: e.target.value })
@@ -767,7 +818,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="create-user-role">分配角色权限</FieldLabel>
+                  <FieldLabel htmlFor="create-user-role">{t('adminUsersTab.roleLabel')}</FieldLabel>
                   <Select
                     value={createForm.role}
                     onValueChange={(val: 'user' | 'admin' | 'vip') =>
@@ -775,12 +826,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     }
                   >
                     <SelectTrigger id="create-user-role" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="选择权限" />
+                      <SelectValue placeholder={t('adminUsersTab.rolePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">普通用户 (User)</SelectItem>
-                      <SelectItem value="vip">付费 / VIP 用户 (VIP)</SelectItem>
-                      <SelectItem value="admin">管理员 (Admin)</SelectItem>
+                      <SelectItem value="user">{t('adminUsersTab.roleOptionUser')}</SelectItem>
+                      <SelectItem value="vip">{t('adminUsersTab.roleOptionVip')}</SelectItem>
+                      <SelectItem value="admin">{t('adminUsersTab.roleOptionAdmin')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -788,19 +839,19 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
               {/* Upload QPS Override */}
               <Field>
-                <FieldLabel htmlFor="create-user-qps-mode">上传频率 QPS 限制</FieldLabel>
+                <FieldLabel htmlFor="create-user-qps-mode">{t('adminUsersTab.qpsModeLabel')}</FieldLabel>
                 <div className="grid grid-cols-2 gap-3">
                   <Select
                     value={createQpsMode}
                     onValueChange={(val: QpsMode) => setCreateQpsMode(val)}
                   >
                     <SelectTrigger id="create-user-qps-mode" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="限流策略" />
+                      <SelectValue placeholder={t('adminUsersTab.limitPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="global">跟随全局默认</SelectItem>
-                      <SelectItem value="unlimited">不限流</SelectItem>
-                      <SelectItem value="custom">自定义阈值</SelectItem>
+                      <SelectItem value="global">{t('adminUsersTab.limitGlobal')}</SelectItem>
+                      <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                      <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
@@ -811,30 +862,30 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     disabled={createQpsMode !== 'custom'}
                     value={createQpsCustom}
                     onChange={(e) => setCreateQpsCustom(e.target.value)}
-                    placeholder="次/秒"
+                    placeholder={t('adminUsersTab.qpsPlaceholder')}
                     className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
                   />
                 </div>
                 <FieldDescription>
-                  基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局阈值
+                  {t('adminUsersTab.qpsDesc')}
                 </FieldDescription>
               </Field>
 
               {/* Upload RPM Override */}
               <Field>
-                <FieldLabel htmlFor="create-user-rpm-mode">上传频率 RPM 限制 (次/分)</FieldLabel>
+                <FieldLabel htmlFor="create-user-rpm-mode">{t('adminUsersTab.rpmModeLabel')}</FieldLabel>
                 <div className="grid grid-cols-2 gap-3">
                   <Select
                     value={createRpmMode}
                     onValueChange={(val: QpsMode) => setCreateRpmMode(val)}
                   >
                     <SelectTrigger id="create-user-rpm-mode" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="限流策略" />
+                      <SelectValue placeholder={t('adminUsersTab.limitPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="global">跟随全局默认</SelectItem>
-                      <SelectItem value="unlimited">不限流</SelectItem>
-                      <SelectItem value="custom">自定义阈值</SelectItem>
+                      <SelectItem value="global">{t('adminUsersTab.limitGlobal')}</SelectItem>
+                      <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                      <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
@@ -845,12 +896,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     disabled={createRpmMode !== 'custom'}
                     value={createRpmCustom}
                     onChange={(e) => setCreateRpmCustom(e.target.value)}
-                    placeholder="次/分钟"
+                    placeholder={t('adminUsersTab.rpmPlaceholder')}
                     className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
                   />
                 </div>
                 <FieldDescription>
-                  与 QPS 同时生效：请求须同时满足秒级与分钟级滑动窗口才会被放行
+                  {t('adminUsersTab.rpmDesc')}
                 </FieldDescription>
               </Field>
 
@@ -858,7 +909,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <Field>
                 <div className="flex items-center justify-between">
                   <FieldLabel htmlFor="create-user-password" required>
-                    初始登录密码
+                    {t('adminUsersTab.pwdLabel')}
                   </FieldLabel>
                   <button
                     type="button"
@@ -873,7 +924,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     className="text-[11px] text-primary hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <Sparkles className="w-3 h-3" />
-                    <span>随机生成强密码</span>
+                    <span>{t('adminUsersTab.genStrongPwd')}</span>
                   </button>
                 </div>
                 <div className="relative">
@@ -882,7 +933,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     type={showPassword ? 'text' : 'password'}
                     required
                     minLength={6}
-                    placeholder="至少 6 位字符"
+                    placeholder={t('adminUsersTab.pwdPlaceholder')}
                     value={createForm.password}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, password: e.target.value })
@@ -902,14 +953,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               {/* Avatar Selector & Presets */}
               <Field>
                 <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="create-user-avatar">头像地址 URL</FieldLabel>
+                  <FieldLabel htmlFor="create-user-avatar">{t('adminUsersTab.avatarLabel')}</FieldLabel>
                   <button
                     type="button"
                     onClick={() => handleRandomizeAvatar(true)}
                     className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Dice5 className="w-3 h-3" />
-                    <span>随机生成 Bot 机器人头像</span>
+                    <span>{t('adminUsersTab.genAvatar')}</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -932,7 +983,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
                 {/* Quick Avatar Presets */}
                 <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-muted-foreground">预设:</span>
+                  <span className="text-[11px] text-muted-foreground">{t('adminUsersTab.presetLabel')}</span>
                   {AVATAR_PRESETS.map((preset, idx) => (
                     <button
                       key={idx}
@@ -952,11 +1003,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
               {/* Bio */}
               <Field>
-                <FieldLabel htmlFor="create-user-bio">个人简介 / 备注</FieldLabel>
+                <FieldLabel htmlFor="create-user-bio">{t('adminUsersTab.bioLabel')}</FieldLabel>
                 <Input
                   id="create-user-bio"
                   type="text"
-                  placeholder="填写用户在图床系统的角色说明或个性签名"
+                  placeholder={t('adminUsersTab.bioPlaceholder')}
                   value={createForm.bio}
                   onChange={(e) =>
                     setCreateForm({ ...createForm, bio: e.target.value })
@@ -973,7 +1024,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   onClick={() => setIsCreateOpen(false)}
                   className="text-xs h-9 rounded-xl"
                 >
-                  取消
+                  {t('adminUsersTab.cancel')}
                 </Button>
                 <Button
                   type="submit"
@@ -982,7 +1033,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
                 >
                   {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  <span>创建用户</span>
+                  <span>{t('adminUsersTab.createSubmit')}</span>
                 </Button>
               </DialogFooter>
             </FieldSet>
@@ -1000,10 +1051,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                 <Edit3 className="w-4 h-4" />
               </div>
-              <span>编辑用户: @{editingUser?.username}</span>
+              <span>{t('adminUsersTab.editDialogTitle', { username: editingUser?.username })}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              修改个人基本资料与系统权限分配
+              {t('adminUsersTab.editDialogDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1013,11 +1064,11 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 {/* Readonly Username & ID */}
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/20 border border-border/40">
                   <div>
-                    <span className="text-[11px] text-muted-foreground">系统 ID</span>
+                    <span className="text-[11px] text-muted-foreground">{t('adminUsersTab.sysId')}</span>
                     <p className="text-xs font-mono font-bold text-foreground">#{editingUser.id}</p>
                   </div>
                   <div>
-                    <span className="text-[11px] text-muted-foreground">用户名 (不可更改)</span>
+                    <span className="text-[11px] text-muted-foreground">{t('adminUsersTab.usernameReadonly')}</span>
                     <p className="text-xs font-mono font-bold text-foreground">@{editingUser.username}</p>
                   </div>
                 </div>
@@ -1025,7 +1076,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 {/* Email & Nickname */}
                 <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field>
-                    <FieldLabel htmlFor="edit-user-email" required>电子邮箱</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-email" required>{t('adminUsersTab.editEmailLabel')}</FieldLabel>
                     <Input
                       id="edit-user-email"
                       type="email"
@@ -1037,7 +1088,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="edit-user-nickname">展示昵称</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-nickname">{t('adminUsersTab.editNicknameLabel')}</FieldLabel>
                     <Input
                       id="edit-user-nickname"
                       type="text"
@@ -1050,7 +1101,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
                 {/* Role */}
                 <Field>
-                  <FieldLabel htmlFor="edit-user-role">系统角色权限</FieldLabel>
+                  <FieldLabel htmlFor="edit-user-role">{t('adminUsersTab.editRoleLabel')}</FieldLabel>
                   <Select
                     value={editForm.role}
                     disabled={Number(editingUser.id) === 1}
@@ -1064,36 +1115,36 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         Number(editingUser.id) === 1 ? 'opacity-60 cursor-not-allowed' : ''
                       }`}
                     >
-                      <SelectValue placeholder="选择权限" />
+                      <SelectValue placeholder={t('adminUsersTab.editRolePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">普通用户 (User)</SelectItem>
-                      <SelectItem value="vip">付费 / VIP 用户 (VIP)</SelectItem>
-                      <SelectItem value="admin">系统管理员 (Admin)</SelectItem>
+                      <SelectItem value="user">{t('adminUsersTab.editRoleOptionUser')}</SelectItem>
+                      <SelectItem value="vip">{t('adminUsersTab.editRoleOptionVip')}</SelectItem>
+                      <SelectItem value="admin">{t('adminUsersTab.editRoleOptionAdmin')}</SelectItem>
                     </SelectContent>
                   </Select>
                   {Number(editingUser.id) === 1 && (
                     <FieldDescription className="text-amber-500 font-medium">
-                      超级管理员 (Root) 拥有永久管理权限，不可更改角色
+                      {t('adminUsersTab.rootRoleNote')}
                     </FieldDescription>
                   )}
                 </Field>
 
                 {/* Upload QPS Override */}
                 <Field>
-                  <FieldLabel htmlFor="edit-user-qps-mode">上传频率 QPS 限制</FieldLabel>
+                  <FieldLabel htmlFor="edit-user-qps-mode">{t('adminUsersTab.editQpsModeLabel')}</FieldLabel>
                   <div className="grid grid-cols-2 gap-3">
                     <Select
                       value={editQpsMode}
                       onValueChange={(val: QpsMode) => setEditQpsMode(val)}
                     >
                       <SelectTrigger id="edit-user-qps-mode" className="w-full text-xs h-9 rounded-xl">
-                        <SelectValue placeholder="限流策略" />
+                        <SelectValue placeholder={t('adminUsersTab.editLimitPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="global">跟随全局默认</SelectItem>
-                        <SelectItem value="unlimited">不限流</SelectItem>
-                        <SelectItem value="custom">自定义阈值</SelectItem>
+                        <SelectItem value="global">{t('adminUsersTab.limitGlobal')}</SelectItem>
+                        <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                        <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -1104,30 +1155,30 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       disabled={editQpsMode !== 'custom'}
                       value={editQpsCustom}
                       onChange={(e) => setEditQpsCustom(e.target.value)}
-                      placeholder="次/秒"
+                      placeholder={t('adminUsersTab.qpsPlaceholder')}
                       className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
                     />
                   </div>
                   <FieldDescription>
-                    基于 Redis 滑动窗口的单账号上传限流，覆盖系统设置中的登录用户全局阈值
+                    {t('adminUsersTab.qpsDesc')}
                   </FieldDescription>
                 </Field>
 
                 {/* Upload RPM Override */}
                 <Field>
-                  <FieldLabel htmlFor="edit-user-rpm-mode">上传频率 RPM 限制 (次/分)</FieldLabel>
+                  <FieldLabel htmlFor="edit-user-rpm-mode">{t('adminUsersTab.editRpmModeLabel')}</FieldLabel>
                   <div className="grid grid-cols-2 gap-3">
                     <Select
                       value={editRpmMode}
                       onValueChange={(val: QpsMode) => setEditRpmMode(val)}
                     >
                       <SelectTrigger id="edit-user-rpm-mode" className="w-full text-xs h-9 rounded-xl">
-                        <SelectValue placeholder="限流策略" />
+                        <SelectValue placeholder={t('adminUsersTab.editLimitPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="global">跟随全局默认</SelectItem>
-                        <SelectItem value="unlimited">不限流</SelectItem>
-                        <SelectItem value="custom">自定义阈值</SelectItem>
+                        <SelectItem value="global">{t('adminUsersTab.limitGlobal')}</SelectItem>
+                        <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                        <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -1138,26 +1189,26 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       disabled={editRpmMode !== 'custom'}
                       value={editRpmCustom}
                       onChange={(e) => setEditRpmCustom(e.target.value)}
-                      placeholder="次/分钟"
+                      placeholder={t('adminUsersTab.rpmPlaceholder')}
                       className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
                     />
                   </div>
                   <FieldDescription>
-                    与 QPS 同时生效：请求须同时满足秒级与分钟级滑动窗口才会被放行
+                    {t('adminUsersTab.rpmDesc')}
                   </FieldDescription>
                 </Field>
 
                 {/* Avatar Selector */}
                 <Field>
                   <div className="flex items-center justify-between">
-                    <FieldLabel htmlFor="edit-user-avatar">头像地址 URL</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-avatar">{t('adminUsersTab.editAvatarLabel')}</FieldLabel>
                     <button
                       type="button"
                       onClick={() => handleRandomizeAvatar(false)}
                       className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Dice5 className="w-3 h-3" />
-                      <span>随机生成头像</span>
+                      <span>{t('adminUsersTab.editGenAvatar')}</span>
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1176,7 +1227,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-muted-foreground">预设:</span>
+                    <span className="text-[11px] text-muted-foreground">{t('adminUsersTab.presetLabel')}</span>
                     {AVATAR_PRESETS.map((preset, idx) => (
                       <button
                         key={idx}
@@ -1196,7 +1247,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
                 {/* Bio */}
                 <Field>
-                  <FieldLabel htmlFor="edit-user-bio">简介签名</FieldLabel>
+                  <FieldLabel htmlFor="edit-user-bio">{t('adminUsersTab.editBioLabel')}</FieldLabel>
                   <Input
                     id="edit-user-bio"
                     type="text"
@@ -1214,7 +1265,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     onClick={() => setEditingUser(null)}
                     className="text-xs h-9 rounded-xl"
                   >
-                    取消
+                    {t('adminUsersTab.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -1223,7 +1274,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
                   >
                     {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                    <span>保存修改</span>
+                    <span>{t('adminUsersTab.editSave')}</span>
                   </Button>
                 </DialogFooter>
               </FieldSet>
@@ -1242,10 +1293,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
                 <KeyRound className="w-4 h-4" />
               </div>
-              <span>重置用户密码: @{resetPwdUser?.username}</span>
+              <span>{t('adminUsersTab.resetPwdTitle', { username: resetPwdUser?.username })}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              直接为用户设置新的登录密码
+              {t('adminUsersTab.resetPwdDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1254,14 +1305,14 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <FieldSet className="gap-4">
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <p>重置后旧密码将立即失效，用户下次需要使用新密码登录系统。</p>
+                  <p>{t('adminUsersTab.resetPwdNote')}</p>
                 </div>
 
                 <FieldGroup className="gap-3.5">
                   <Field>
                     <div className="flex items-center justify-between">
                       <FieldLabel htmlFor="reset-user-password" required>
-                        新密码 (至少 6 位)
+                        {t('adminUsersTab.newPwdLabel')}
                       </FieldLabel>
                       <button
                         type="button"
@@ -1269,7 +1320,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Sparkles className="w-3 h-3" />
-                        <span>自动生成</span>
+                        <span>{t('adminUsersTab.autoGen')}</span>
                       </button>
                     </div>
                     <div className="relative">
@@ -1278,7 +1329,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         type={showPassword ? 'text' : 'password'}
                         required
                         minLength={6}
-                        placeholder="输入新登录密码"
+                        placeholder={t('adminUsersTab.newPwdPlaceholder')}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="text-xs h-9 rounded-xl pr-9 font-mono"
@@ -1295,13 +1346,13 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
 
                   <Field>
                     <FieldLabel htmlFor="reset-user-confirm-pwd" required>
-                      确认新密码
+                      {t('adminUsersTab.confirmPwdLabel')}
                     </FieldLabel>
                     <Input
                       id="reset-user-confirm-pwd"
                       type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="再次输入以确认"
+                      placeholder={t('adminUsersTab.confirmPwdPlaceholder')}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="text-xs h-9 rounded-xl font-mono"
@@ -1317,7 +1368,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     onClick={() => setResetPwdUser(null)}
                     className="text-xs h-9 rounded-xl"
                   >
-                    取消
+                    {t('adminUsersTab.resetCancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -1326,7 +1377,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                     className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs"
                   >
                     {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                    <span>确认重置密码</span>
+                    <span>{t('adminUsersTab.resetConfirm')}</span>
                   </Button>
                 </DialogFooter>
               </FieldSet>
@@ -1345,10 +1396,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
                 <Trash2 className="w-4 h-4" />
               </div>
-              <span>确认删除用户</span>
+              <span>{t('adminUsersTab.deleteTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              此操作不可撤销，请谨慎处理
+              {t('adminUsersTab.deleteWarning')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1367,8 +1418,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   </div>
                 </div>
                 <p className="text-muted-foreground pt-1 border-t border-border/40">
-                  确定要删除用户 <strong className="text-foreground">@{deletingUser.username}</strong> 吗？
-                  该用户将失去系统访问权限。
+                  {t('adminUsersTab.deleteConfirmText', { username: deletingUser.username })}
+                  {t('adminUsersTab.deleteConfirmDesc')}
                 </p>
               </div>
 
@@ -1379,7 +1430,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   onClick={() => setDeletingUser(null)}
                   className="text-xs h-9 rounded-xl"
                 >
-                  取消
+                  {t('adminUsersTab.deleteCancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -1389,7 +1440,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer font-semibold shadow-xs"
                 >
                   {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  <span>确认永久删除</span>
+                  <span>{t('adminUsersTab.deleteConfirm')}</span>
                 </Button>
               </DialogFooter>
             </div>

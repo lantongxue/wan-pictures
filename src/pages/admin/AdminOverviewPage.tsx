@@ -27,8 +27,10 @@ import { formatFileSize } from '../../utils/imageProcessing';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 export const AdminOverviewPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { backendOnline } = useAuth();
   const [stats, setStats] = useState<AdminOverviewStats | null>(null);
@@ -59,14 +61,14 @@ export const AdminOverviewPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              系统概览与指标监控
+              {t('admin.overview.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
               REAL-TIME
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            监控全量图床资产、存储引擎负载容量分配及多租户统计
+            {t('admin.overview.subtitle')}
           </p>
         </div>
 
@@ -79,7 +81,7 @@ export const AdminOverviewPage: React.FC = () => {
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新指标</span>
+            <span>{t('admin.overview.refresh')}</span>
           </Button>
 
           <Button
@@ -88,7 +90,7 @@ export const AdminOverviewPage: React.FC = () => {
             className="h-9 px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
           >
             <ImageIcon className="w-3.5 h-3.5" />
-            <span>管理图片资产</span>
+            <span>{t('admin.overview.manageImages')}</span>
           </Button>
         </div>
       </div>
@@ -101,7 +103,7 @@ export const AdminOverviewPage: React.FC = () => {
           className="p-4.5 rounded-2xl border border-border/80 bg-card hover:border-blue-500/50 hover:shadow-md transition-all cursor-pointer space-y-1.5 group"
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">总图床资产</span>
+            <span className="text-xs font-semibold">{t('admin.overview.metricImages')}</span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
               <ImageIcon className="w-4 h-4" />
             </div>
@@ -110,7 +112,7 @@ export const AdminOverviewPage: React.FC = () => {
             {stats?.totalImages ?? 0}
           </p>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>全系统已入库图片</span>
+            <span>{t('admin.overview.metricImagesDesc')}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.div>
@@ -121,7 +123,7 @@ export const AdminOverviewPage: React.FC = () => {
           className="p-4.5 rounded-2xl border border-border/80 bg-card hover:border-indigo-500/50 hover:shadow-md transition-all cursor-pointer space-y-1.5 group"
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">存储容量总计</span>
+            <span className="text-xs font-semibold">{t('admin.overview.metricStorage')}</span>
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform">
               <HardDrive className="w-4 h-4" />
             </div>
@@ -130,7 +132,7 @@ export const AdminOverviewPage: React.FC = () => {
             {stats ? formatFileSize(stats.totalSize) : '0 B'}
           </p>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>主引擎: {stats?.activeStorage.toUpperCase() || 'LOCAL'}</span>
+            <span>{t('admin.overview.activeEngine', { engine: stats?.activeStorage.toUpperCase() || 'LOCAL' })}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.div>
@@ -141,7 +143,7 @@ export const AdminOverviewPage: React.FC = () => {
           className="p-4.5 rounded-2xl border border-border/80 bg-card hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer space-y-1.5 group"
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">相册分类空间</span>
+            <span className="text-xs font-semibold">{t('admin.overview.metricAlbums')}</span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform">
               <FolderKanban className="w-4 h-4" />
             </div>
@@ -150,7 +152,7 @@ export const AdminOverviewPage: React.FC = () => {
             {stats?.totalAlbums ?? 0}
           </p>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>主题归档空间</span>
+            <span>{t('admin.overview.metricAlbumsDesc')}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.div>
@@ -161,7 +163,7 @@ export const AdminOverviewPage: React.FC = () => {
           className="p-4.5 rounded-2xl border border-border/80 bg-card hover:border-amber-500/50 hover:shadow-md transition-all cursor-pointer space-y-1.5 group"
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">分类检索标签</span>
+            <span className="text-xs font-semibold">{t('admin.overview.metricTags')}</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
               <TagIcon className="w-4 h-4" />
             </div>
@@ -170,7 +172,7 @@ export const AdminOverviewPage: React.FC = () => {
             {stats?.totalTags ?? 0}
           </p>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>多维属性标签</span>
+            <span>{t('admin.overview.metricTagsDesc')}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.div>
@@ -181,7 +183,7 @@ export const AdminOverviewPage: React.FC = () => {
           className="p-4.5 rounded-2xl border border-border/80 bg-card hover:border-purple-500/50 hover:shadow-md transition-all cursor-pointer space-y-1.5 group col-span-2 sm:col-span-1"
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">系统注册用户</span>
+            <span className="text-xs font-semibold">{t('admin.overview.metricUsers')}</span>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform">
               <Users className="w-4 h-4" />
             </div>
@@ -190,7 +192,7 @@ export const AdminOverviewPage: React.FC = () => {
             {stats?.totalUsers ?? 0}
           </p>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>权限与租户账户</span>
+            <span>{t('admin.overview.metricUsersDesc')}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </motion.div>
@@ -206,7 +208,7 @@ export const AdminOverviewPage: React.FC = () => {
                 <Cloud className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground">存储引擎使用量分配</h3>
+                <h3 className="text-sm font-bold text-foreground">{t('admin.overview.storageTitle')}</h3>
                 <p className="text-xs text-muted-foreground">Multi-Cloud Storage Allocations</p>
               </div>
             </div>
@@ -214,7 +216,7 @@ export const AdminOverviewPage: React.FC = () => {
               to="/admin/storage"
               className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
             >
-              <span>配置引擎</span>
+              <span>{t('admin.overview.configureEngine')}</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -225,7 +227,7 @@ export const AdminOverviewPage: React.FC = () => {
               <div className="flex justify-between text-xs">
                 <span className="font-medium flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                  <span>本地磁盘存储 (Local FS)</span>
+                  <span>{t('admin.overview.storageLocal')}</span>
                   {stats?.activeStorage === 'local' && (
                     <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4">
                       ACTIVE
@@ -255,7 +257,7 @@ export const AdminOverviewPage: React.FC = () => {
               <div className="flex justify-between text-xs">
                 <span className="font-medium flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span>Amazon S3 / R2 / OSS 对象存储</span>
+                  <span>{t('admin.overview.storageS3')}</span>
                   {stats?.activeStorage === 's3' && (
                     <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4">
                       ACTIVE
@@ -285,7 +287,7 @@ export const AdminOverviewPage: React.FC = () => {
               <div className="flex justify-between text-xs">
                 <span className="font-medium flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span>WebDAV 网盘存储 (坚果云 / Nextcloud)</span>
+                  <span>{t('admin.overview.storageWebdav')}</span>
                   {stats?.activeStorage === 'webdav' && (
                     <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4">
                       ACTIVE
@@ -312,7 +314,7 @@ export const AdminOverviewPage: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">当前系统主写入存储:</span>
+            <span className="text-muted-foreground">{t('admin.overview.activeStorageLabel')}</span>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="font-bold font-mono text-foreground">
@@ -330,12 +332,12 @@ export const AdminOverviewPage: React.FC = () => {
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground">图片资产格式分布</h3>
+                <h3 className="text-sm font-bold text-foreground">{t('admin.overview.formatsTitle')}</h3>
                 <p className="text-xs text-muted-foreground">MIME Format Breakdown</p>
               </div>
             </div>
             <Badge variant="subtle" className="text-[10px]">
-              {Object.keys(stats?.formatStats || {}).length} 种格式
+              {t('admin.overview.formatCount', { count: Object.keys(stats?.formatStats || {}).length })}
             </Badge>
           </div>
 
@@ -353,21 +355,21 @@ export const AdminOverviewPage: React.FC = () => {
                 </div>
                 <div className="mt-2">
                   <span className="text-xl font-black font-mono text-foreground">{count}</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">张</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">{t('admin.overview.imageUnit')}</span>
                 </div>
               </div>
             ))}
             {(!stats || Object.keys(stats.formatStats).length === 0) && (
               <div className="col-span-3 text-center py-8 text-xs text-muted-foreground">
-                暂无格式统计数据
+                {t('admin.overview.formatsEmpty')}
               </div>
             )}
           </div>
 
           <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
-            <span>支持格式: PNG, JPG, WEBP, GIF, SVG, AVIF</span>
+            <span>{t('admin.overview.supportedFormats')}</span>
             <Link to="/admin/images" className="text-primary hover:underline flex items-center gap-1 font-medium">
-              <span>查看全部资产</span>
+              <span>{t('admin.overview.viewAllAssets')}</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -384,8 +386,8 @@ export const AdminOverviewPage: React.FC = () => {
             <Upload className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">上传新图片</p>
-            <p className="text-[11px] text-muted-foreground truncate">返回前台快速入库</p>
+            <p className="text-xs font-bold text-foreground">{t('admin.overview.quickUpload')}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{t('admin.overview.quickUploadDesc')}</p>
           </div>
         </Link>
 
@@ -397,8 +399,8 @@ export const AdminOverviewPage: React.FC = () => {
             <FolderKanban className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">新建相册分类</p>
-            <p className="text-[11px] text-muted-foreground truncate">规划专属资产空间</p>
+            <p className="text-xs font-bold text-foreground">{t('admin.overview.quickAlbum')}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{t('admin.overview.quickAlbumDesc')}</p>
           </div>
         </Link>
 
@@ -410,8 +412,8 @@ export const AdminOverviewPage: React.FC = () => {
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">用户权限管理</p>
-            <p className="text-[11px] text-muted-foreground truncate">添加与管理团队用户</p>
+            <p className="text-xs font-bold text-foreground">{t('admin.overview.quickUsers')}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{t('admin.overview.quickUsersDesc')}</p>
           </div>
         </Link>
 
@@ -423,8 +425,8 @@ export const AdminOverviewPage: React.FC = () => {
             <Database className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">数据备份与导出</p>
-            <p className="text-[11px] text-muted-foreground truncate">JSON 全量备份与恢复</p>
+            <p className="text-xs font-bold text-foreground">{t('admin.overview.quickBackup')}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{t('admin.overview.quickBackupDesc')}</p>
           </div>
         </Link>
       </div>
@@ -433,8 +435,8 @@ export const AdminOverviewPage: React.FC = () => {
       <div className="p-5 sm:p-6 rounded-3xl border border-border/80 bg-card space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-foreground">最近入库资产 (Recent Assets)</h3>
-            <p className="text-xs text-muted-foreground">最新上传入库的高清图片素材</p>
+            <h3 className="text-sm font-bold text-foreground">{t('admin.overview.recentAssets')}</h3>
+            <p className="text-xs text-muted-foreground">{t('admin.overview.recentAssetsDesc')}</p>
           </div>
 
           <Button
@@ -443,7 +445,7 @@ export const AdminOverviewPage: React.FC = () => {
             onClick={() => navigate('/admin/images')}
             className="text-xs h-8 gap-1 cursor-pointer"
           >
-            <span>进入资产管理列表</span>
+            <span>{t('admin.overview.enterAssetList')}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -473,7 +475,7 @@ export const AdminOverviewPage: React.FC = () => {
           ))}
           {(!stats || stats.recentActivity.length === 0) && (
             <div className="col-span-8 text-center py-10 text-xs text-muted-foreground border border-dashed border-border/60 rounded-2xl">
-              暂无近期入库的资产图片
+              {t('admin.overview.recentEmpty')}
             </div>
           )}
         </div>

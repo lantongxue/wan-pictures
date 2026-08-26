@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { Shield, Lock, LogIn, ArrowLeft, AlertCircle, RefreshCw, KeyRound, User as UserIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -15,6 +16,7 @@ import {
 } from '../../components/ui/field';
 
 export const AdminGuard: React.FC = () => {
+  const { t } = useTranslation();
   const { user, isAuthenticated, login, logout, backendOnline } = useAuth();
   const navigate = useNavigate();
 
@@ -31,10 +33,10 @@ export const AdminGuard: React.FC = () => {
     try {
       const res = await login({ account: account.trim(), password });
       if (!res.success) {
-        setLoginError(res.message || '登录失败，请检查账号密码');
+        setLoginError(res.message || t('admin.guard.loginFailed'));
       }
     } catch (err: any) {
-      setLoginError(err.message || '登录发生异常');
+      setLoginError(err.message || t('admin.guard.loginError'));
     } finally {
       setLoginLoading(false);
     }
@@ -53,10 +55,10 @@ export const AdminGuard: React.FC = () => {
               <Shield className="w-7 h-7" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              万图管理中心 · 身份验证
+              {t('admin.guard.title')}
             </h1>
             <p className="text-xs text-muted-foreground">
-              Wan Pictures Admin Console · 请输入管理员凭证进入系统
+              {t('admin.guard.subtitle')}
             </p>
           </div>
 
@@ -73,7 +75,7 @@ export const AdminGuard: React.FC = () => {
                 <Field>
                   <FieldLabel htmlFor="admin-login-account" required className="gap-1.5">
                     <UserIcon className="w-3.5 h-3.5 text-primary" />
-                    <span>管理员账号 / 邮箱</span>
+                    <span>{t('admin.guard.labelAccount')}</span>
                   </FieldLabel>
                   <Input
                     id="admin-login-account"
@@ -81,7 +83,7 @@ export const AdminGuard: React.FC = () => {
                     required
                     value={account}
                     onChange={(e) => setAccount(e.target.value)}
-                    placeholder="输入管理员用户名或邮箱"
+                    placeholder={t('admin.guard.placeholderAccount')}
                     className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
                   />
                 </Field>
@@ -90,7 +92,7 @@ export const AdminGuard: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <FieldLabel htmlFor="admin-login-password" required className="gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-primary" />
-                      <span>管理密码</span>
+                      <span>{t('admin.guard.labelPassword')}</span>
                     </FieldLabel>
                   </div>
                   <Input
@@ -99,7 +101,7 @@ export const AdminGuard: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t('admin.guard.placeholderPassword')}
                     className="h-10 text-xs rounded-xl bg-muted/40 font-mono"
                   />
                 </Field>
@@ -113,12 +115,12 @@ export const AdminGuard: React.FC = () => {
                 {loginLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>验证管理员凭证中...</span>
+                    <span>{t('admin.guard.verifying')}</span>
                   </>
                 ) : (
                   <>
                     <LogIn className="w-4 h-4" />
-                    <span>登录并进入管理控制台</span>
+                    <span>{t('admin.guard.loginButton')}</span>
                   </>
                 )}
               </Button>
@@ -131,12 +133,12 @@ export const AdminGuard: React.FC = () => {
               className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>返回图床前台</span>
+              <span>{t('admin.guard.backWorkspace')}</span>
             </Link>
 
             <span className="text-[11px] text-muted-foreground flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>{backendOnline ? '云端服务在线' : '本地安全模式'}</span>
+              <span>{backendOnline ? t('admin.guard.cloudOnline') : t('admin.guard.localMode')}</span>
             </span>
           </div>
         </div>
@@ -155,22 +157,22 @@ export const AdminGuard: React.FC = () => {
 
           <div className="space-y-1.5">
             <h2 className="text-lg sm:text-xl font-bold text-foreground">
-              403 访问受限 · 需要管理员权限
+              {t('admin.guard.forbiddenTitle')}
             </h2>
             <p className="text-xs text-muted-foreground">
-              当前登录账号 <strong className="text-foreground font-mono">@{user.username}</strong> 仅具有普通用户权限，无法访问后台管理中心。
+              {t('admin.guard.forbiddenDesc', { username: user.username })}
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-card border border-border/80 text-left text-xs space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">当前角色:</span>
+              <span className="text-muted-foreground">{t('admin.guard.currentRole')}:</span>
               <Badge variant="subtle" className="text-[10px] font-mono">
                 {user.role}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">所需角色:</span>
+              <span className="text-muted-foreground">{t('admin.guard.requiredRole')}:</span>
               <Badge variant="default" className="text-[10px] font-mono">
                 admin
               </Badge>
@@ -184,7 +186,7 @@ export const AdminGuard: React.FC = () => {
               className="w-full sm:flex-1 h-9 rounded-xl text-xs gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>返回前台主页</span>
+              <span>{t('admin.guard.backHome')}</span>
             </Button>
             <Button
               onClick={logout}
@@ -192,7 +194,7 @@ export const AdminGuard: React.FC = () => {
               className="w-full sm:flex-1 h-9 rounded-xl text-xs gap-1.5 cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>退出登录并切换账号</span>
+              <span>{t('admin.guard.logoutSwitch')}</span>
             </Button>
           </div>
         </div>

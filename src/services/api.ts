@@ -969,26 +969,33 @@ export const adminApi = {
   // -------------------------------------------------------------
 
   /**
-   * Get list of users with stats and optional search/role filters
+   * Get list of users with stats and optional search/role filters (paginated)
    */
   async getUsers(params?: {
     q?: string;
     role?: string;
-  }): Promise<{ success: boolean; data: AdminUserItem[]; message?: string }> {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ success: boolean; data: { items: AdminUserItem[]; total: number }; message?: string }> {
     const qParams = new URLSearchParams();
     if (params?.q) qParams.set('q', params.q);
     if (params?.role && params.role !== 'all') qParams.set('role', params.role);
+    if (params?.page && params.page > 1) qParams.set('page', String(params.page));
+    if (params?.pageSize) qParams.set('page_size', String(params.pageSize));
     const queryString = qParams.toString() ? `?${qParams.toString()}` : '';
 
     const res = await request<{ items: any[]; total: number }>(`/admin/users${queryString}`);
     if (res.success && res.data) {
       return {
         success: true,
-        data: (res.data.items || []).map(mapBackendUser),
+        data: {
+          items: (res.data.items || []).map(mapBackendUser),
+          total: Number(res.data.total || 0),
+        },
         message: res.message,
       };
     }
-    return { success: false, data: [], message: res.message || '无法连接后端服务' };
+    return { success: false, data: { items: [], total: 0 }, message: res.message || '无法连接后端服务' };
   },
 
   /**

@@ -17,6 +17,7 @@ import {
   Clock,
   User as UserIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -117,6 +118,7 @@ const SAMPLE_LOGS: AuditLogItem[] = [
 ];
 
 export const AdminLogsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditLogItem[]>(SAMPLE_LOGS);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -142,14 +144,14 @@ export const AdminLogsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              系统操作与安全审计日志
+              {t('adminLogs.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
               AUDIT TRAIL
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            追踪全系统登录验证、多云存储调度、资产入库删除及用户权限变更记录
+            {t('adminLogs.subtitle')}
           </p>
         </div>
 
@@ -160,7 +162,7 @@ export const AdminLogsPage: React.FC = () => {
           className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>刷新日志</span>
+          <span>{t('adminLogs.refresh')}</span>
         </Button>
       </div>
 
@@ -170,7 +172,7 @@ export const AdminLogsPage: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="搜索操作行为、操作人、目标对象或 IP 地址..."
+            placeholder={t('adminLogs.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 text-xs h-9 rounded-xl"
@@ -179,16 +181,16 @@ export const AdminLogsPage: React.FC = () => {
 
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-full sm:w-[150px] text-xs h-9 rounded-xl">
-            <SelectValue placeholder="日志类别" />
+            <SelectValue placeholder={t('adminLogs.categoryPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部日志类型</SelectItem>
-            <SelectItem value="auth">身份与登录 (Auth)</SelectItem>
-            <SelectItem value="upload">资产入库 (Upload)</SelectItem>
-            <SelectItem value="storage">存储调度 (Storage)</SelectItem>
-            <SelectItem value="album">相册管理 (Album)</SelectItem>
-            <SelectItem value="user">用户权限 (User)</SelectItem>
-            <SelectItem value="system">系统维护 (System)</SelectItem>
+            <SelectItem value="all">{t('adminLogs.categoryAll')}</SelectItem>
+            <SelectItem value="auth">{t('adminLogs.categoryAuth')}</SelectItem>
+            <SelectItem value="upload">{t('adminLogs.categoryUpload')}</SelectItem>
+            <SelectItem value="storage">{t('adminLogs.categoryStorage')}</SelectItem>
+            <SelectItem value="album">{t('adminLogs.categoryAlbum')}</SelectItem>
+            <SelectItem value="user">{t('adminLogs.categoryUser')}</SelectItem>
+            <SelectItem value="system">{t('adminLogs.categorySystem')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -199,13 +201,13 @@ export const AdminLogsPage: React.FC = () => {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold">
-                <th className="p-3.5">状态</th>
-                <th className="p-3.5">操作类型</th>
-                <th className="p-3.5">操作人</th>
-                <th className="p-3.5">目标资源</th>
-                <th className="p-3.5">详细记录</th>
-                <th className="p-3.5">来源 IP</th>
-                <th className="p-3.5">时间戳</th>
+                <th className="p-3.5">{t('adminLogs.colStatus')}</th>
+                <th className="p-3.5">{t('adminLogs.colAction')}</th>
+                <th className="p-3.5">{t('adminLogs.colOperator')}</th>
+                <th className="p-3.5">{t('adminLogs.colTarget')}</th>
+                <th className="p-3.5">{t('adminLogs.colDetail')}</th>
+                <th className="p-3.5">{t('adminLogs.colIp')}</th>
+                <th className="p-3.5">{t('adminLogs.colTime')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60 font-mono">
@@ -214,7 +216,7 @@ export const AdminLogsPage: React.FC = () => {
                   <td className="p-3.5">
                     <span className="inline-flex items-center gap-1 text-[11px] font-sans font-semibold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>成功</span>
+                      <span>{t('adminLogs.statusSuccess')}</span>
                     </span>
                   </td>
 
@@ -249,7 +251,7 @@ export const AdminLogsPage: React.FC = () => {
               {filteredLogs.length === 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-muted-foreground font-sans text-xs">
-                    没有找到符合条件的日志记录
+                    {t('adminLogs.empty')}
                   </td>
                 </tr>
               )}

@@ -19,6 +19,7 @@ import {
   Users,
   Sliders,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { UploadQuotaSettings } from '../../types';
 import { adminApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +43,7 @@ import {
 } from '../../components/ui/field';
 
 export const AdminSettingsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { backendOnline } = useAuth();
   const [quotaSettings, setQuotaSettings] = useState<UploadQuotaSettings>({
     allow_anonymous: true,
@@ -78,7 +80,7 @@ export const AdminSettingsPage: React.FC = () => {
         setQuotaSettings((prev) => ({ ...prev, ...quotaRes.data }));
       }
     } catch (err: any) {
-      showNotification(err.message || '加载配置失败', 'error');
+      showNotification(err.message || t('adminSettings.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -92,9 +94,9 @@ export const AdminSettingsPage: React.FC = () => {
     e.preventDefault();
     try {
       await adminApi.saveQuotaSettings(quotaSettings);
-      showNotification('全局上传限制与配额策略已成功保存');
+      showNotification(t('adminSettings.quotaSaved'));
     } catch (err: any) {
-      showNotification(err.message || '保存设置失败', 'error');
+      showNotification(err.message || t('adminSettings.saveFailed'), 'error');
     }
   };
 
@@ -109,7 +111,7 @@ export const AdminSettingsPage: React.FC = () => {
       ]);
 
       if (!imagesRes.success || !albumsRes.success || !tagsRes.success || !configsRes.success) {
-        showNotification('后端数据拉取失败，无法导出', 'error');
+        showNotification(t('adminSettings.exportFailed'), 'error');
         return;
       }
 
@@ -137,9 +139,9 @@ export const AdminSettingsPage: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
 
-      showNotification('后端全量数据备份文件已成功导出下载');
+      showNotification(t('adminSettings.exportSuccess'));
     } catch (err: any) {
-      showNotification(err.message || '导出失败', 'error');
+      showNotification(err.message || t('adminSettings.exportError'), 'error');
     }
   };
 
@@ -168,14 +170,14 @@ export const AdminSettingsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              系统维护、全局偏好与数据备份
+              {t('adminSettings.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
               SYSTEM
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            系统环境规格、全库 JSON 备份导出导入与资产预处理默认策略配置
+            {t('adminSettings.subtitle')}
           </p>
         </div>
       </div>
@@ -185,7 +187,7 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-2 shadow-xs">
           <div className="flex items-center gap-2 text-primary">
             <Server className="w-4 h-4" />
-            <h3 className="text-xs font-bold uppercase tracking-wider">后端架构 (Backend Engine)</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider">{t('adminSettings.backendTitle')}</h3>
           </div>
           <p className="text-base font-black font-mono text-foreground">Golang 1.22 + Gin + GORM</p>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -194,26 +196,26 @@ export const AdminSettingsPage: React.FC = () => {
                 backendOnline ? 'bg-emerald-500' : 'bg-emerald-500'
               }`}
             />
-            <span>{backendOnline ? '云端 API 服务运行中' : '本地浏览器存储引擎就绪'}</span>
+            <span>{backendOnline ? t('adminSettings.backendRunning') : t('adminSettings.backendLocal')}</span>
           </div>
         </div>
 
         <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-2 shadow-xs">
           <div className="flex items-center gap-2 text-indigo-500">
             <Database className="w-4 h-4" />
-            <h3 className="text-xs font-bold uppercase tracking-wider">持久化存储 (Database Engine)</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider">{t('adminSettings.dbTitle')}</h3>
           </div>
           <p className="text-base font-black font-mono text-foreground">SQLite (Go Backend)</p>
-          <p className="text-xs text-muted-foreground">双向离线优先持久化机制与事务保证</p>
+          <p className="text-xs text-muted-foreground">{t('adminSettings.dbDesc')}</p>
         </div>
 
         <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-2 shadow-xs">
           <div className="flex items-center gap-2 text-emerald-500">
             <Cpu className="w-4 h-4" />
-            <h3 className="text-xs font-bold uppercase tracking-wider">前端框架 (Frontend Stack)</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider">{t('adminSettings.frontendTitle')}</h3>
           </div>
           <p className="text-base font-black font-mono text-foreground">React 19 + Vite 6 + Tailwind 4</p>
-          <p className="text-xs text-muted-foreground">React Router 独立路由管理系统</p>
+          <p className="text-xs text-muted-foreground">{t('adminSettings.frontendDesc')}</p>
         </div>
       </div>
 
@@ -222,7 +224,7 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="flex items-center gap-2 pb-4 border-b border-border/60">
           <Shield className="w-5 h-5 text-indigo-500" />
           <div>
-            <h3 className="text-sm font-bold text-foreground">上传限制与分级配额策略</h3>
+            <h3 className="text-sm font-bold text-foreground">{t('adminSettings.quotaTitle')}</h3>
             <p className="text-xs text-muted-foreground">Role-based Upload Quotas & Restriction Policies</p>
           </div>
         </div>
@@ -236,7 +238,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs font-bold text-foreground">匿名未登录访客</span>
+                      <span className="text-xs font-bold text-foreground">{t('adminSettings.anonSection')}</span>
                     </div>
                     <Badge variant="subtle" className="text-[9px] font-mono">
                       IP-BASED
@@ -244,7 +246,7 @@ export const AdminSettingsPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border/60">
-                    <span className="text-xs text-foreground font-medium">允许匿名访客上传</span>
+                    <span className="text-xs text-foreground font-medium">{t('adminSettings.anonUploadLabel')}</span>
                     <Switch
                       checked={quotaSettings.allow_anonymous}
                       onCheckedChange={(checked) =>
@@ -256,7 +258,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <FieldGroup className="gap-2.5">
                     <Field>
                       <FieldLabel htmlFor="guest-daily-limit" className="text-[11px]">
-                        单日上传上限 (张/天)
+                        {t('adminSettings.dailyLimit')}
                       </FieldLabel>
                       <Input
                         id="guest-daily-limit"
@@ -276,7 +278,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="guest-max-size" className="text-[11px]">
-                        单张图片体积上限 (MB)
+                        {t('adminSettings.maxSize')}
                       </FieldLabel>
                       <Input
                         id="guest-max-size"
@@ -296,7 +298,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="guest-upload-qps" className="text-[11px]">
-                        匿名上传频率 QPS (次/秒)
+                        {t('adminSettings.qpsLabel')}
                       </FieldLabel>
                       <Input
                         id="guest-upload-qps"
@@ -316,7 +318,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="guest-upload-rpm" className="text-[11px]">
-                        匿名上传频率 RPM (次/分)
+                        {t('adminSettings.rpmLabel')}
                       </FieldLabel>
                       <Input
                         id="guest-upload-rpm"
@@ -337,8 +339,8 @@ export const AdminSettingsPage: React.FC = () => {
                 </div>
 
                 <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                  按客户端 IP 统计每日上传次数，超出限制将提示登录或明日再试。QPS/RPM 基于 Redis
-                  滑动窗口按 IP 限流（须同时满足），0 表示不限流。
+                  {t('adminSettings.anonIpHint')}
+                  {t('adminSettings.anonWindowHint')}
                 </p>
               </div>
 
@@ -348,7 +350,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <UserCheck className="w-4 h-4 text-emerald-500" />
-                      <span className="text-xs font-bold text-foreground">普通注册用户 (Free)</span>
+                      <span className="text-xs font-bold text-foreground">{t('adminSettings.freeSection')}</span>
                     </div>
                     <Badge variant="subtle" className="text-[9px] font-mono">
                       USER-ID
@@ -358,7 +360,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <FieldGroup className="gap-2.5 pt-1">
                     <Field>
                       <FieldLabel htmlFor="user-daily-limit" className="text-[11px]">
-                        单日上传上限 (张/天)
+                        {t('adminSettings.dailyLimit')}
                       </FieldLabel>
                       <Input
                         id="user-daily-limit"
@@ -378,7 +380,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="user-max-size" className="text-[11px]">
-                        单张图片体积上限 (MB)
+                        {t('adminSettings.maxSize')}
                       </FieldLabel>
                       <Input
                         id="user-max-size"
@@ -398,7 +400,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="user-upload-qps" className="text-[11px]">
-                        登录用户上传频率 QPS (次/秒)
+                        {t('adminSettings.freeQpsLabel')}
                       </FieldLabel>
                       <Input
                         id="user-upload-qps"
@@ -418,7 +420,7 @@ export const AdminSettingsPage: React.FC = () => {
 
                     <Field>
                       <FieldLabel htmlFor="user-upload-rpm" className="text-[11px]">
-                        登录用户上传频率 RPM (次/分)
+                        {t('adminSettings.freeRpmLabel')}
                       </FieldLabel>
                       <Input
                         id="user-upload-rpm"
@@ -439,8 +441,8 @@ export const AdminSettingsPage: React.FC = () => {
                 </div>
 
                 <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/40">
-                  登录后按账号 ID 统计每日限额，提供更高并发与秒传去重保障。QPS/RPM 基于 Redis
-                  滑动窗口按账号限流（对全体登录角色生效、须同时满足），0 表示不限流，可在用户管理中单独覆盖。
+                  {t('adminSettings.freeAccountHint')}
+                  {t('adminSettings.freeWindowHint')}
                 </p>
               </div>
 
@@ -450,7 +452,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Crown className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs font-bold text-foreground">付费 / VIP 用户 (VIP)</span>
+                      <span className="text-xs font-bold text-foreground">{t('adminSettings.vipSection')}</span>
                     </div>
                     <Badge variant="default" className="text-[9px] bg-amber-500 text-white font-mono">
                       RESERVED
@@ -460,7 +462,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <FieldGroup className="gap-2.5 pt-1">
                     <Field>
                       <FieldLabel htmlFor="vip-daily-limit" className="text-[11px]">
-                        单日上传上限 (张/天)
+                        {t('adminSettings.dailyLimit')}
                       </FieldLabel>
                       <Input
                         id="vip-daily-limit"
@@ -474,14 +476,14 @@ export const AdminSettingsPage: React.FC = () => {
                             vip_daily_limit: Math.max(0, parseInt(e.target.value) || 0),
                           })
                         }
-                        placeholder="500 (0表示无限制)"
+                        placeholder={t('adminSettings.vipDailyPlaceholder')}
                         className="h-8 text-xs rounded-xl bg-background"
                       />
                     </Field>
 
                     <Field>
                       <FieldLabel htmlFor="vip-max-size" className="text-[11px]">
-                        单张图片体积上限 (MB)
+                        {t('adminSettings.maxSize')}
                       </FieldLabel>
                       <Input
                         id="vip-max-size"
@@ -502,7 +504,7 @@ export const AdminSettingsPage: React.FC = () => {
                 </div>
 
                 <p className="text-[10px] text-amber-700 dark:text-amber-300 pt-2 border-t border-amber-500/20">
-                  已预留 VIP 账号标记与权限通道，管理员可在用户列表中直接指派。
+                  {t('adminSettings.vipNote')}
                 </p>
               </div>
             </div>
@@ -512,13 +514,13 @@ export const AdminSettingsPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-primary" />
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  系统级重命名与图片处理全局策略 (System-Level Policy)
+                  {t('adminSettings.policyTitle')}
                 </h4>
               </div>
 
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field>
-                  <FieldLabel htmlFor="sys-naming-rule">系统重命名策略</FieldLabel>
+                  <FieldLabel htmlFor="sys-naming-rule">{t('adminSettings.namingLabel')}</FieldLabel>
                   <Select
                     value={quotaSettings.naming_rule === 'original' ? 'original' : 'uuid'}
                     onValueChange={(val: any) => {
@@ -526,11 +528,11 @@ export const AdminSettingsPage: React.FC = () => {
                     }}
                   >
                     <SelectTrigger id="sys-naming-rule" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="命名规则" />
+                      <SelectValue placeholder={t('adminSettings.namingPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="uuid">UUID 自动命名 (唯一标识)</SelectItem>
-                      <SelectItem value="original">保留原始文件名 (Original)</SelectItem>
+                      <SelectItem value="uuid">{t('adminSettings.namingUuid')}</SelectItem>
+                      <SelectItem value="original">{t('adminSettings.namingOriginal')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -541,8 +543,8 @@ export const AdminSettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
                   <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-foreground">自动压缩大图体积</p>
-                    <p className="text-[11px] text-muted-foreground">上传时自动无损压缩，优化外链速度</p>
+                    <p className="text-xs font-bold text-foreground">{t('adminSettings.compressTitle')}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('adminSettings.compressDesc')}</p>
                   </div>
                   <Switch
                     checked={!!quotaSettings.auto_compress}
@@ -554,8 +556,8 @@ export const AdminSettingsPage: React.FC = () => {
 
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-muted/30 border border-border/60">
                   <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-foreground">自动转换为 WebP 格式</p>
-                    <p className="text-[11px] text-muted-foreground">大幅减小体积，兼顾透明通道与画质</p>
+                    <p className="text-xs font-bold text-foreground">{t('adminSettings.webpTitle')}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('adminSettings.webpDesc')}</p>
                   </div>
                   <Switch
                     checked={!!quotaSettings.convert_to_webp}
@@ -573,7 +575,7 @@ export const AdminSettingsPage: React.FC = () => {
                 size="sm"
                 className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
               >
-                保存全局限制与策略
+                {t('adminSettings.savePolicy')}
               </Button>
             </div>
           </FieldSet>
@@ -585,7 +587,7 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="flex items-center gap-2 pb-4 border-b border-border/60">
           <Database className="w-5 h-5 text-amber-500" />
           <div>
-            <h3 className="text-sm font-bold text-foreground">数据备份中心</h3>
+            <h3 className="text-sm font-bold text-foreground">{t('adminSettings.backupTitle')}</h3>
             <p className="text-xs text-muted-foreground">Full Backend Data Export</p>
           </div>
         </div>
@@ -594,9 +596,9 @@ export const AdminSettingsPage: React.FC = () => {
           {/* Export JSON */}
           <div className="p-4 rounded-2xl border border-border/60 bg-muted/20 space-y-3 flex flex-col justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-foreground">全量数据导出备份</p>
+              <p className="text-xs font-bold text-foreground">{t('adminSettings.exportTitle')}</p>
               <p className="text-[11px] text-muted-foreground">
-                实时拉取后端图片、相册、标签、存储配置与配额策略，生成完整 JSON 备份文件。
+                {t('adminSettings.exportDesc')}
               </p>
             </div>
             <Button
@@ -607,7 +609,7 @@ export const AdminSettingsPage: React.FC = () => {
               className="w-full text-xs rounded-xl gap-1.5 cursor-pointer bg-background"
             >
               <Download className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
-              <span>导出 JSON 备份</span>
+              <span>{t('adminSettings.exportBtn')}</span>
             </Button>
           </div>
         </div>

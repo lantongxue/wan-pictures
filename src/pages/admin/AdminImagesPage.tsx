@@ -28,9 +28,11 @@ import { ImageItem, Album, TagItem, StorageDriverType } from '../../types';
 import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
 import { toAbsoluteImageUrl } from '../../utils/linkFormatter';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
+import { Paginator } from '../../components/ui/pagination';
 import {
   Select,
   SelectContent,
@@ -55,6 +57,7 @@ import {
 } from '../../components/ui/field';
 
 export const AdminImagesPage: React.FC = () => {
+  const { t } = useTranslation();
   const [images, setImages] = useState<ImageItem[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -66,6 +69,11 @@ export const AdminImagesPage: React.FC = () => {
   const [selectedDriver, setSelectedDriver] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -101,15 +109,20 @@ export const AdminImagesPage: React.FC = () => {
           albumId: selectedAlbum,
           storageDriver: selectedDriver,
           sortBy,
+          page,
+          pageSize,
         }),
         adminApi.getAlbums(),
         adminApi.getTags(),
       ]);
-      if (imgRes.success) setImages(imgRes.data.items);
+      if (imgRes.success) {
+        setImages(imgRes.data.items);
+        setTotal(imgRes.data.total || 0);
+      }
       if (albRes.success) setAlbums(albRes.data);
       if (tagRes.success) setTags(tagRes.data);
     } catch (err: any) {
-      showNotification(err.message || '加载图片失败', 'error');
+      showNotification(err.message || t('adminImages.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -117,10 +130,11 @@ export const AdminImagesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedAlbum, selectedDriver, sortBy]);
+  }, [selectedAlbum, selectedDriver, sortBy, page, pageSize]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     loadData();
   };
 
@@ -144,7 +158,7 @@ export const AdminImagesPage: React.FC = () => {
     const url = toAbsoluteImageUrl(img.url || img.dataUrl);
     navigator.clipboard.writeText(url);
     setCopiedId(img.id);
-    showNotification(`已复制 "${img.name}" 直链`);
+    showNotification(t('adminImages.copySuccess', { name: img.name }));
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -169,45 +183,45 @@ export const AdminImagesPage: React.FC = () => {
         tags: parsedTags,
       });
       if (!res.success) {
-        showNotification(res.message || '保存失败', 'error');
+        showNotification(res.message || t('adminImages.saveFailed'), 'error');
         return;
       }
 
-      showNotification('图片属性已保存');
+      showNotification(t('adminImages.saved'));
       setEditingImage(null);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '保存失败', 'error');
+      showNotification(err.message || t('adminImages.saveFailed'), 'error');
     }
   };
 
   const handleDeleteImage = async (id: number, name: string) => {
-    if (!confirm(`确定要彻底删除图片 "${name}" 吗？此操作无法撤销。`)) return;
+    if (!confirm(t('adminImages.confirmDelete', { name }))) return;
     try {
       const res = await adminApi.deleteImage(id);
       if (!res.success) {
-        showNotification(res.message || '删除失败', 'error');
+        showNotification(res.message || t('adminImages.deleteFailed'), 'error');
         return;
       }
-      showNotification('图片已删除');
+      showNotification(t('adminImages.deleted'));
       setSelectedIds((prev) => prev.filter((i) => i !== id));
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '删除失败', 'error');
+      showNotification(err.message || t('adminImages.deleteFailed'), 'error');
     }
   };
 
   // Batch actions
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`确定要批量删除选中的 ${selectedIds.length} 个图片资产吗？`)) return;
+    if (!confirm(t('adminImages.confirmBatchDelete', { count: selectedIds.length }))) return;
     try {
       await adminApi.batchImageAction(selectedIds, 'delete');
-      showNotification(`已批量删除 ${selectedIds.length} 个资产`);
+      showNotification(t('adminImages.batchDeleted', { count: selectedIds.length }));
       setSelectedIds([]);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '批量删除失败', 'error');
+      showNotification(err.message || t('adminImages.batchDeleteFailed'), 'error');
     }
   };
 
@@ -215,12 +229,12 @@ export const AdminImagesPage: React.FC = () => {
     if (selectedIds.length === 0 || !batchTargetAlbum) return;
     try {
       await adminApi.batchImageAction(selectedIds, 'move', { albumId: batchTargetAlbum });
-      showNotification(`已将 ${selectedIds.length} 个图片移入新相册`);
+      showNotification(t('adminImages.batchMoved', { count: selectedIds.length }));
       setIsBatchMoveOpen(false);
       setSelectedIds([]);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '移动相册失败', 'error');
+      showNotification(err.message || t('adminImages.batchMoveFailed'), 'error');
     }
   };
 
@@ -228,13 +242,13 @@ export const AdminImagesPage: React.FC = () => {
     if (selectedIds.length === 0 || !batchNewTag.trim()) return;
     try {
       await adminApi.batchImageAction(selectedIds, 'tag', { tagToAdd: batchNewTag.trim() });
-      showNotification(`已为 ${selectedIds.length} 个图片添加标签 #${batchNewTag.toUpperCase()}`);
+      showNotification(t('adminImages.batchTagged', { count: selectedIds.length, tag: batchNewTag.toUpperCase() }));
       setIsBatchTagOpen(false);
       setBatchNewTag('');
       setSelectedIds([]);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '添加标签失败', 'error');
+      showNotification(err.message || t('adminImages.batchTagFailed'), 'error');
     }
   };
 
@@ -263,14 +277,14 @@ export const AdminImagesPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              图片资产全量管理
+              {t('adminImages.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
-              {images.length} 项资产
+              {t('adminImages.count', { count: total })}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            全生命周期管理、多维度检索、元数据批量编辑与存储驱动归档
+            {t('adminImages.subtitle')}
           </p>
         </div>
 
@@ -284,7 +298,7 @@ export const AdminImagesPage: React.FC = () => {
                   ? 'bg-background shadow-xs text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="表格视图"
+              title={t('adminImages.viewTable')}
             >
               <List className="w-4 h-4" />
             </button>
@@ -295,7 +309,7 @@ export const AdminImagesPage: React.FC = () => {
                   ? 'bg-background shadow-xs text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="卡片网格视图"
+              title={t('adminImages.viewGrid')}
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
@@ -309,7 +323,7 @@ export const AdminImagesPage: React.FC = () => {
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新</span>
+            <span>{t('adminImages.refresh')}</span>
           </Button>
         </div>
       </div>
@@ -325,7 +339,7 @@ export const AdminImagesPage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="搜索资产文件名、原始名称、标签、格式..."
+                placeholder={t('adminImages.searchPlaceholder')}
                 className="pl-9 text-xs h-9 rounded-xl"
               />
               {searchQuery && (
@@ -333,6 +347,7 @@ export const AdminImagesPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setSearchQuery('');
+                    setPage(1);
                     loadData();
                   }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
@@ -342,7 +357,7 @@ export const AdminImagesPage: React.FC = () => {
               )}
             </div>
             <Button type="submit" size="sm" className="h-9 px-3 text-xs rounded-xl cursor-pointer">
-              搜索
+              {t('adminImages.search')}
             </Button>
           </form>
 
@@ -351,13 +366,16 @@ export const AdminImagesPage: React.FC = () => {
             {/* Album Filter */}
             <Select
               value={selectedAlbum === 'all' ? 'all' : String(selectedAlbum)}
-              onValueChange={(val) => setSelectedAlbum(val === 'all' ? 'all' : Number(val))}
+              onValueChange={(val) => {
+                setSelectedAlbum(val === 'all' ? 'all' : Number(val));
+                setPage(1);
+              }}
             >
               <SelectTrigger className="w-[140px] text-xs h-9 rounded-xl">
-                <SelectValue placeholder="全部相册" />
+                <SelectValue placeholder={t('adminImages.albumAll')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部相册</SelectItem>
+                <SelectItem value="all">{t('adminImages.albumAll')}</SelectItem>
                 {albums.map((alb) => (
                   <SelectItem key={alb.id} value={String(alb.id)}>
                     {alb.name}
@@ -367,29 +385,41 @@ export const AdminImagesPage: React.FC = () => {
             </Select>
 
             {/* Storage Driver Filter */}
-            <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+            <Select
+              value={selectedDriver}
+              onValueChange={(val) => {
+                setSelectedDriver(val);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="w-[130px] text-xs h-9 rounded-xl">
-                <SelectValue placeholder="存储引擎" />
+                <SelectValue placeholder={t('adminImages.enginePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部引擎</SelectItem>
-                <SelectItem value="local">本地 Local</SelectItem>
-                <SelectItem value="s3">Amazon S3 / OSS</SelectItem>
-                <SelectItem value="webdav">WebDAV 网盘</SelectItem>
+                <SelectItem value="all">{t('adminImages.engineAll')}</SelectItem>
+                <SelectItem value="local">{t('adminImages.engineLocal')}</SelectItem>
+                <SelectItem value="s3">{t('adminImages.engineS3')}</SelectItem>
+                <SelectItem value="webdav">{t('adminImages.engineWebdav')}</SelectItem>
               </SelectContent>
             </Select>
 
             {/* Sort Filter */}
-            <Select value={sortBy} onValueChange={setSortBy}>
+            <Select
+              value={sortBy}
+              onValueChange={(val) => {
+                setSortBy(val);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="w-[140px] text-xs h-9 rounded-xl">
-                <SelectValue placeholder="排序规则" />
+                <SelectValue placeholder={t('adminImages.sortPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date-desc">最新上传优先</SelectItem>
-                <SelectItem value="date-asc">最早上传优先</SelectItem>
-                <SelectItem value="size-desc">文件体积从大到小</SelectItem>
-                <SelectItem value="size-asc">文件体积从小到大</SelectItem>
-                <SelectItem value="name-asc">文件名 (A-Z)</SelectItem>
+                <SelectItem value="date-desc">{t('adminImages.sortDateDesc')}</SelectItem>
+                <SelectItem value="date-asc">{t('adminImages.sortDateAsc')}</SelectItem>
+                <SelectItem value="size-desc">{t('adminImages.sortSizeDesc')}</SelectItem>
+                <SelectItem value="size-asc">{t('adminImages.sortSizeAsc')}</SelectItem>
+                <SelectItem value="name-asc">{t('adminImages.sortNameAsc')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -400,10 +430,10 @@ export const AdminImagesPage: React.FC = () => {
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
               <Badge variant="default" className="text-[11px] font-mono">
-                已选中 {selectedIds.length} 项
+                {t('adminImages.selectedCount', { count: selectedIds.length })}
               </Badge>
               <span className="text-muted-foreground hidden sm:inline">
-                可执行批量移动相册、批量打标或批量删除
+                {t('adminImages.batchHint')}
               </span>
             </div>
 
@@ -415,7 +445,7 @@ export const AdminImagesPage: React.FC = () => {
                 className="h-8 text-xs rounded-lg gap-1.5 cursor-pointer bg-background"
               >
                 <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
-                <span>移动至相册</span>
+                <span>{t('adminImages.batchMove')}</span>
               </Button>
 
               <Button
@@ -425,7 +455,7 @@ export const AdminImagesPage: React.FC = () => {
                 className="h-8 text-xs rounded-lg gap-1.5 cursor-pointer bg-background"
               >
                 <TagIcon className="w-3.5 h-3.5 text-amber-500" />
-                <span>批量添加标签</span>
+                <span>{t('adminImages.batchTag')}</span>
               </Button>
 
               <Button
@@ -435,7 +465,7 @@ export const AdminImagesPage: React.FC = () => {
                 className="h-8 text-xs rounded-lg gap-1.5 cursor-pointer text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-rose-500/30"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>批量删除</span>
+                <span>{t('adminImages.batchDelete')}</span>
               </Button>
 
               <Button
@@ -444,7 +474,7 @@ export const AdminImagesPage: React.FC = () => {
                 onClick={() => setSelectedIds([])}
                 className="h-8 text-xs rounded-lg text-muted-foreground cursor-pointer"
               >
-                取消选中
+                {t('adminImages.clearSelection')}
               </Button>
             </div>
           </div>
@@ -455,15 +485,15 @@ export const AdminImagesPage: React.FC = () => {
       {loading ? (
         <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-xs text-muted-foreground">正在加载图片资产数据...</p>
+          <p className="text-xs text-muted-foreground">{t('adminImages.loading')}</p>
         </div>
       ) : images.length === 0 ? (
         <div className="py-20 text-center border border-dashed border-border/80 rounded-3xl bg-muted/10 space-y-3">
           <ImageIcon className="w-12 h-12 text-muted-foreground/40 mx-auto" />
           <div className="space-y-1">
-            <p className="text-sm font-bold text-foreground">没有找到匹配的图片资产</p>
+            <p className="text-sm font-bold text-foreground">{t('adminImages.emptyTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              请调整筛选相册、存储引擎或关键词重新检索
+              {t('adminImages.emptyDesc')}
             </p>
           </div>
         </div>
@@ -486,15 +516,15 @@ export const AdminImagesPage: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="p-3.5">缩略图</th>
-                  <th className="p-3.5 min-w-[200px]">文件名与扩展</th>
-                  <th className="p-3.5">归属相册</th>
-                  <th className="p-3.5">存储引擎</th>
-                  <th className="p-3.5">规格尺寸</th>
-                  <th className="p-3.5">文件大小</th>
-                  <th className="p-3.5">标签属性</th>
-                  <th className="p-3.5">上传时间</th>
-                  <th className="p-3.5 text-right pr-4">操作</th>
+                  <th className="p-3.5">{t('adminImages.colThumb')}</th>
+                  <th className="p-3.5 min-w-[200px]">{t('adminImages.colName')}</th>
+                  <th className="p-3.5">{t('adminImages.colAlbum')}</th>
+                  <th className="p-3.5">{t('adminImages.colEngine')}</th>
+                  <th className="p-3.5">{t('adminImages.colSpec')}</th>
+                  <th className="p-3.5">{t('adminImages.colSize')}</th>
+                  <th className="p-3.5">{t('adminImages.colTags')}</th>
+                  <th className="p-3.5">{t('adminImages.colTime')}</th>
+                  <th className="p-3.5 text-right pr-4">{t('adminImages.colAction')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -557,7 +587,7 @@ export const AdminImagesPage: React.FC = () => {
                             color: alb?.color,
                           }}
                         >
-                          {alb?.name || '默认相册'}
+                          {alb?.name || t('adminImages.defaultAlbum')}
                         </Badge>
                       </td>
 
@@ -623,7 +653,7 @@ export const AdminImagesPage: React.FC = () => {
                             size="icon"
                             onClick={() => handleCopyLink(img)}
                             className="h-8 w-8 rounded-lg cursor-pointer text-muted-foreground hover:text-foreground"
-                            title="复制链接"
+                            title={t('adminImages.copyLink')}
                           >
                             {copiedId === img.id ? (
                               <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -637,7 +667,7 @@ export const AdminImagesPage: React.FC = () => {
                             size="icon"
                             onClick={() => handleOpenEdit(img)}
                             className="h-8 w-8 rounded-lg cursor-pointer text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-                            title="编辑元数据"
+                            title={t('adminImages.editMeta')}
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </Button>
@@ -647,7 +677,7 @@ export const AdminImagesPage: React.FC = () => {
                             size="icon"
                             onClick={() => handleDeleteImage(img.id, img.name)}
                             className="h-8 w-8 rounded-lg cursor-pointer text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                            title="删除资产"
+                            title={t('adminImages.deleteAsset')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -722,7 +752,7 @@ export const AdminImagesPage: React.FC = () => {
 
                   <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
                     <span className="text-[11px] text-muted-foreground truncate max-w-[90px]">
-                      {alb?.name || '默认相册'}
+                      {alb?.name || t('adminImages.defaultAlbum')}
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -765,6 +795,20 @@ export const AdminImagesPage: React.FC = () => {
         </div>
       )}
 
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <Paginator
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      )}
+
       {/* ========================================================= */}
       {/* 1. EDIT IMAGE METADATA MODAL */}
       {/* ========================================================= */}
@@ -773,10 +817,10 @@ export const AdminImagesPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Edit3 className="w-4 h-4 text-primary" />
-              <span>编辑图片资产属性</span>
+              <span>{t('adminImages.editTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              修改资产展示名称、所属相册空间及分类标签
+              {t('adminImages.editDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -798,7 +842,7 @@ export const AdminImagesPage: React.FC = () => {
               <FieldSet className="gap-4">
                 <FieldGroup className="gap-3.5">
                   <Field>
-                    <FieldLabel htmlFor="edit-img-name" required>图片文件名</FieldLabel>
+                    <FieldLabel htmlFor="edit-img-name" required>{t('adminImages.nameLabel')}</FieldLabel>
                     <Input
                       id="edit-img-name"
                       type="text"
@@ -810,10 +854,10 @@ export const AdminImagesPage: React.FC = () => {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="edit-img-album">归属相册空间</FieldLabel>
+                    <FieldLabel htmlFor="edit-img-album">{t('adminImages.albumLabel')}</FieldLabel>
                     <Select value={String(editAlbum)} onValueChange={(val) => setEditAlbum(Number(val))}>
                       <SelectTrigger id="edit-img-album" className="w-full text-xs h-9 rounded-xl">
-                        <SelectValue placeholder="选择相册" />
+                        <SelectValue placeholder={t('adminImages.albumPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {albums.map((alb) => (
@@ -827,18 +871,18 @@ export const AdminImagesPage: React.FC = () => {
 
                   <Field>
                     <FieldLabel htmlFor="edit-img-tags">
-                      分类标签
+                      {t('adminImages.tagsLabel')}
                     </FieldLabel>
                     <Input
                       id="edit-img-tags"
                       type="text"
                       value={editTags}
                       onChange={(e) => setEditTags(e.target.value)}
-                      placeholder="例如: WALLPAPER, 4K, DESIGN"
+                      placeholder={t('adminImages.tagsPlaceholder')}
                       className="text-xs h-9 rounded-xl font-mono uppercase"
                     />
                     <FieldDescription>
-                      多个标签请以逗号分隔，系统将自动大写归类
+                      {t('adminImages.tagsHint')}
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
@@ -853,14 +897,14 @@ export const AdminImagesPage: React.FC = () => {
               onClick={() => setEditingImage(null)}
               className="text-xs rounded-xl cursor-pointer"
             >
-              取消
+              {t('adminImages.cancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleSaveEdit}
               className="text-xs rounded-xl cursor-pointer bg-primary text-primary-foreground font-semibold"
             >
-              保存修改
+              {t('adminImages.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -872,9 +916,9 @@ export const AdminImagesPage: React.FC = () => {
       <Dialog open={isBatchMoveOpen} onOpenChange={setIsBatchMoveOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">批量移动相册</DialogTitle>
+            <DialogTitle className="text-base font-bold">{t('adminImages.batchMoveTitle')}</DialogTitle>
             <DialogDescription className="text-xs">
-              将选中的 {selectedIds.length} 个资产移入指定相册空间
+              {t('adminImages.batchMoveDesc', { count: selectedIds.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -882,10 +926,10 @@ export const AdminImagesPage: React.FC = () => {
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="batch-move-album">目标相册空间</FieldLabel>
+                  <FieldLabel htmlFor="batch-move-album">{t('adminImages.batchMoveAlbumLabel')}</FieldLabel>
                   <Select value={String(batchTargetAlbum)} onValueChange={(val) => setBatchTargetAlbum(Number(val))}>
                     <SelectTrigger id="batch-move-album" className="w-full text-xs h-9 rounded-xl">
-                      <SelectValue placeholder="选择目标相册" />
+                      <SelectValue placeholder={t('adminImages.batchMoveAlbumPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {albums.map((alb) => (
@@ -907,14 +951,14 @@ export const AdminImagesPage: React.FC = () => {
               onClick={() => setIsBatchMoveOpen(false)}
               className="text-xs rounded-xl"
             >
-              取消
+              {t('adminImages.batchMoveCancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleBatchMove}
               className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
             >
-              确认移动
+              {t('adminImages.batchMoveConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -926,9 +970,9 @@ export const AdminImagesPage: React.FC = () => {
       <Dialog open={isBatchTagOpen} onOpenChange={setIsBatchTagOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">批量添加标签</DialogTitle>
+            <DialogTitle className="text-base font-bold">{t('adminImages.batchTagTitle')}</DialogTitle>
             <DialogDescription className="text-xs">
-              为选中的 {selectedIds.length} 个资产统一追加属性标签
+              {t('adminImages.batchTagDesc', { count: selectedIds.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -936,17 +980,17 @@ export const AdminImagesPage: React.FC = () => {
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="batch-new-tag" required>追加标签名称</FieldLabel>
+                  <FieldLabel htmlFor="batch-new-tag" required>{t('adminImages.batchTagLabel')}</FieldLabel>
                   <Input
                     id="batch-new-tag"
                     type="text"
-                    placeholder="输入标签名 (如 4K / DESIGN)"
+                    placeholder={t('adminImages.batchTagPlaceholder')}
                     value={batchNewTag}
                     onChange={(e) => setBatchNewTag(e.target.value)}
                     className="text-xs h-9 rounded-xl font-mono uppercase"
                   />
                   <FieldDescription>
-                    将自动同步追加至所有已选中的资产标签列表中
+                    {t('adminImages.batchTagHint')}
                   </FieldDescription>
                 </Field>
               </FieldGroup>
@@ -960,14 +1004,14 @@ export const AdminImagesPage: React.FC = () => {
               onClick={() => setIsBatchTagOpen(false)}
               className="text-xs rounded-xl"
             >
-              取消
+              {t('adminImages.batchTagCancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleBatchAddTag}
               className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
             >
-              确认追加
+              {t('adminImages.batchTagConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1004,7 +1048,7 @@ export const AdminImagesPage: React.FC = () => {
                     className="text-xs rounded-xl gap-1.5 cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    <span>复制直链</span>
+                    <span>{t('adminImages.copyDirectLink')}</span>
                   </Button>
                   <Button
                     size="sm"
@@ -1017,7 +1061,7 @@ export const AdminImagesPage: React.FC = () => {
                     className="text-xs rounded-xl gap-1.5 cursor-pointer bg-primary text-primary-foreground font-semibold"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>下载原图</span>
+                    <span>{t('adminImages.downloadOriginal')}</span>
                   </Button>
                 </div>
               </div>

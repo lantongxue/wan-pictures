@@ -29,6 +29,7 @@ import {
   WebDAVConfig,
 } from '../../types';
 import { adminApi } from '../../services/api';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -42,6 +43,7 @@ import {
 } from '../../components/ui/field';
 
 export const AdminStoragePage: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [storageConfigs, setStorageConfigs] = useState<StorageConfigItem[]>([]);
   const [activeDriver, setActiveDriver] = useState<StorageDriverType>('local');
@@ -119,7 +121,7 @@ export const AdminStoragePage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      showNotification(err.message || '加载存储配置失败', 'error');
+      showNotification(err.message || t('adminStorage.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -137,25 +139,25 @@ export const AdminStoragePage: React.FC = () => {
   const handleToggleEnabled = async (driver: StorageDriverType, isEnabled: boolean) => {
     try {
       await adminApi.toggleStorageEnabled(driver, isEnabled);
-      showNotification(`存储引擎 [${driver.toUpperCase()}] 已${isEnabled ? '启用' : '禁用'}`);
+      showNotification(t('adminStorage.toggleSuccess', { driver: driver.toUpperCase(), state: isEnabled ? t('adminStorage.enabled') : t('adminStorage.disabledState') }));
       loadConfigs();
     } catch (err: any) {
-      showNotification(err.message || '切换启用状态失败', 'error');
+      showNotification(err.message || t('adminStorage.toggleFailed'), 'error');
     }
   };
 
   const handleSwitchActiveStorage = async (driver: StorageDriverType) => {
     if (!isDriverEnabled(driver)) {
-      showNotification(`无法设为主存储：存储引擎 ${driver.toUpperCase()} 当前处于禁用状态，请先开启启用开关`, 'error');
+      showNotification(t('adminStorage.setPrimaryDisabled', { driver: driver.toUpperCase() }), 'error');
       return;
     }
     try {
       await adminApi.setActiveStorage(driver);
       setActiveDriver(driver);
-      showNotification(`主存储引擎已切换至: ${driver.toUpperCase()}`);
+      showNotification(t('adminStorage.setPrimarySuccess', { driver: driver.toUpperCase() }));
       loadConfigs();
     } catch (err: any) {
-      showNotification(err.message || '切换主存储失败', 'error');
+      showNotification(err.message || t('adminStorage.setPrimaryFailed'), 'error');
     }
   };
 
@@ -171,12 +173,12 @@ export const AdminStoragePage: React.FC = () => {
       const res = await adminApi.testStorageConnection(driver, config);
       setTestResults((prev) => ({ ...prev, [driver]: res }));
       if (res.success) {
-        showNotification(`[${driver.toUpperCase()}] 连接测试成功 (耗时: ${res.latencyMs || 12}ms)`);
+        showNotification(t('adminStorage.testSuccess', { driver: driver.toUpperCase(), ms: res.latencyMs || 12 }));
       } else {
-        showNotification(`[${driver.toUpperCase()}] 连接测试失败: ${res.message}`, 'error');
+        showNotification(t('adminStorage.testFailed', { driver: driver.toUpperCase(), message: res.message }), 'error');
       }
     } catch (err: any) {
-      showNotification(err.message || '连接测试异常', 'error');
+      showNotification(err.message || t('adminStorage.testError'), 'error');
     } finally {
       setTestingDriver(null);
     }
@@ -188,16 +190,16 @@ export const AdminStoragePage: React.FC = () => {
       const item: StorageConfigItem = {
         id: 1,
         driver: 'local',
-        name: '本地文件系统与离线存储 (Local Storage)',
+        name: t('adminStorage.localConfigName'),
         isEnabled: isDriverEnabled('local'),
         isActive: activeDriver === 'local',
         config: localConfig,
       };
       await adminApi.saveStorageConfig(item);
-      showNotification('本地磁盘存储配置已成功持久化');
+      showNotification(t('adminStorage.saveLocalSuccess'));
       loadConfigs();
     } catch (err: any) {
-      showNotification(err.message || '保存失败', 'error');
+      showNotification(err.message || t('adminStorage.saveFailed'), 'error');
     }
   };
 
@@ -207,16 +209,16 @@ export const AdminStoragePage: React.FC = () => {
       const item: StorageConfigItem = {
         id: 2,
         driver: 's3',
-        name: 'Amazon S3 / Cloudflare R2 / OSS / COS 对象存储',
+        name: t('adminStorage.s3ConfigName'),
         isEnabled: isDriverEnabled('s3'),
         isActive: activeDriver === 's3',
         config: s3Config,
       };
       await adminApi.saveStorageConfig(item);
-      showNotification('S3 对象存储配置已成功保存');
+      showNotification(t('adminStorage.saveS3Success'));
       loadConfigs();
     } catch (err: any) {
-      showNotification(err.message || '保存失败', 'error');
+      showNotification(err.message || t('adminStorage.saveFailed'), 'error');
     }
   };
 
@@ -226,16 +228,16 @@ export const AdminStoragePage: React.FC = () => {
       const item: StorageConfigItem = {
         id: 3,
         driver: 'webdav',
-        name: 'WebDAV 网盘存储 (坚果云 / Nextcloud / Alist)',
+        name: t('adminStorage.webdavConfigName'),
         isEnabled: isDriverEnabled('webdav'),
         isActive: activeDriver === 'webdav',
         config: webdavConfig,
       };
       await adminApi.saveStorageConfig(item);
-      showNotification('WebDAV 网盘存储配置已保存');
+      showNotification(t('adminStorage.saveWebdavSuccess'));
       loadConfigs();
     } catch (err: any) {
-      showNotification(err.message || '保存失败', 'error');
+      showNotification(err.message || t('adminStorage.saveFailed'), 'error');
     }
   };
 
@@ -264,14 +266,14 @@ export const AdminStoragePage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              多云存储引擎调度与配置
+              {t('adminStorage.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
               MULTI-DRIVER
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            支持本地磁盘 Local、S3/OSS/R2 对象存储与 WebDAV 网盘协议动态调度、独立启用开关与连通性自检
+            {t('adminStorage.subtitle')}
           </p>
         </div>
 
@@ -284,7 +286,7 @@ export const AdminStoragePage: React.FC = () => {
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新配置</span>
+            <span>{t('adminStorage.refresh')}</span>
           </Button>
         </div>
       </div>
@@ -307,10 +309,10 @@ export const AdminStoragePage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-foreground">本地磁盘存储</h3>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.localTitle')}</h3>
                   {!isDriverEnabled('local') && (
                     <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
-                      已禁用
+                      {t('adminStorage.disabled')}
                     </Badge>
                   )}
                 </div>
@@ -322,7 +324,7 @@ export const AdminStoragePage: React.FC = () => {
               <Switch
                 checked={isDriverEnabled('local')}
                 onCheckedChange={(checked) => handleToggleEnabled('local', checked)}
-                title={isDriverEnabled('local') ? '点击禁用本地存储' : '点击启用本地存储'}
+                title={isDriverEnabled('local') ? t('adminStorage.enableTitleOn', { driver: 'Local' }) : t('adminStorage.enableTitleOff', { driver: 'Local' })}
               />
               {activeDriver === 'local' ? (
                 <Badge variant="default" className="text-[9px] bg-blue-600">
@@ -333,16 +335,16 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleSwitchActiveStorage('local')}
                   className="text-[10px] text-primary hover:underline font-semibold"
                 >
-                  设为主存储
+                  {t('adminStorage.setPrimary')}
                 </button>
               ) : (
-                <span className="text-[10px] text-muted-foreground">需先启用</span>
+                <span className="text-[10px] text-muted-foreground">{t('adminStorage.needEnable')}</span>
               )}
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            利用服务端本地磁盘或挂载卷存储，支持无损路径归档与极速读写。
+            {t('adminStorage.localDesc')}
           </p>
 
           <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
@@ -358,7 +360,7 @@ export const AdminStoragePage: React.FC = () => {
               }}
               className="h-7 text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 cursor-pointer"
             >
-              {testingDriver === 'local' ? '检测中...' : '测试连通性'}
+              {testingDriver === 'local' ? t('adminStorage.testing') : t('adminStorage.testConnectivity')}
             </Button>
           </div>
         </div>
@@ -379,10 +381,10 @@ export const AdminStoragePage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-foreground">S3 对象存储</h3>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.s3Title')}</h3>
                   {!isDriverEnabled('s3') && (
                     <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
-                      已禁用
+                      {t('adminStorage.disabled')}
                     </Badge>
                   )}
                 </div>
@@ -394,7 +396,7 @@ export const AdminStoragePage: React.FC = () => {
               <Switch
                 checked={isDriverEnabled('s3')}
                 onCheckedChange={(checked) => handleToggleEnabled('s3', checked)}
-                title={isDriverEnabled('s3') ? '点击禁用 S3 存储' : '点击启用 S3 存储'}
+                title={isDriverEnabled('s3') ? t('adminStorage.enableTitleOn', { driver: 'S3' }) : t('adminStorage.enableTitleOff', { driver: 'S3' })}
               />
               {activeDriver === 's3' ? (
                 <Badge variant="default" className="text-[9px] bg-amber-600">
@@ -405,21 +407,21 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleSwitchActiveStorage('s3')}
                   className="text-[10px] text-primary hover:underline font-semibold"
                 >
-                  设为主存储
+                  {t('adminStorage.setPrimary')}
                 </button>
               ) : (
-                <span className="text-[10px] text-muted-foreground">需先启用</span>
+                <span className="text-[10px] text-muted-foreground">{t('adminStorage.needEnable')}</span>
               )}
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            兼容标准 S3 协议，支持 AWS S3、Cloudflare R2、阿里云 OSS、腾讯云 COS 与自建 MinIO。
+            {t('adminStorage.s3Desc')}
           </p>
 
           <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
             <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[150px]">
-              {s3Config.bucket ? `bucket: ${s3Config.bucket}` : '未配置存储桶'}
+              {s3Config.bucket ? `bucket: ${s3Config.bucket}` : t('adminStorage.noBucket')}
             </span>
             <Button
               variant="ghost"
@@ -430,7 +432,7 @@ export const AdminStoragePage: React.FC = () => {
               }}
               className="h-7 text-xs text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 cursor-pointer"
             >
-              {testingDriver === 's3' ? '检测中...' : '测试连通性'}
+              {testingDriver === 's3' ? t('adminStorage.testing') : t('adminStorage.testConnectivity')}
             </Button>
           </div>
         </div>
@@ -451,14 +453,14 @@ export const AdminStoragePage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-foreground">WebDAV 网盘</h3>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.webdavTitle')}</h3>
                   {!isDriverEnabled('webdav') && (
                     <Badge variant="outline" className="text-[9px] text-muted-foreground border-border">
-                      已禁用
+                      {t('adminStorage.disabled')}
                     </Badge>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground">坚果云 / Nextcloud / Alist</p>
+                <p className="text-[11px] text-muted-foreground">{t('adminStorage.webdavSub')}</p>
               </div>
             </div>
 
@@ -466,7 +468,7 @@ export const AdminStoragePage: React.FC = () => {
               <Switch
                 checked={isDriverEnabled('webdav')}
                 onCheckedChange={(checked) => handleToggleEnabled('webdav', checked)}
-                title={isDriverEnabled('webdav') ? '点击禁用 WebDAV 存储' : '点击启用 WebDAV 存储'}
+                title={isDriverEnabled('webdav') ? t('adminStorage.enableTitleOn', { driver: 'WebDAV' }) : t('adminStorage.enableTitleOff', { driver: 'WebDAV' })}
               />
               {activeDriver === 'webdav' ? (
                 <Badge variant="default" className="text-[9px] bg-emerald-600">
@@ -477,16 +479,16 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleSwitchActiveStorage('webdav')}
                   className="text-[10px] text-primary hover:underline font-semibold"
                 >
-                  设为主存储
+                  {t('adminStorage.setPrimary')}
                 </button>
               ) : (
-                <span className="text-[10px] text-muted-foreground">需先启用</span>
+                <span className="text-[10px] text-muted-foreground">{t('adminStorage.needEnable')}</span>
               )}
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            连接坚果云、群晖 NAS、Nextcloud 或 Alist 网盘，将个人私有网盘作为图床持久化后端。
+            {t('adminStorage.webdavDesc')}
           </p>
 
           <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
@@ -502,7 +504,7 @@ export const AdminStoragePage: React.FC = () => {
               }}
               className="h-7 text-xs text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 cursor-pointer"
             >
-              {testingDriver === 'webdav' ? '检测中...' : '测试连通性'}
+              {testingDriver === 'webdav' ? t('adminStorage.testing') : t('adminStorage.testConnectivity')}
             </Button>
           </div>
         </div>
@@ -527,7 +529,7 @@ export const AdminStoragePage: React.FC = () => {
             )}
             <div>
               <p className="font-bold">
-                [{selectedDriverTab.toUpperCase()} 连通性测试] {testResults[selectedDriverTab].message}
+                {t('adminStorage.testResultTitle', { driver: selectedDriverTab.toUpperCase(), message: testResults[selectedDriverTab].message })}
               </p>
               {testResults[selectedDriverTab].diagnostics && (
                 <p className="text-[11px] mt-0.5 font-mono opacity-80">
@@ -556,7 +558,7 @@ export const AdminStoragePage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <HardDrive className="w-5 h-5 text-blue-500" />
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">本地磁盘存储参数配置</h3>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.localConfigTitle')}</h3>
                   <p className="text-xs text-muted-foreground">Local Storage Parameters & Retention</p>
                 </div>
               </div>
@@ -570,7 +572,7 @@ export const AdminStoragePage: React.FC = () => {
                   className="text-xs rounded-xl gap-1.5 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  <span>设为主写入存储</span>
+                  <span>{t('adminStorage.localSetPrimary')}</span>
                 </Button>
               )}
             </div>
@@ -579,7 +581,7 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="local-storage-path" required>
-                    服务端存储根路径 (Storage Root Path)
+                    {t('adminStorage.storageRootLabel')}
                   </FieldLabel>
                   <Input
                     id="local-storage-path"
@@ -592,13 +594,13 @@ export const AdminStoragePage: React.FC = () => {
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                   <FieldDescription>
-                    图片在服务器文件系统的真实持久化目录，例如 ./uploads/images
+                    {t('adminStorage.storageRootHint')}
                   </FieldDescription>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="local-public-prefix" required>
-                    公网访问 URL 前缀 (Public URL Prefix)
+                    {t('adminStorage.urlPrefixLabel')}
                   </FieldLabel>
                   <Input
                     id="local-public-prefix"
@@ -611,7 +613,7 @@ export const AdminStoragePage: React.FC = () => {
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                   <FieldDescription>
-                    静态资源路由映射前缀，例如 /uploads/
+                    {t('adminStorage.urlPrefixHint')}
                   </FieldDescription>
                 </Field>
               </FieldGroup>
@@ -619,7 +621,7 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="local-subfolder-format">
-                    子目录日期划分规范 (Subfolder Format)
+                    {t('adminStorage.subfolderLabel')}
                   </FieldLabel>
                   <Input
                     id="local-subfolder-format"
@@ -631,13 +633,13 @@ export const AdminStoragePage: React.FC = () => {
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                   <FieldDescription>
-                    支持 YYYY/MM 或 YYYYMMDD 按年月自动创建子目录
+                    {t('adminStorage.subfolderHint')}
                   </FieldDescription>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="local-max-size">
-                    最大存储配额容量 (MB)
+                    {t('adminStorage.maxQuotaLabel')}
                   </FieldLabel>
                   <Input
                     id="local-max-size"
@@ -649,7 +651,7 @@ export const AdminStoragePage: React.FC = () => {
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                   <FieldDescription>
-                    本地单磁盘最大允许占用的配额容量 (默认 10GB)
+                    {t('adminStorage.maxQuotaHint')}
                   </FieldDescription>
                 </Field>
               </FieldGroup>
@@ -662,14 +664,14 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleTestStorage('local')}
                   className="text-xs rounded-xl cursor-pointer"
                 >
-                  {testingDriver === 'local' ? '测试中...' : '测试磁盘连通性'}
+                  {testingDriver === 'local' ? t('adminStorage.testing') : t('adminStorage.testLocal')}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold cursor-pointer shadow-xs"
                 >
-                  保存本地配置
+                  {t('adminStorage.saveLocal')}
                 </Button>
               </div>
             </FieldSet>
@@ -685,7 +687,7 @@ export const AdminStoragePage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Cloud className="w-5 h-5 text-amber-500" />
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">S3 兼容对象存储参数配置</h3>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.s3ConfigTitle')}</h3>
                   <p className="text-xs text-muted-foreground">Amazon S3 / R2 / OSS / MinIO Credentials</p>
                 </div>
               </div>
@@ -699,7 +701,7 @@ export const AdminStoragePage: React.FC = () => {
                   className="text-xs rounded-xl gap-1.5 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  <span>设为主写入存储</span>
+                  <span>{t('adminStorage.localSetPrimary')}</span>
                 </Button>
               )}
             </div>
@@ -708,13 +710,13 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="s3-endpoint" required>
-                    S3 Endpoint (端点地址)
+                    {t('adminStorage.endpointLabel')}
                   </FieldLabel>
                   <Input
                     id="s3-endpoint"
                     type="text"
                     required
-                    placeholder="https://s3.us-east-1.amazonaws.com 或 https://xxx.r2.cloudflarestorage.com"
+                    placeholder={t('adminStorage.endpointPlaceholder')}
                     value={s3Config.endpoint}
                     onChange={(e) => setS3Config({ ...s3Config, endpoint: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
@@ -723,13 +725,13 @@ export const AdminStoragePage: React.FC = () => {
 
                 <Field>
                   <FieldLabel htmlFor="s3-bucket" required>
-                    Bucket (存储桶名称)
+                    {t('adminStorage.bucketLabel')}
                   </FieldLabel>
                   <Input
                     id="s3-bucket"
                     type="text"
                     required
-                    placeholder="例如: wanpictures-assets"
+                    placeholder={t('adminStorage.bucketPlaceholder')}
                     value={s3Config.bucket}
                     onChange={(e) => setS3Config({ ...s3Config, bucket: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
@@ -783,12 +785,12 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="s3-domain">
-                    自定义 CDN 加速域名 (Custom Domain)
+                    {t('adminStorage.customDomainLabel')}
                   </FieldLabel>
                   <Input
                     id="s3-domain"
                     type="text"
-                    placeholder="https://cdn.yourdomain.com (留空则默认 S3 直链)"
+                    placeholder={t('adminStorage.customDomainPlaceholder')}
                     value={s3Config.customDomain}
                     onChange={(e) => setS3Config({ ...s3Config, customDomain: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
@@ -796,11 +798,11 @@ export const AdminStoragePage: React.FC = () => {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="s3-region">Region (地域)</FieldLabel>
+                  <FieldLabel htmlFor="s3-region">{t('adminStorage.regionLabel')}</FieldLabel>
                   <Input
                     id="s3-region"
                     type="text"
-                    placeholder="例如: us-east-1 / auto / oss-cn-hangzhou"
+                    placeholder={t('adminStorage.regionPlaceholder')}
                     value={s3Config.region}
                     onChange={(e) => setS3Config({ ...s3Config, region: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
@@ -816,14 +818,14 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleTestStorage('s3')}
                   className="text-xs rounded-xl cursor-pointer"
                 >
-                  {testingDriver === 's3' ? '测试中...' : '测试 S3 连通性'}
+                  {testingDriver === 's3' ? t('adminStorage.testing') : t('adminStorage.testS3')}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   className="text-xs rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer shadow-xs"
                 >
-                  保存 S3 配置
+                  {t('adminStorage.saveS3')}
                 </Button>
               </div>
             </FieldSet>
@@ -839,8 +841,8 @@ export const AdminStoragePage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Server className="w-5 h-5 text-emerald-500" />
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">WebDAV 网盘存储参数配置</h3>
-                  <p className="text-xs text-muted-foreground">Nextcloud / 坚果云 / Alist Protocol Parameters</p>
+                  <h3 className="text-sm font-bold text-foreground">{t('adminStorage.webdavConfigTitle')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('adminStorage.webdavSubtitle2')}</p>
                 </div>
               </div>
 
@@ -853,7 +855,7 @@ export const AdminStoragePage: React.FC = () => {
                   className="text-xs rounded-xl gap-1.5 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-500" />
-                  <span>设为主写入存储</span>
+                  <span>{t('adminStorage.webdavSetPrimary')}</span>
                 </Button>
               )}
             </div>
@@ -862,13 +864,13 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="dav-server" required>
-                    WebDAV 服务器地址 (Server URL)
+                    {t('adminStorage.webdavUrlLabel')}
                   </FieldLabel>
                   <Input
                     id="dav-server"
                     type="text"
                     required
-                    placeholder="https://dav.jianguoyun.com/dav/ 或 https://pan.example.com/dav"
+                    placeholder={t('adminStorage.webdavUrlPlaceholder')}
                     value={webdavConfig.serverUrl}
                     onChange={(e) =>
                       setWebdavConfig({ ...webdavConfig, serverUrl: e.target.value })
@@ -879,12 +881,12 @@ export const AdminStoragePage: React.FC = () => {
 
                 <Field>
                   <FieldLabel htmlFor="dav-root">
-                    网盘根目录路径 (Root Path)
+                    {t('adminStorage.webdavRootLabel')}
                   </FieldLabel>
                   <Input
                     id="dav-root"
                     type="text"
-                    placeholder="/wanpictures/uploads/"
+                    placeholder={t('adminStorage.webdavRootPlaceholder')}
                     value={webdavConfig.rootPath}
                     onChange={(e) =>
                       setWebdavConfig({ ...webdavConfig, rootPath: e.target.value })
@@ -897,7 +899,7 @@ export const AdminStoragePage: React.FC = () => {
               <FieldGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="dav-user" required>
-                    WebDAV 账号 / 邮箱 (Username)
+                    {t('adminStorage.webdavUserLabel')}
                   </FieldLabel>
                   <Input
                     id="dav-user"
@@ -914,14 +916,14 @@ export const AdminStoragePage: React.FC = () => {
 
                 <Field>
                   <FieldLabel htmlFor="dav-pwd" required>
-                    WebDAV 密码 / 应用授权码 (App Password)
+                    {t('adminStorage.webdavPwdLabel')}
                   </FieldLabel>
                   <div className="relative">
                     <Input
                       id="dav-pwd"
                       type={showDavPassword ? 'text' : 'password'}
                       required
-                      placeholder="坚果云生成的应用授权专用密码"
+                      placeholder={t('adminStorage.webdavPwdPlaceholder')}
                       value={webdavConfig.password}
                       onChange={(e) =>
                         setWebdavConfig({ ...webdavConfig, password: e.target.value })
@@ -947,14 +949,14 @@ export const AdminStoragePage: React.FC = () => {
                   onClick={() => handleTestStorage('webdav')}
                   className="text-xs rounded-xl cursor-pointer"
                 >
-                  {testingDriver === 'webdav' ? '测试中...' : '测试 WebDAV 连通性'}
+                  {testingDriver === 'webdav' ? t('adminStorage.testing') : t('adminStorage.testWebdav')}
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
                   className="text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer shadow-xs"
                 >
-                  保存 WebDAV 配置
+                  {t('adminStorage.saveWebdav')}
                 </Button>
               </div>
             </FieldSet>

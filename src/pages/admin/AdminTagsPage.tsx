@@ -15,6 +15,7 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { TagItem, ImageItem } from '../../types';
 import { adminApi } from '../../services/api';
 import { Button } from '../../components/ui/button';
@@ -57,6 +58,7 @@ const TAG_COLOR_PRESETS = [
 ];
 
 export const AdminTagsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +95,7 @@ export const AdminTagsPage: React.FC = () => {
       if (tagRes.success) setTags(tagRes.data);
       if (imgRes.success) setImages(imgRes.data.items);
     } catch (err: any) {
-      showNotification(err.message || '加载标签失败', 'error');
+      showNotification(err.message || t('adminTags.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -114,15 +116,15 @@ export const AdminTagsPage: React.FC = () => {
         description: newTagDesc.trim(),
       });
       if (res.success) {
-        showNotification(`标签 #${newTagName.toUpperCase()} 创建成功`);
+        showNotification(t('adminTags.createSuccess', { name: newTagName.toUpperCase() }));
         setNewTagName('');
         setNewTagDesc('');
         loadData();
       } else {
-        showNotification(res.message || '创建标签失败', 'error');
+        showNotification(res.message || t('adminTags.createFailed'), 'error');
       }
     } catch (err: any) {
-      showNotification(err.message || '创建失败', 'error');
+      showNotification(err.message || t('adminTags.createError'), 'error');
     }
   };
 
@@ -134,46 +136,46 @@ export const AdminTagsPage: React.FC = () => {
         color: editingTag.color,
         description: editingTag.description,
       });
-      showNotification(`标签 #${editingTag.name} 已更新`);
+      showNotification(t('adminTags.updateSuccess', { name: editingTag.name }));
       setEditingTag(null);
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '更新失败', 'error');
+      showNotification(err.message || t('adminTags.updateError'), 'error');
     }
   };
 
   const handleDeleteTag = async (tag: TagItem) => {
     if (
       !confirm(
-        `确定要删除标签 #${tag.name} 吗？系统将自动从所有关联图片中移除该标签。`
+        t('adminTags.confirmDelete', { name: tag.name })
       )
     )
       return;
 
     try {
       await adminApi.deleteTag(tag.id, tag.name);
-      showNotification(`标签 #${tag.name} 已删除`);
+      showNotification(t('adminTags.deletedSuccess', { name: tag.name }));
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '删除失败', 'error');
+      showNotification(err.message || t('adminTags.deleteError'), 'error');
     }
   };
 
   const handleMergeTags = async () => {
     if (!mergeSourceTag || !mergeTargetTag || mergeSourceTag === mergeTargetTag) {
-      showNotification('请选择两个不同的标签进行合并', 'error');
+      showNotification(t('adminTags.mergeNeedDifferent'), 'error');
       return;
     }
 
     try {
       const res = await adminApi.mergeTags(mergeSourceTag, mergeTargetTag);
-      showNotification(res.message || `已将 #${mergeSourceTag} 合并至 #${mergeTargetTag}`);
+      showNotification(res.message || t('adminTags.mergeSuccess', { source: mergeSourceTag, target: mergeTargetTag }));
       setIsMergeModalOpen(false);
       setMergeSourceTag('');
       setMergeTargetTag('');
       loadData();
     } catch (err: any) {
-      showNotification(err.message || '合并失败', 'error');
+      showNotification(err.message || t('adminTags.mergeFailed'), 'error');
     }
   };
 
@@ -207,14 +209,14 @@ export const AdminTagsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              标签分类体系与合并治理
+              {t('adminTags.title')}
             </h1>
             <Badge variant="subtle" className="text-[10px] font-mono">
-              {tags.length} 个标签
+              {t('adminTags.count', { count: tags.length })}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            多维度属性打标、标签色彩自定义与全库同义标签合并治理工具
+            {t('adminTags.subtitle')}
           </p>
         </div>
 
@@ -227,7 +229,7 @@ export const AdminTagsPage: React.FC = () => {
             className="h-9 px-3 text-xs rounded-xl gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新</span>
+            <span>{t('adminTags.refresh')}</span>
           </Button>
 
           <Button
@@ -237,7 +239,7 @@ export const AdminTagsPage: React.FC = () => {
             className="h-9 px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
           >
             <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span>标签合并工具</span>
+            <span>{t('adminTags.merge')}</span>
           </Button>
         </div>
       </div>
@@ -251,7 +253,7 @@ export const AdminTagsPage: React.FC = () => {
               <Plus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">创建新检索标签</h3>
+              <h3 className="text-sm font-bold text-foreground">{t('adminTags.createTitle')}</h3>
               <p className="text-xs text-muted-foreground">Add Custom Taxonomy Tag</p>
             </div>
           </div>
@@ -260,12 +262,12 @@ export const AdminTagsPage: React.FC = () => {
             <FieldSet className="gap-4">
               <FieldGroup className="gap-3.5">
                 <Field>
-                  <FieldLabel htmlFor="create-tag-name" required>标签名称</FieldLabel>
+                  <FieldLabel htmlFor="create-tag-name" required>{t('adminTags.nameLabel')}</FieldLabel>
                   <Input
                     id="create-tag-name"
                     type="text"
                     required
-                    placeholder="例如: 4K / WALLPAPER / 插画"
+                    placeholder={t('adminTags.namePlaceholder')}
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     className="text-xs h-9 rounded-xl font-mono uppercase"
@@ -273,11 +275,11 @@ export const AdminTagsPage: React.FC = () => {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="create-tag-desc">描述说明 (选填)</FieldLabel>
+                  <FieldLabel htmlFor="create-tag-desc">{t('adminTags.descLabel')}</FieldLabel>
                   <Input
                     id="create-tag-desc"
                     type="text"
-                    placeholder="简要说明此标签的归类语义"
+                    placeholder={t('adminTags.descPlaceholder')}
                     value={newTagDesc}
                     onChange={(e) => setNewTagDesc(e.target.value)}
                     className="text-xs h-9 rounded-xl"
@@ -285,7 +287,7 @@ export const AdminTagsPage: React.FC = () => {
                 </Field>
 
                 <Field>
-                  <FieldLabel>标签视觉色标</FieldLabel>
+                  <FieldLabel>{t('adminTags.colorLabel')}</FieldLabel>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {TAG_COLOR_PRESETS.map((color) => (
                       <button
@@ -309,7 +311,7 @@ export const AdminTagsPage: React.FC = () => {
                 className="w-full h-9 rounded-xl text-xs font-bold gap-1.5 bg-primary text-primary-foreground cursor-pointer shadow-xs mt-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>保存并添加到标签库</span>
+                <span>{t('adminTags.createSubmit')}</span>
               </Button>
             </FieldSet>
           </form>
@@ -324,7 +326,7 @@ export const AdminTagsPage: React.FC = () => {
                 type="text"
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
-                placeholder="检索标签名称或语义说明..."
+                placeholder={t('adminTags.searchPlaceholder')}
                 className="pl-9 text-xs h-9 rounded-xl"
               />
               {tagSearch && (
@@ -338,7 +340,7 @@ export const AdminTagsPage: React.FC = () => {
             </div>
 
             <Badge variant="subtle" className="text-[11px] font-mono shrink-0">
-              共 {filteredTags.length} 个
+              {t('adminTags.totalCount', { count: filteredTags.length })}
             </Badge>
           </div>
 
@@ -346,12 +348,12 @@ export const AdminTagsPage: React.FC = () => {
           {loading ? (
             <div className="py-16 text-center flex flex-col items-center justify-center gap-3">
               <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs text-muted-foreground">正在加载标签库...</p>
+              <p className="text-xs text-muted-foreground">{t('adminTags.loading')}</p>
             </div>
           ) : filteredTags.length === 0 ? (
             <div className="py-16 text-center border border-dashed border-border/80 rounded-3xl bg-muted/10 space-y-2">
               <TagIcon className="w-10 h-10 text-muted-foreground/40 mx-auto" />
-              <p className="text-xs text-muted-foreground">未找到匹配的分类标签</p>
+              <p className="text-xs text-muted-foreground">{t('adminTags.noMatch')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -380,12 +382,12 @@ export const AdminTagsPage: React.FC = () => {
                       </div>
 
                       <Badge variant="subtle" className="text-[10px] font-mono">
-                        {count} 张关联
+                        {t('adminTags.relatedCount', { count })}
                       </Badge>
                     </div>
 
                     <p className="text-xs text-muted-foreground line-clamp-2">
-                      {tag.description || '自定义属性标签，用于多维度聚合筛选。'}
+                      {tag.description || t('adminTags.noDesc')}
                     </p>
 
                     <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-border/60">
@@ -396,7 +398,7 @@ export const AdminTagsPage: React.FC = () => {
                         className="h-7 px-2 text-xs rounded-lg gap-1 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 cursor-pointer"
                       >
                         <Edit3 className="w-3 h-3" />
-                        <span>编辑</span>
+                        <span>{t('adminTags.edit')}</span>
                       </Button>
 
                       <Button
@@ -406,7 +408,7 @@ export const AdminTagsPage: React.FC = () => {
                         className="h-7 px-2 text-xs rounded-lg gap-1 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
                       >
                         <Trash2 className="w-3 h-3" />
-                        <span>删除</span>
+                        <span>{t('adminTags.delete')}</span>
                       </Button>
                     </div>
                   </motion.div>
@@ -425,10 +427,10 @@ export const AdminTagsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Edit3 className="w-4 h-4 text-primary" />
-              <span>编辑标签属性</span>
+              <span>{t('adminTags.editTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              修改标签名称、色彩标识与详细说明
+              {t('adminTags.editDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -437,7 +439,7 @@ export const AdminTagsPage: React.FC = () => {
               <FieldSet className="gap-4">
                 <FieldGroup className="gap-3.5">
                   <Field>
-                    <FieldLabel htmlFor="edit-tag-name" required>标签名称</FieldLabel>
+                    <FieldLabel htmlFor="edit-tag-name" required>{t('adminTags.editNameLabel')}</FieldLabel>
                     <Input
                       id="edit-tag-name"
                       type="text"
@@ -450,7 +452,7 @@ export const AdminTagsPage: React.FC = () => {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="edit-tag-desc">描述说明</FieldLabel>
+                    <FieldLabel htmlFor="edit-tag-desc">{t('adminTags.editDescLabel')}</FieldLabel>
                     <Input
                       id="edit-tag-desc"
                       type="text"
@@ -463,7 +465,7 @@ export const AdminTagsPage: React.FC = () => {
                   </Field>
 
                   <Field>
-                    <FieldLabel>主题色标</FieldLabel>
+                    <FieldLabel>{t('adminTags.editColorLabel')}</FieldLabel>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {TAG_COLOR_PRESETS.map((color) => (
                         <button
@@ -492,14 +494,14 @@ export const AdminTagsPage: React.FC = () => {
               onClick={() => setEditingTag(null)}
               className="text-xs rounded-xl"
             >
-              取消
+              {t('adminTags.cancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleSaveEditTag}
               className="text-xs rounded-xl bg-primary text-primary-foreground font-semibold"
             >
-              保存更新
+              {t('adminTags.saveUpdate')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -513,10 +515,10 @@ export const AdminTagsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <ArrowRightLeft className="w-4 h-4 text-amber-500" />
-              <span>标签合并与归一化工具</span>
+              <span>{t('adminTags.mergeTitle')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              将某个旧标签（源标签）全量替换并合并至另一个标准标签（目标标签）
+              {t('adminTags.mergeSubtitle')}
             </DialogDescription>
           </DialogHeader>
 
@@ -524,7 +526,7 @@ export const AdminTagsPage: React.FC = () => {
             <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
-                合并完成后，所有包含源标签的图片将自动变更为目标标签，源标签将被永久移除。
+                {t('adminTags.mergeNote')}
               </span>
             </div>
 
@@ -532,11 +534,11 @@ export const AdminTagsPage: React.FC = () => {
               <FieldGroup className="gap-3.5">
                 <Field>
                   <FieldLabel htmlFor="merge-source-tag" required>
-                    选择源标签 (将被合并并删除)
+                    {t('adminTags.sourceLabel')}
                   </FieldLabel>
                   <Select value={mergeSourceTag} onValueChange={setMergeSourceTag}>
                     <SelectTrigger id="merge-source-tag" className="w-full text-xs h-9 rounded-xl font-mono uppercase">
-                      <SelectValue placeholder="选择源标签" />
+                      <SelectValue placeholder={t('adminTags.sourcePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {tags.map((t) => (
@@ -550,11 +552,11 @@ export const AdminTagsPage: React.FC = () => {
 
                 <Field>
                   <FieldLabel htmlFor="merge-target-tag" required>
-                    选择目标标签 (接收合并的主标签)
+                    {t('adminTags.targetLabel')}
                   </FieldLabel>
                   <Select value={mergeTargetTag} onValueChange={setMergeTargetTag}>
                     <SelectTrigger id="merge-target-tag" className="w-full text-xs h-9 rounded-xl font-mono uppercase">
-                      <SelectValue placeholder="选择目标标签" />
+                      <SelectValue placeholder={t('adminTags.targetPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {tags
@@ -578,14 +580,14 @@ export const AdminTagsPage: React.FC = () => {
               onClick={() => setIsMergeModalOpen(false)}
               className="text-xs rounded-xl"
             >
-              取消
+              {t('adminTags.cancel')}
             </Button>
             <Button
               size="sm"
               onClick={handleMergeTags}
               className="text-xs rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer"
             >
-              确认合并标签
+              {t('adminTags.mergeConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
