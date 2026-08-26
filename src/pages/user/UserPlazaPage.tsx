@@ -1,11 +1,13 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from './UserContext';
 import { ImagePlaza } from '../../components/ImagePlaza';
 
 export const UserPlazaPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const {
     images,
@@ -33,7 +35,7 @@ export const UserPlazaPage: React.FC = () => {
           setIsAuthModalOpen(true);
           return;
         }
-        document.getElementById('hidden-file-input')?.click();
+        navigate('/workspace');
       }}
     />
   );

@@ -738,13 +738,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     if (currentTab === 'plaza') {
-      document.getElementById('hidden-file-input')?.click();
+      navigate('/workspace');
     } else {
       const dropzone = document.getElementById('dropzone-area');
       if (dropzone) dropzone.scrollIntoView({ behavior: 'smooth' });
-      else document.getElementById('hidden-file-input')?.click();
+      else navigate('/workspace');
     }
-  }, [isAuthenticated, currentTab, showToast, t]);
+  }, [isAuthenticated, currentTab, navigate, showToast, t]);
 
   const handleOpenAlbums = useCallback(() => {
     if (!isAuthenticated) {
