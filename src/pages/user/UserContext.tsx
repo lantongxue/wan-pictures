@@ -7,12 +7,13 @@ import {
   Album,
   UploadSettings,
   UploadQueueItem,
+  UploadQuotaInfo,
   FilterOptions,
   ToastMessage,
 } from '../../types';
 import { uploadApi } from '../../services/api';
 import { dbService, DEFAULT_ALBUMS, DEFAULT_SETTINGS } from '../../utils/db';
-import { processImageUpload, getImageMetadata } from '../../utils/imageProcessing';
+import { processImageUpload, getImageMetadata, partitionAllowedImages, isAllowedImageType, extractExtension } from '../../utils/imageProcessing';
 import { INITIAL_SAMPLE_IMAGES } from '../../data/sampleImages';
 import { useAuth } from '../../context/AuthContext';
 
@@ -37,6 +38,10 @@ export interface UserContextType {
   setUploadQueue: React.Dispatch<React.SetStateAction<UploadQueueItem[]>>;
   isUploadModalOpen: boolean;
   setIsUploadModalOpen: (open: boolean) => void;
+
+  // Backend-driven upload quota (GET /api/v1/upload/quota), null when backend offline
+  quotaInfo: UploadQuotaInfo | null;
+  refreshQuota: () => Promise<UploadQuotaInfo | null>;
 
   // Modals & Inspection States
   isLinkModalOpen: boolean;
@@ -126,6 +131,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [uploadTargetAlbumId, setUploadTargetAlbumId] = useState<string>('default');
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [quotaInfo, setQuotaInfo] = useState<UploadQuotaInfo | null>(null);
 
   // Modals & Inspection States
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -166,6 +172,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  // Fetch upload quota policy from backend (restrictions live entirely server-side)
+  const refreshQuota = useCallback(async (): Promise<UploadQuotaInfo | null> => {
+    const res = await uploadApi.getQuota().catch(() => null);
+    const next = res?.data || null;
+    setQuotaInfo(next);
+    return next;
+  }, []);
+
+  // Keep quota in sync with login state (anonymous vs user/vip/admin policy)
+  useEffect(() => {
+    refreshQuota();
+  }, [refreshQuota, isAuthenticated]);
 
   // Initialize DB and load initial data
   useEffect(() => {
@@ -294,21 +313,35 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return images.filter((i) => selectedIds.has(i.id));
   }, [images, selectedIds]);
 
-  // Handle Files Selected / Dragged
+  // Handle Files Selected / Dragged — real upload pipeline against the Go backend
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
-      if (files.length === 0) return;
+      // MIME whitelist: PNG / JPG / WEBP / GIF / SVG / AVIF / BMP / ICO only
+      const { accepted: validFiles, rejected } = partitionAllowedImages(files);
+      if (rejected.length > 0) {
+        showToast(
+          t('common.warning'),
+          t('uploadModal.unsupportedSkipped', { count: rejected.length }),
+          'warning'
+        );
+      }
+      if (validFiles.length === 0) return;
 
-      // Check quota and anonymous upload permissions
+      // Read quota policy from GET /api/v1/upload/quota.
+      // Only used to guide UX (e.g. anonymous gate); the backend remains the
+      // single source of truth for every restriction.
       const quotaRes = await uploadApi.getQuota().catch(() => null);
-      if (!isAuthenticated && quotaRes?.data && !quotaRes.data.allow_anonymous) {
-        showToast(t('albums.authRequiredTitle'), '管理员已关闭匿名上传，请先登录账号后再上传图片', 'warning');
-        setAuthModalMode('login');
-        setIsAuthModalOpen(true);
-        return;
+      if (quotaRes?.data) {
+        setQuotaInfo(quotaRes.data);
+        if (!isAuthenticated && !quotaRes.data.allow_anonymous) {
+          showToast(t('albums.authRequiredTitle'), '管理员已关闭匿名上传，请先登录账号后再上传图片', 'warning');
+          setAuthModalMode('login');
+          setIsAuthModalOpen(true);
+          return;
+        }
       }
 
-      const newQueueItems: UploadQueueItem[] = files.map((file) => ({
+      const newQueueItems: UploadQueueItem[] = validFiles.map((file) => ({
         id: 'queue_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
         file,
         name: file.name,
@@ -323,18 +356,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsUploadModalOpen(true);
 
       const processedResults: ImageItem[] = [];
+      let instantCount = 0;
 
       for (let i = 0; i < newQueueItems.length; i++) {
         const qItem = newQueueItems[i];
         setUploadQueue((prev) =>
-          prev.map((item) => (item.id === qItem.id ? { ...item, status: 'processing', progress: 15 } : item))
+          prev.map((item) => (item.id === qItem.id ? { ...item, status: 'processing', progress: 10 } : item))
         );
 
         try {
-          // Step 1: Compute SHA-256 Hash for instant deduplication precheck
+          // Step 1: SHA-256 fingerprint for instant-upload (秒传) preflight
           const fileHash = await uploadApi.computeSHA256(qItem.file);
 
-          // Step 2: Instant Upload Preflight (秒传哈希预检)
+          // Step 2: Instant upload preflight against backend dedup index
           const checkRes = await uploadApi.checkHash({
             hash: fileHash,
             size: qItem.file.size,
@@ -342,10 +376,27 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             albumId: uploadTargetAlbumId,
           });
 
-          if (checkRes.success && checkRes.exists && checkRes.image) {
+          if (checkRes.isBackendOnline && !checkRes.success) {
+            // Backend rejected the preflight (quota exceeded / policy error)
+            setUploadQueue((prev) =>
+              prev.map((item) =>
+                item.id === qItem.id ? { ...item, status: 'error', error: checkRes.message } : item
+              )
+            );
+            showToast('上传受阻', checkRes.message, 'warning');
+            continue;
+          }
+
+          if (
+            checkRes.isBackendOnline &&
+            checkRes.success &&
+            checkRes.exists &&
+            checkRes.image
+          ) {
             // Instant Deduplication Success! (⚡ 秒传触发)
             await dbService.saveImage(checkRes.image);
             processedResults.push(checkRes.image);
+            instantCount++;
 
             setUploadQueue((prev) =>
               prev.map((item) =>
@@ -363,11 +414,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             continue;
           }
 
-          // Step 3: Regular Upload with Multi-Storage Dispatch
+          // Step 3: Real multipart upload with progress tracking
           const uploadRes = await uploadApi.uploadFile(qItem.file, uploadTargetAlbumId, (percent) => {
             setUploadQueue((prev) =>
               prev.map((item) =>
-                item.id === qItem.id ? { ...item, progress: Math.max(15, percent) } : item
+                item.id === qItem.id ? { ...item, progress: Math.max(10, percent) } : item
               )
             );
           });
@@ -375,6 +426,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (uploadRes.success && uploadRes.image) {
             await dbService.saveImage(uploadRes.image);
             processedResults.push(uploadRes.image);
+            if (uploadRes.isInstant) instantCount++;
 
             setUploadQueue((prev) =>
               prev.map((item) =>
@@ -389,33 +441,34 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   : item
               )
             );
-          } else {
-            // If server reported quota or engine error
-            if (uploadRes.message && !uploadRes.message.includes('无法连接后端')) {
-              setUploadQueue((prev) =>
-                prev.map((item) =>
-                  item.id === qItem.id
-                    ? { ...item, status: 'error', error: uploadRes.message }
-                    : item
-                )
-              );
-              showToast('上传受阻', uploadRes.message, 'warning');
-              continue;
-            }
+            continue;
+          }
 
-            // Fallback to local storage processing if backend is offline
-            const processedImage = await processImageUpload(qItem.file, settings, uploadTargetAlbumId);
-            await dbService.saveImage(processedImage);
-            processedResults.push(processedImage);
-
+          // Step 4: Failure — every limit decision comes from the backend
+          if (uploadRes.isBackendOnline) {
             setUploadQueue((prev) =>
               prev.map((item) =>
                 item.id === qItem.id
-                  ? { ...item, status: 'done', resultItem: processedImage, progress: 100 }
+                  ? { ...item, status: 'error', error: uploadRes.message }
                   : item
               )
             );
+            showToast('上传受阻', uploadRes.message, 'warning');
+            continue;
           }
+
+          // Backend unreachable → offline fallback caches the asset locally
+          const processedImage = await processImageUpload(qItem.file, settings, uploadTargetAlbumId);
+          await dbService.saveImage(processedImage);
+          processedResults.push(processedImage);
+
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === qItem.id
+                ? { ...item, status: 'done', resultItem: processedImage, progress: 100 }
+                : item
+            )
+          );
         } catch (err: any) {
           console.error('Failed to process image:', err);
           setUploadQueue((prev) =>
@@ -440,7 +493,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           colors: ['#3B82F6', '#6366F1', '#10B981'],
         });
 
-        const instantCount = uploadQueue.filter((q) => q.isInstant).length;
         showToast(
           t('uploadModal.titleDone'),
           instantCount > 0
@@ -450,8 +502,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         setLinkModalImages(processedResults);
       }
+
+      // Sync latest quota counters from backend after the batch
+      refreshQuota();
     },
-    [isAuthenticated, uploadTargetAlbumId, settings, showToast, t, uploadQueue]
+    [isAuthenticated, uploadTargetAlbumId, settings, showToast, t, refreshQuota]
   );
 
   // Global Clipboard Paste Listener (Ctrl+V / Cmd+V)
@@ -467,10 +522,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const files: File[] = [];
         for (let i = 0; i < e.clipboardData.items.length; i++) {
           const item = e.clipboardData.items[i];
-          if (item.type.startsWith('image/')) {
+          if (item.type.startsWith('image/') && isAllowedImageType(item.type)) {
             const file = item.getAsFile();
             if (file) {
-              const ext = item.type.split('/')[1] || 'png';
+              const ext = extractExtension('', item.type);
               const namedFile = new File([file], `screenshot_${Date.now()}.${ext}`, {
                 type: item.type,
               });
@@ -481,12 +536,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (files.length > 0) {
           e.preventDefault();
-          if (!isAuthenticated) {
-            showToast(t('albums.authRequiredTitle'), t('albums.authRequiredDesc'), 'warning');
-            setAuthModalMode('login');
-            setIsAuthModalOpen(true);
-            return;
-          }
           showToast(t('common.info'), `Capturing ${files.length} images...`, 'info');
           handleFilesSelected(files);
         }
@@ -495,7 +544,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [uploadTargetAlbumId, settings, isAuthenticated, t, showToast, handleFilesSelected]);
+  }, [uploadTargetAlbumId, settings, t, showToast, handleFilesSelected]);
 
   // Handle URL Import
   const handleUrlImport = useCallback(
@@ -770,6 +819,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUploadQueue,
     isUploadModalOpen,
     setIsUploadModalOpen,
+    quotaInfo,
+    refreshQuota,
     isLinkModalOpen,
     setIsLinkModalOpen,
     linkModalImages,

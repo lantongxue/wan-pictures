@@ -19,8 +19,10 @@ import {
   StorageConfigItem,
   StorageDriverType,
   StorageTestResult,
+  UploadQuotaInfo,
 } from '../types';
 import { dbService } from '../utils/db';
+import { sha256 } from 'js-sha256';
 
 // API Base URL (same-origin /api/v1 via dev proxy, or override with VITE_API_BASE_URL)
 const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/v1';
@@ -993,13 +995,20 @@ export const adminApi = {
  */
 export const uploadApi = {
   /**
-   * Fast SHA-256 computation in browser using Web Crypto API
+   * Fast SHA-256 computation in browser.
+   * Prefers Web Crypto API; falls back to the js-sha256 library when
+   * crypto.subtle is unavailable (insecure context, e.g. plain HTTP / LAN IP).
    */
   async computeSHA256(file: File): Promise<string> {
     const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+    if (globalThis.crypto?.subtle) {
+      const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    return sha256(buffer);
   },
 
   /**
@@ -1010,7 +1019,7 @@ export const uploadApi = {
     size: number;
     name?: string;
     albumId?: string;
-  }): Promise<{ success: boolean; exists: boolean; isInstant?: boolean; image?: ImageItem; message?: string }> {
+  }): Promise<{ success: boolean; exists: boolean; isInstant?: boolean; image?: ImageItem; message?: string; isBackendOnline: boolean }> {
     const res = await request<any>('/upload/check-hash', {
       method: 'POST',
       body: JSON.stringify({
@@ -1044,15 +1053,16 @@ export const uploadApi = {
             favorite: d.image.favorite,
             storageDriver: d.image.storage_driver || 'local',
           };
-          return { success: true, exists: true, isInstant: true, image: img, message: res.message };
+          return { success: true, exists: true, isInstant: true, image: img, message: res.message, isBackendOnline: true };
         }
-        return { success: true, exists: false, isInstant: false };
+        return { success: true, exists: false, isInstant: false, isBackendOnline: true };
       }
-      return { success: false, exists: false, message: res.message };
+      // Backend reachable but rejected the preflight (quota / policy error)
+      return { success: false, exists: false, message: res.message, isBackendOnline: true };
     }
 
-    // Local fallback check
-    return { success: true, exists: false, isInstant: false };
+    // Backend unreachable
+    return { success: true, exists: false, isInstant: false, isBackendOnline: false };
   },
 
   /**
@@ -1062,7 +1072,7 @@ export const uploadApi = {
     file: File,
     albumId = 'default',
     onProgress?: (percent: number) => void
-  ): Promise<{ success: boolean; isInstant?: boolean; image?: ImageItem; message?: string }> {
+  ): Promise<{ success: boolean; isInstant?: boolean; image?: ImageItem; message?: string; isBackendOnline: boolean }> {
     const token = authStorage.getToken();
     const url = `${API_BASE_URL}/upload`;
 
@@ -1109,17 +1119,20 @@ export const uploadApi = {
               isInstant: !!res.data.is_instant,
               image: img,
               message: res.message || '上传成功',
+              isBackendOnline: true,
             });
           } else {
             resolve({
               success: false,
               message: res.message || `上传失败 (HTTP ${xhr.status})`,
+              isBackendOnline: true,
             });
           }
         } catch {
           resolve({
             success: false,
             message: `服务器响应异常 (HTTP ${xhr.status})`,
+            isBackendOnline: true,
           });
         }
       };
@@ -1128,6 +1141,7 @@ export const uploadApi = {
         resolve({
           success: false,
           message: '网络连接异常，无法连接后端上传服务',
+          isBackendOnline: false,
         });
       };
 
@@ -1139,25 +1153,34 @@ export const uploadApi = {
   },
 
   /**
-   * Fetch current quota info for today
+   * Fetch current quota info for today.
+   * All upload restrictions are enforced by the backend; this only reports
+   * the policy/counters for display purposes. Returns data ONLY when the
+   * backend is reachable (no client-side fabricated limits).
    */
-  async getQuota(): Promise<{ success: boolean; data?: any; message?: string }> {
+  async getQuota(): Promise<{ success: boolean; online: boolean; data?: UploadQuotaInfo; message?: string }> {
     const res = await request<any>('/upload/quota');
     if (res.isBackendOnline && res.success && res.data) {
-      return { success: true, data: res.data };
+      const d = res.data;
+      return {
+        success: true,
+        online: true,
+        data: {
+          role: d.role || 'anonymous',
+          daily_limit: Number(d.daily_limit || 0),
+          today_used: Number(d.today_used || 0),
+          remaining_today: Number(d.remaining_today || 0),
+          single_max_size_mb: Number(d.single_max_size_mb || 0),
+          single_max_size_bytes: Number(d.single_max_size_bytes || 0),
+          allow_anonymous: !!d.allow_anonymous,
+          naming_rule: d.naming_rule || 'timestamp',
+        },
+      };
     }
-    return {
-      success: true,
-      data: {
-        role: authStorage.getUser()?.role || 'anonymous',
-        daily_limit: 20,
-        today_used: 0,
-        remaining_today: 20,
-        single_max_size_mb: 5,
-        allow_anonymous: true,
-        naming_rule: 'timestamp',
-      },
-    };
+    if (res.isBackendOnline) {
+      return { success: false, online: true, message: res.message };
+    }
+    return { success: false, online: false, message: res.message };
   },
 };
 

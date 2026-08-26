@@ -5,8 +5,11 @@ import {
   Layers,
   Sparkles,
   Globe,
+  Gauge,
 } from 'lucide-react';
 import { Album } from '../types';
+import { useUser } from '../pages/user/UserContext';
+import { partitionAllowedImages } from '../utils/imageProcessing';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -43,10 +46,19 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
   onAlbumChange,
 }) => {
   const { t } = useTranslation();
+  const { quotaInfo, showToast } = useUser();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const notifyRejected = (count: number) => {
+    showToast(
+      t('common.warning'),
+      t('uploadModal.unsupportedSkipped', { count }),
+      'warning'
+    );
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -66,10 +78,10 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
     setIsDragOver(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const validFiles = Array.from(e.dataTransfer.files).filter((file: File) =>
-        file.type.startsWith('image/') ||
-        /\.(png|jpe?g|webp|gif|svg|avif|bmp|ico|tiff)$/i.test(file.name)
-      );
+      const { accepted: validFiles, rejected } = partitionAllowedImages(Array.from(e.dataTransfer.files));
+      if (rejected.length > 0) {
+        notifyRejected(rejected.length);
+      }
       if (validFiles.length > 0) {
         onFilesSelected(validFiles);
       }
@@ -78,8 +90,13 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const validFiles: File[] = Array.from(e.target.files);
-      onFilesSelected(validFiles);
+      const { accepted: validFiles, rejected } = partitionAllowedImages(Array.from(e.target.files));
+      if (rejected.length > 0) {
+        notifyRejected(rejected.length);
+      }
+      if (validFiles.length > 0) {
+        onFilesSelected(validFiles);
+      }
       e.target.value = '';
     }
   };
@@ -144,7 +161,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.svg,.avif,.bmp,.ico,.tiff"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif,image/bmp,image/x-icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.avif,.bmp,.ico"
             className="hidden"
             onChange={handleFileInputChange}
           />
@@ -182,6 +199,21 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
                 </Badge>
               ))}
             </div>
+
+            {/* Live quota policy reported by backend (GET /api/v1/upload/quota).
+                Restrictions themselves are enforced server-side. */}
+            {quotaInfo && (
+              <p className="mt-3 flex items-center gap-1.5 text-[11px] tracking-wide text-muted-foreground">
+                <Gauge className="w-3 h-3 text-primary" />
+                {quotaInfo.daily_limit > 0
+                  ? t('hero.quotaHint', {
+                      max: quotaInfo.single_max_size_mb,
+                      remaining: Math.max(quotaInfo.remaining_today, 0),
+                      limit: quotaInfo.daily_limit,
+                    })
+                  : t('hero.quotaUnlimited', { max: quotaInfo.single_max_size_mb })}
+              </p>
+            )}
           </div>
         </div>
 

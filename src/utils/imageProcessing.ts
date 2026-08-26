@@ -8,6 +8,51 @@ export function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Whitelist enforced on every upload entry point (drop, picker, paste).
+export const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/png', // PNG
+  'image/jpeg', // JPG
+  'image/webp', // WEBP
+  'image/gif', // GIF
+  'image/svg+xml', // SVG
+  'image/avif', // AVIF
+  'image/bmp', // BMP
+  'image/x-icon', // ICO
+  'image/vnd.microsoft.icon', // ICO (alias)
+] as const;
+
+const ALLOWED_IMAGE_EXTENSIONS = [
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
+  'svg',
+  'avif',
+  'bmp',
+  'ico',
+];
+
+export function isAllowedImageType(mimeType: string, fileName?: string): boolean {
+  if (mimeType && ALLOWED_IMAGE_MIME_TYPES.includes(mimeType.toLowerCase() as any)) {
+    return true;
+  }
+  // Fallback to extension when browser reports an empty/unmapped MIME type
+  if (!fileName) return false;
+  const ext = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
+  return ALLOWED_IMAGE_EXTENSIONS.includes(ext);
+}
+
+export function partitionAllowedImages(files: File[]): { accepted: File[]; rejected: File[] } {
+  const accepted: File[] = [];
+  const rejected: File[] = [];
+  for (const file of files) {
+    if (isAllowedImageType(file.type, file.name)) accepted.push(file);
+    else rejected.push(file);
+  }
+  return { accepted, rejected };
+}
+
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleString('zh-CN', {
