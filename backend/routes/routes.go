@@ -37,6 +37,7 @@ func SetupRouter() *gin.Engine {
 	userCtrl := controllers.NewUserController()
 	uploadCtrl := controllers.NewUploadController()
 	imageCtrl := controllers.NewImageController()
+	devCtrl := controllers.NewDevController()
 
 	// Static route to serve uploaded local image assets (legacy; new links go
 	// through the counting proxy /image/... below)
@@ -148,10 +149,29 @@ func SetupRouter() *gin.Engine {
 		v1.GET("/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
 				"pong":       true,
-				"modules":    []string{"auth", "admin", "images", "albums", "tags", "storage", "users"},
+				"modules":    []string{"auth", "admin", "images", "albums", "tags", "storage", "users", "dev"},
 				"admin_path": "/api/v1/admin",
 			}, "Wan Pictures (万图) backend & admin management engine is online"))
 		})
+
+		// Developer Module: API KEY Management (Requires JWT).
+		// Keys are used to authenticate the dedicated open upload endpoints.
+		devKeys := v1.Group("/dev/keys")
+		devKeys.Use(middleware.JWTAuthMiddleware())
+		{
+			devKeys.GET("", devCtrl.ListApiKeys)
+			devKeys.POST("", devCtrl.CreateApiKey)
+			devKeys.DELETE("/:id", devCtrl.RevokeApiKey)
+		}
+	}
+
+	// Dedicated Open API group (/openapi/v1): external developer upload surface.
+	// Authenticated EXCLUSIVELY by developer API keys (Bearer wpk_...) via
+	// ApiKeyAuthMiddleware — JWT tokens are rejected on these routes.
+	openapi := r.Group("/openapi/v1")
+	{
+		uploadRateLimit := middleware.UploadRateLimit()
+		openapi.POST("/upload", middleware.ApiKeyAuthMiddleware(), uploadRateLimit, devCtrl.ApiUpload)
 	}
 
 	return r

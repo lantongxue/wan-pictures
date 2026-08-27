@@ -267,4 +267,21 @@ type UploadQuotaInfo struct {
 	NamingRule         string `json:"naming_rule"`
 }
 
+// Developer API Key DTOs
+type CreateApiKeyRequest struct {
+	Name          string `json:"name" binding:"required,min=1,max=64"`
+	ExpiresInDays *int   `json:"expires_in_days" binding:"omitempty,min=1,max=3650"` // optional; NULL/0 = never expires
+}
+
+// ApiKeyResponse is the safe representation of an API key. The plaintext
+// `key` field is always populated — owners may review their keys at any time.
+type ApiKeyResponse struct {
+	ID         uint       `json:"id"`
+	Name       string     `json:"name"`
+	Key        string     `json:"key"` // plaintext, viewable by the owner anytime
+	LastUsedAt *time.Time `json:"last_used_at"`
+	ExpiresAt  *time.Time `json:"expires_at"`
+	CreatedAt  time.Time  `json:"created_at"`
+}
+
 

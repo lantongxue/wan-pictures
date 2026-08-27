@@ -25,6 +25,7 @@ import {
   Menu,
   Languages,
   KeyRound,
+  Code2,
 } from 'lucide-react';
 import { Album, ViewMode, FilterOptions } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
@@ -64,6 +65,7 @@ interface NavbarProps {
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onOpenProfile: () => void;
   onOpenPassword: () => void;
+  onOpenDeveloper?: () => void;
   onShowToast?: (title: string, desc?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
@@ -82,6 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onOpenProfile,
   onOpenPassword,
+  onOpenDeveloper,
   onShowToast,
 }) => {
   const navigate = useNavigate();
@@ -383,6 +386,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <KeyRound className="w-4 h-4 text-amber-500 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <span className="text-foreground">{t('nav.changePassword')}</span>
+                          </div>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          id="dropdown-item-developer"
+                          onClick={onOpenDeveloper}
+                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                        >
+                          <Code2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-foreground">{t('nav.developer')}</span>
                           </div>
                         </DropdownMenuItem>
 
@@ -886,6 +900,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="flex items-center gap-2.5">
                         <KeyRound className="w-4 h-4 text-amber-500 shrink-0" />
                         <span className="text-foreground">{t('nav.changePassword')}</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  )}
+
+                  {isAuthenticated && (
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        if (onOpenDeveloper) onOpenDeveloper();
+                      }}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-muted/20 hover:bg-muted/50 border border-border/40 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Code2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span className="text-foreground">{t('nav.developer')}</span>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>

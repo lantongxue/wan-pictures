@@ -286,3 +286,17 @@ export interface ChangePasswordPayload {
   new_password: string;
 }
 
+export interface ApiKeyItem {
+  id: number;
+  name: string;
+  key?: string; // plaintext — viewable by the owner anytime
+  lastUsedAt?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export interface CreateApiKeyPayload {
+  name: string;
+  expires_in_days?: number;
+}
+

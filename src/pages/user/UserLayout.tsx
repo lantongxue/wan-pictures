@@ -98,6 +98,7 @@ const UserLayoutContent: React.FC = () => {
         onOpenAuth={handleOpenAuth}
         onOpenProfile={handleOpenProfile}
         onOpenPassword={handleOpenPassword}
+        onOpenDeveloper={() => navigate('/developer')}
         onShowToast={showToast}
       />
 

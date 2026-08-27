@@ -21,6 +21,8 @@ import {
   StorageDriverType,
   StorageTestResult,
   UploadQuotaInfo,
+  ApiKeyItem,
+  CreateApiKeyPayload,
 } from '../types';
 import { sha256 } from 'js-sha256';
 
@@ -1118,6 +1120,74 @@ export const adminApi = {
       return { success: true, message: res.message || '密码重置成功' };
     }
     throw new Error(res.message || '重置密码失败');
+  },
+};
+
+/**
+ * Wan Pictures (万图) Developer Module API Service
+ * API KEY management lives under the standard /api/v1 namespace (JWT auth),
+ * while the dedicated upload endpoint is exposed at /openapi/v1/upload and
+ * authenticated exclusively with developer API keys (Bearer wpk_...).
+ */
+export const devApi = {
+  /**
+   * List all API keys owned by the authenticated user
+   * GET /api/v1/dev/keys
+   */
+  async listKeys(): Promise<{ success: boolean; data: ApiKeyItem[]; message?: string }> {
+    const res = await request<any[]>('/dev/keys');
+    if (res.success && Array.isArray(res.data)) {
+      const keys: ApiKeyItem[] = res.data.map((k) => ({
+        id: Number(k.id),
+        name: k.name,
+        key: k.key || '',
+        lastUsedAt: k.last_used_at || null,
+        expiresAt: k.expires_at || null,
+        createdAt: k.created_at,
+      }));
+      return { success: true, data: keys, message: res.message };
+    }
+    return { success: false, data: [], message: res.message || '无法加载 API KEY 列表' };
+  },
+
+  /**
+   * Create a new API key. The plaintext key is returned exactly once.
+   * POST /api/v1/dev/keys
+   */
+  async createKey(payload: CreateApiKeyPayload): Promise<{ success: boolean; data?: ApiKeyItem; message?: string }> {
+    const body: Record<string, any> = { name: payload.name };
+    if (payload.expires_in_days && payload.expires_in_days > 0) {
+      body.expires_in_days = payload.expires_in_days;
+    }
+    const res = await request<any>('/dev/keys', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (res.success && res.data) {
+      const k = res.data;
+      return {
+        success: true,
+        data: {
+          id: Number(k.id),
+          name: k.name,
+          key: k.key || '',
+          lastUsedAt: k.last_used_at || null,
+          expiresAt: k.expires_at || null,
+          createdAt: k.created_at,
+        },
+        message: res.message,
+      };
+    }
+    return { success: false, message: res.message || 'API KEY 创建失败' };
+  },
+
+  /**
+   * Revoke (permanently invalidate) an API key
+   * DELETE /api/v1/dev/keys/:id
+   */
+  async revokeKey(id: number): Promise<{ success: boolean; message?: string }> {
+    const res = await request(`/dev/keys/${id}`, { method: 'DELETE' });
+    return { success: res.success, message: res.message };
   },
 };
 

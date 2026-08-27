@@ -8,7 +8,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
 // User Front-End System & Pages
-import { UserLayout, UserWorkspacePage, UserPlazaPage } from './pages/user';
+import { UserLayout, UserWorkspacePage, UserPlazaPage, DeveloperPage } from './pages/user';
 
 // Admin Management System & Sub-pages
 import { AdminLayout } from './layouts/AdminLayout';
@@ -33,6 +33,7 @@ export default function App() {
               <Route index element={<UserPlazaPage />} />
               <Route path="plaza" element={<UserPlazaPage />} />
               <Route path="workspace" element={<UserWorkspacePage />} />
+              <Route path="developer" element={<DeveloperPage />} />
             </Route>
 
             {/* Independent Admin Management System */}

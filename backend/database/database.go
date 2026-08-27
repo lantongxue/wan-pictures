@@ -77,6 +77,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.FileAsset{},
 		&models.SystemSetting{},
 		&models.UploadLog{},
+		&models.ApiKey{},
 	); err != nil {
 		return err
 	}
@@ -98,6 +99,14 @@ func AutoMigrate(db *gorm.DB) error {
 			}
 			log.Printf("[Database] Dropped removed color_palette column")
 		}
+	}
+
+	// Drop the removed key_prefix column from api_keys
+	if db.Migrator().HasColumn(&models.ApiKey{}, "key_prefix") {
+		if err := db.Migrator().DropColumn(&models.ApiKey{}, "key_prefix"); err != nil {
+			return fmt.Errorf("failed to drop api_keys.key_prefix column: %w", err)
+		}
+		log.Printf("[Database] Dropped removed api_keys.key_prefix column")
 	}
 
 	// Multi-valued index on the tags JSON array, enabling indexed tag

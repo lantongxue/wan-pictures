@@ -200,6 +200,16 @@ func resolveRateLimitIdentity(c *gin.Context) (dimension string, identity string
 				return rateLimitDimUser, id, user.ID
 			}
 		}
+		// Developer API keys (wpk_...) count against their owner's bucket
+		if utils.IsApiKeyToken(tokenStr) {
+			if key, ok := lookupApiKey(tokenStr); ok {
+				var user models.User
+				if err := database.DB.First(&user, key.UserID).Error; err == nil {
+					id := strconv.FormatUint(uint64(user.ID), 10)
+					return rateLimitDimUser, id, user.ID
+				}
+			}
+		}
 	}
 
 	return rateLimitDimAnon, clientIP, 0

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -213,7 +214,10 @@ func isDuplicateKeyError(err error) bool {
 
 // buildImageFromAsset constructs a logical Image record pointing at an existing
 // physical FileAsset (the deduplicated original). Used by all instant-upload paths.
-func buildImageFromAsset(asset *models.FileAsset, name, originalName string, albumID, userID uint) models.Image {
+func buildImageFromAsset(asset *models.FileAsset, name, originalName string, albumID, userID uint, tags []string) models.Image {
+	if len(tags) == 0 {
+		tags = []string{strings.ToUpper(asset.Extension)}
+	}
 	now := time.Now()
 	return models.Image{
 		Name:          name,
@@ -228,7 +232,7 @@ func buildImageFromAsset(asset *models.FileAsset, name, originalName string, alb
 		ThumbUrl:      asset.ThumbUrl,
 		AlbumID:       albumID,
 		UserID:        userID,
-		Tags:          []string{strings.ToUpper(asset.Extension)},
+		Tags:          tags,
 		StorageDriver: asset.StorageDriver,
 		FileAssetID:   asset.ID,
 		FileHash:      asset.FileHash,
@@ -307,7 +311,7 @@ func parseSVGDimensions(data []byte) (int, int, error) {
 // locks the asset row against concurrent deletions of the last reference, then
 // inserts the Image + UploadLog and bumps ref_count in a single transaction.
 // Returns gorm.ErrRecordNotFound wrapped if the asset vanished concurrently.
-func persistInstantImage(asset *models.FileAsset, name, originalName string, albumID, userID uint, clientIP string) (*models.Image, error) {
+func persistInstantImage(asset *models.FileAsset, name, originalName string, albumID, userID uint, clientIP string, tags []string) (*models.Image, error) {
 	var created *models.Image
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		var locked models.FileAsset
@@ -315,7 +319,7 @@ func persistInstantImage(asset *models.FileAsset, name, originalName string, alb
 			return fmt.Errorf("file asset unavailable for instant upload: %w", err)
 		}
 
-		img := buildImageFromAsset(&locked, name, originalName, albumID, userID)
+		img := buildImageFromAsset(&locked, name, originalName, albumID, userID, tags)
 		if err := tx.Create(&img).Error; err != nil {
 			return err
 		}
@@ -387,7 +391,7 @@ func (ctrl *UploadController) CheckHash(c *gin.Context) {
 		albumID = models.DefaultAlbumID
 	}
 
-	newImage, linkErr := persistInstantImage(&fileAsset, imgName, req.Name, albumID, userID, clientIP)
+	newImage, linkErr := persistInstantImage(&fileAsset, imgName, req.Name, albumID, userID, clientIP, nil)
 	if linkErr != nil {
 		if errors.Is(linkErr, gorm.ErrRecordNotFound) {
 			// Asset purged between lookup and linking (last reference deleted
@@ -420,24 +424,37 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 	role, userID, clientIP := ctrl.getUserContext(c)
 
+	// Web uploads carry no user tags; the extension tag is applied automatically
+	status, payload, message, err := ctrl.processUpload(c, role, userID, clientIP, fileHeader, nil)
+	if err != nil {
+		c.JSON(status, models.ErrorResponse(status, err.Error()))
+		return
+	}
+	c.JSON(status, models.SuccessResponse(payload, message))
+}
+
+// processUpload is the shared upload pipeline used by both the public web
+// endpoint (/api/v1/upload) and the dedicated open API endpoint
+// (/openapi/v1/upload). It enforces quota policies, performs SHA-256 instant
+// deduplication (秒传), stores the file through the active storage engine,
+// generates a thumbnail, and persists FileAsset + Image + UploadLog atomically.
+// extraTags (optional) are validated user tags applied to the created Image.
+func (ctrl *UploadController) processUpload(c *gin.Context, role string, userID uint, clientIP string, fileHeader *multipart.FileHeader, extraTags []string) (int, gin.H, string, error) {
 	// 1. Quota & Size check
 	if err := ctrl.checkUploadQuota(role, userID, clientIP, fileHeader.Size); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, err.Error()))
-		return
+		return http.StatusBadRequest, nil, "", err
 	}
 
 	// 2. Read file content into memory
 	f, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to read file: "+err.Error()))
-		return
+		return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to read file: %w", err)
 	}
 	defer f.Close()
 
 	fileBytes, err := io.ReadAll(f)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to read file content: "+err.Error()))
-		return
+		return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to read file content: %w", err)
 	}
 
 	// 3. Compute SHA-256 and MD5 hashes
@@ -461,17 +478,15 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 	if err := database.DB.Where("file_hash = ?", sha256Hash).First(&existingAsset).Error; err == nil {
 		formattedName := formatFileNameBySystemRule(fileHeader.Filename, quotas.NamingRule, quotas.CustomPrefix)
 
-		newImage, linkErr := persistInstantImage(&existingAsset, formattedName, fileHeader.Filename, albumID, userID, clientIP)
+		newImage, linkErr := persistInstantImage(&existingAsset, formattedName, fileHeader.Filename, albumID, userID, clientIP, extraTags)
 		if linkErr == nil {
-			c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
+			return http.StatusOK, gin.H{
 				"is_instant": true,
 				"image":      newImage.PublicCopy(),
-			}, "⚡ 秒传成功"))
-			return
+			}, "⚡ 秒传成功", nil
 		}
 		if !errors.Is(linkErr, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
-			return
+			return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to create image record: %w", linkErr)
 		}
 		// Asset purged between lookup and linking (last reference deleted
 		// concurrently) - fall through and store the file as a fresh upload.
@@ -503,6 +518,9 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		contentType = "image/" + cleanExt
 	}
 
+	// 5b. Merge user-provided tags (already validated) with the format tag
+	tags := finalizeUploadTags(extraTags, cleanExt)
+
 	// 6. Apply system-level renaming and construct storage path
 	formattedName := formatFileNameBySystemRule(fileHeader.Filename, quotas.NamingRule, quotas.CustomPrefix)
 	storageKey := generateStoragePath(formattedName)
@@ -511,15 +529,13 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 	mgr := storage.GetManager()
 	engine, driver, err := mgr.GetActiveEngine()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Storage engine unavailable: "+err.Error()))
-		return
+		return http.StatusInternalServerError, nil, "", fmt.Errorf("Storage engine unavailable: %w", err)
 	}
 
 	// 8. Save to storage backend
 	publicURL, err := engine.Save(c.Request.Context(), storageKey, bytes.NewReader(fileBytes), int64(len(fileBytes)), contentType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to save file to storage: "+err.Error()))
-		return
+		return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to save file to storage: %w", err)
 	}
 
 	// 8b. Generate a downscaled thumbnail next to the original so gallery
@@ -565,7 +581,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 			ThumbUrl:      thumbURL,
 			AlbumID:       albumID,
 			UserID:        userID,
-			Tags:          []string{strings.ToUpper(cleanExt)},
+			Tags:          tags,
 			StorageDriver: string(driver),
 			FileAssetID:   newAsset.ID,
 			FileHash:      newAsset.FileHash,
@@ -599,34 +615,89 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 			var winner models.FileAsset
 			if ferr := database.DB.Where("file_hash = ?", sha256Hash).First(&winner).Error; ferr == nil {
-newImage, linkErr := persistInstantImage(&winner, formattedName, fileHeader.Filename, albumID, userID, clientIP)
-			if linkErr == nil {
-				c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
-					"is_instant": true,
-					"image":      newImage.PublicCopy(),
-				}, "⚡ 秒传成功"))
-				return
-			}
+				newImage, linkErr := persistInstantImage(&winner, formattedName, fileHeader.Filename, albumID, userID, clientIP, extraTags)
+				if linkErr == nil {
+					return http.StatusOK, gin.H{
+						"is_instant": true,
+						"image":      newImage.PublicCopy(),
+					}, "⚡ 秒传成功", nil
+				}
 				if !errors.Is(linkErr, gorm.ErrRecordNotFound) {
-					c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
-					return
+					return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to create image record: %w", linkErr)
 				}
 			}
-			c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "File asset disappeared during deduplication, please retry"))
-			return
+			return http.StatusInternalServerError, nil, "", errors.New("File asset disappeared during deduplication, please retry")
 		}
 
 		// Transaction rolled back - remove the object we saved to storage
 		_ = engine.Delete(c.Request.Context(), storageKey)
 		_ = engine.Delete(c.Request.Context(), thumbnail.ThumbKey(storageKey))
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to persist upload: "+err.Error()))
-		return
+		return http.StatusInternalServerError, nil, "", fmt.Errorf("Failed to persist upload: %w", err)
 	}
 
-	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
+	return http.StatusOK, gin.H{
 		"is_instant": false,
 		"image":      createdImage.PublicCopy(),
-	}, "上传成功"))
+	}, "上传成功", nil
+}
+
+// parseUploadTags parses a multipart 'tags' field into a validated list.
+// Separators: comma, Chinese comma, semicolon, Chinese semicolon, Chinese dash.
+// Rules: trim whitespace, drop empty items, dedupe case-insensitively,
+// max 32 runes per tag, max 10 tags total.
+func parseUploadTags(raw string) ([]string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '，' || r == ';' || r == '；' || r == '、'
+	})
+
+	seen := make(map[string]bool, len(parts))
+	tags := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t == "" {
+			continue
+		}
+		if len([]rune(t)) > 32 {
+			return nil, fmt.Errorf("标签「%s」长度超出限制（每个标签最多 32 字符）", t)
+		}
+		key := strings.ToLower(t)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		tags = append(tags, t)
+		if len(tags) > 10 {
+			return nil, errors.New("标签数量超出限制（最多 10 个标签）")
+		}
+	}
+	return tags, nil
+}
+
+// finalizeUploadTags merges validated user tags with the mandatory format tag
+// (e.g. "PNG"), deduplicating case-insensitively and capping at 10 total.
+func finalizeUploadTags(userTags []string, ext string) []string {
+	extTag := strings.ToUpper(ext)
+	seen := make(map[string]bool, len(userTags)+1)
+	result := make([]string, 0, len(userTags)+1)
+	for _, t := range userTags {
+		key := strings.ToLower(t)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		result = append(result, t)
+		if len(result) >= 10 {
+			return result
+		}
+	}
+	if !seen[strings.ToLower(extTag)] && len(result) < 10 {
+		result = append(result, extTag)
+	}
+	return result
 }
 
 // GetQuota returns remaining upload limit and quota policy for the current caller
