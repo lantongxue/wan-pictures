@@ -24,8 +24,6 @@ import {
   Sparkles,
   Database,
   Cloud,
-  CheckCircle2,
-  AlertTriangle,
   User as UserIcon,
   Mail,
   ChevronDown,
@@ -39,6 +37,8 @@ import { formatFileSize } from '../utils/imageProcessing';
 import { adminApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Toaster } from '../components/ui/toaster';
+import { toast } from '../components/ui/use-toast';
 import { UserProfileModal } from '../components/UserProfileModal';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import {
@@ -68,7 +68,6 @@ export const AdminLayout: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [stats, setStats] = useState<{
     totalImages: number;
     totalAlbums: number;
@@ -174,8 +173,11 @@ export const AdminLayout: React.FC = () => {
   };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    setFeedback({ message, type });
-    setTimeout(() => setFeedback(null), 3000);
+    toast({
+      title: message,
+      variant: type === 'error' ? 'destructive' : 'success',
+      duration: 3000,
+    });
   };
 
   // Get current page title for breadcrumbs
@@ -718,27 +720,7 @@ export const AdminLayout: React.FC = () => {
       </div>
 
       {/* Toast notification */}
-      <AnimatePresence>
-        {feedback && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`fixed top-20 right-6 z-50 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-rose-500 text-white'
-            }`}
-          >
-            {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-            )}
-            <span>{feedback.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Toaster />
 
       {/* User Profile Modal */}
       <UserProfileModal

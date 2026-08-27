@@ -852,6 +852,7 @@
     "downloadOriginal": "下载原图",
     "loadFailed": "加载图片失败",
     "copySuccess": "已复制 \"{{name}}\" 直链",
+    "copyFailed": "复制失败，请手动复制链接",
     "saveFailed": "保存失败",
     "saved": "图片属性已保存",
     "confirmDelete": "确定要彻底删除图片 \"{{name}}\" 吗？此操作无法撤销。",

@@ -8,11 +8,11 @@ import {
   UploadQueueItem,
   UploadQuotaInfo,
   FilterOptions,
-  ToastMessage,
 } from '../../types';
 import { uploadApi, publicApi, adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { partitionAllowedImages, isAllowedImageType, extractExtension } from '../../utils/imageProcessing';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from '../../components/ui/use-toast';
 
 export interface UserContextType {
   // Data States (served live by the Go backend)
@@ -67,9 +67,7 @@ export interface UserContextType {
   totalStorageBytes: number;
 
   // Toasts
-  toasts: ToastMessage[];
   showToast: (title: string, description?: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
-  dismissToast: (id: string) => void;
 
   // Handlers
   refreshImages: () => Promise<void>;
@@ -157,23 +155,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // Toasts
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
   const showToast = useCallback(
     (title: string, description?: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
-      const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5);
-      const newToast: ToastMessage = { id, title, description, type };
-      setToasts((prev) => [...prev, newToast]);
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, 3500);
+      const variant =
+        type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'error' ? 'destructive' : 'default';
+      toast({ title, description, variant, duration: 3500 });
     },
     []
   );
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
 
   // Fetch upload quota policy from backend (restrictions live entirely server-side)
   const refreshQuota = useCallback(async (): Promise<UploadQuotaInfo | null> => {
@@ -856,9 +845,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     filteredImages,
     selectedImagesList,
     totalStorageBytes,
-    toasts,
     showToast,
-    dismissToast,
     refreshImages,
     refreshAlbums,
     handleFilesSelected,

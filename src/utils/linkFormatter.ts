@@ -1,3 +1,4 @@
+import ClipboardJS from 'clipboard';
 import { ImageItem, LinkFormatType } from '../types';
 
 /**
@@ -100,25 +101,35 @@ export function formatBatchImageLinks(
 
 export async function copyToClipboard(text: string): Promise<boolean> {
   if (!text) return false;
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } else {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      textarea.style.top = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      return successful;
-    }
-  } catch (err) {
-    console.error('Copy failed:', err);
-    return false;
-  }
+  if (!ClipboardJS.isSupported()) return false;
+
+  // When called from inside a modal (Radix Dialog focus trap), the fake
+  // element must live inside the dialog or the focus trap will steal focus
+  // back and the execCommand('copy') selection will fail.
+  const container =
+    (document.activeElement?.closest('[role="dialog"]') as Element) || document.body;
+
+  const trigger = document.createElement('button');
+  container.appendChild(trigger);
+
+  const clipboard = new ClipboardJS(trigger, {
+    text: () => text,
+    container,
+  });
+
+  return new Promise<boolean>((resolve) => {
+    const cleanup = () => {
+      clipboard.destroy();
+      trigger.remove();
+    };
+    clipboard.on('success', () => {
+      cleanup();
+      resolve(true);
+    });
+    clipboard.on('error', () => {
+      cleanup();
+      resolve(false);
+    });
+    trigger.click();
+  });
 }

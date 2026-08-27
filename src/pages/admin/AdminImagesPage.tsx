@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   Image as ImageIcon,
   Search,
@@ -27,7 +26,7 @@ import {
 import { ImageItem, Album, TagItem, StorageDriverType } from '../../types';
 import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
 import { formatFileSize, formatDate } from '../../utils/imageProcessing';
-import { toAbsoluteImageUrl } from '../../utils/linkFormatter';
+import { toAbsoluteImageUrl, copyToClipboard } from '../../utils/linkFormatter';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -55,6 +54,7 @@ import {
   FieldLabel,
   FieldDescription,
 } from '../../components/ui/field';
+import { toast } from '../../components/ui/use-toast';
 
 export const AdminImagesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -93,11 +93,13 @@ export const AdminImagesPage: React.FC = () => {
 
   // Toast / Feedback message
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    setFeedback({ message, type });
-    setTimeout(() => setFeedback(null), 3000);
+    toast({
+      title: message,
+      variant: type === 'error' ? 'destructive' : 'success',
+      duration: 3000,
+    });
   };
 
   const loadData = async () => {
@@ -154,9 +156,13 @@ export const AdminImagesPage: React.FC = () => {
   };
 
   // Actions
-  const handleCopyLink = (img: ImageItem) => {
+  const handleCopyLink = async (img: ImageItem) => {
     const url = toAbsoluteImageUrl(img.url || img.dataUrl);
-    navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (!ok) {
+      showNotification(t('adminImages.copyFailed'), 'error');
+      return;
+    }
     setCopiedId(img.id);
     showNotification(t('adminImages.copySuccess', { name: img.name }));
     setTimeout(() => setCopiedId(null), 2000);
@@ -254,24 +260,6 @@ export const AdminImagesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Toast notification */}
-      <AnimatePresence>
-        {feedback && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`fixed top-20 right-6 z-50 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-rose-500 text-white'
-            }`}
-          >
-            <span>{feedback.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Page Title & Stats Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -1038,23 +1026,17 @@ export const AdminImagesPage: React.FC = () => {
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-6">
           {previewImage && (
             <div className="space-y-4">
-              <div className="relative rounded-2xl overflow-hidden bg-black/90 flex items-center justify-center min-h-[300px] max-h-[500px]">
-                <img
-                  src={previewImage.dataUrl || previewImage.url}
-                  alt={previewImage.name}
-                  className="max-h-[500px] w-auto object-contain"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-foreground">{previewImage.name}</h3>
-                  <p className="text-xs font-mono text-muted-foreground">
+              {/* Header: keeps the dialog's floating close button (top-right)
+                  over this title bar instead of over the image below */}
+              <div className="flex items-center justify-between gap-3 pr-8">
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-foreground truncate">{previewImage.name}</h3>
+                  <p className="text-xs font-mono text-muted-foreground truncate">
                     {previewImage.originalName} · {formatFileSize(previewImage.size)} · {previewImage.width}×{previewImage.height}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
                     variant="outline"
@@ -1078,6 +1060,14 @@ export const AdminImagesPage: React.FC = () => {
                     <span>{t('adminImages.downloadOriginal')}</span>
                   </Button>
                 </div>
+              </div>
+
+              <div className="relative rounded-2xl overflow-hidden bg-black/90 flex items-center justify-center min-h-[300px] max-h-[500px]">
+                <img
+                  src={previewImage.dataUrl || previewImage.url}
+                  alt={previewImage.name}
+                  className="max-w-full max-h-[500px] object-contain"
+                />
               </div>
             </div>
           )}

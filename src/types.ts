@@ -207,14 +207,6 @@ export interface FilterOptions {
   aspectRatioFilter?: AspectRatioFilter;
 }
 
-export interface ToastMessage {
-  id: string;
-  type: 'success' | 'info' | 'warning' | 'error';
-  title: string;
-  description?: string;
-  duration?: number;
-}
-
 export interface User {
   id: number;
   username: string;

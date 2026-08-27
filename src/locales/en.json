@@ -852,6 +852,7 @@
     "downloadOriginal": "Download original",
     "loadFailed": "Failed to load images",
     "copySuccess": "Copied direct link of \"{{name}}\"",
+    "copyFailed": "Copy failed, please copy the link manually",
     "saveFailed": "Failed to save",
     "saved": "Image attributes saved",
     "confirmDelete": "Are you sure you want to permanently delete image \"{{name}}\"? This cannot be undone.",

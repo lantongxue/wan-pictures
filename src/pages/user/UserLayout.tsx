@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { UserProvider, useUser } from './UserContext';
 
 import { Navbar } from '../../components/Navbar';
-import { ToastContainer } from '../../components/Toast';
+import { Toaster } from '../../components/ui/toaster';
 import { BatchActionBar } from '../../components/BatchActionBar';
 import { UploadModal } from '../../components/UploadModal';
 import { LinkGeneratorModal } from '../../components/LinkGeneratorModal';
@@ -53,9 +53,7 @@ const UserLayoutContent: React.FC = () => {
     filteredImages,
     selectedImagesList,
     totalStorageBytes,
-    toasts,
     showToast,
-    dismissToast,
     handleUpdateImage,
     handleDeleteImage,
     handleToggleFavorite,
@@ -82,7 +80,7 @@ const UserLayoutContent: React.FC = () => {
       }`}
     >
       {/* Toast Notification Container */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <Toaster />
 
       {/* Main Navbar */}
       <Navbar

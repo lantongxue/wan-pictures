@@ -1,43 +1,29 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Users, UserPlus, Shield, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { UserManagementTab } from '../../components/admin/UserManagementTab';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { toast } from '../../components/ui/use-toast';
 
 export const AdminUsersPage: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [userCount, setUserCount] = useState<number>(3);
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showNotification = (title: string, desc?: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
-    setFeedback({ message: title + (desc ? `: ${desc}` : ''), type: type === 'error' ? 'error' : 'success' });
-    setTimeout(() => setFeedback(null), 3500);
+    toast({
+      title,
+      description: desc,
+      variant:
+        type === 'error' ? 'destructive' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'default',
+      duration: 3500,
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Toast notification */}
-      <AnimatePresence>
-        {feedback && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`fixed top-20 right-6 z-50 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-rose-500 text-white'
-            }`}
-          >
-            <span>{feedback.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
