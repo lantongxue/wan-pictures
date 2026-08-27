@@ -490,9 +490,9 @@ export const AdminImagesPage: React.FC = () => {
         /* TABLE VIEW */
         <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[1180px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold">
+                <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold whitespace-nowrap">
                   <th className="p-3.5 w-10 text-center">
                     <button
                       onClick={handleSelectAll}
@@ -506,14 +506,14 @@ export const AdminImagesPage: React.FC = () => {
                     </button>
                   </th>
                   <th className="p-3.5">{t('adminImages.colThumb')}</th>
-                  <th className="p-3.5 min-w-[200px]">{t('adminImages.colName')}</th>
-                  <th className="p-3.5">{t('adminImages.colAlbum')}</th>
-                  <th className="p-3.5">{t('adminImages.colEngine')}</th>
-<th className="p-3.5">{t('adminImages.colSpec')}</th>
-                 <th className="p-3.5">{t('adminImages.colViews')}</th>
-                 <th className="p-3.5">{t('adminImages.colSize')}</th>
-                  <th className="p-3.5">{t('adminImages.colTags')}</th>
-                  <th className="p-3.5">{t('adminImages.colTime')}</th>
+                  <th className="p-3.5 min-w-[200px] w-[240px]">{t('adminImages.colName')}</th>
+                  <th className="p-3.5 whitespace-nowrap">{t('adminImages.colAlbum')}</th>
+                  <th className="p-3.5 whitespace-nowrap">{t('adminImages.colEngine')}</th>
+<th className="p-3.5 whitespace-nowrap">{t('adminImages.colSpec')}</th>
+                 <th className="p-3.5 whitespace-nowrap">{t('adminImages.colViews')}</th>
+                 <th className="p-3.5 whitespace-nowrap">{t('adminImages.colSize')}</th>
+                  <th className="p-3.5 w-[160px]">{t('adminImages.colTags')}</th>
+                  <th className="p-3.5 whitespace-nowrap">{t('adminImages.colTime')}</th>
                   <th className="p-3.5 text-right pr-4">{t('adminImages.colAction')}</th>
                 </tr>
               </thead>
@@ -559,10 +559,10 @@ export const AdminImagesPage: React.FC = () => {
 
                       {/* Name */}
                       <td className="p-3.5">
-                        <div className="font-semibold text-foreground truncate max-w-[240px]">
+                        <div className="font-semibold text-foreground truncate max-w-[240px]" title={img.name}>
                           {img.name}
                         </div>
-                        <div className="text-[11px] font-mono text-muted-foreground truncate max-w-[240px]">
+                        <div className="text-[11px] font-mono text-muted-foreground truncate max-w-[240px]" title={img.originalName || img.name}>
                           {img.originalName || img.name}
                         </div>
                       </td>
@@ -571,7 +571,7 @@ export const AdminImagesPage: React.FC = () => {
                       <td className="p-3.5">
                         <Badge
                           variant="subtle"
-                          className="text-[11px] font-medium"
+                          className="text-[11px] font-medium whitespace-nowrap max-w-[140px] truncate"
                           style={{
                             borderColor: alb?.color ? `${alb.color}40` : undefined,
                             color: alb?.color,
@@ -584,7 +584,7 @@ export const AdminImagesPage: React.FC = () => {
                       {/* Storage Driver */}
                       <td className="p-3.5">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase whitespace-nowrap ${
                             img.storageDriver === 's3'
                               ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                               : img.storageDriver === 'webdav'
@@ -617,7 +617,7 @@ export const AdminImagesPage: React.FC = () => {
 
                       {/* Tags */}
                       <td className="p-3.5">
-                        <div className="flex items-center gap-1 flex-wrap max-w-[180px]">
+                        <div className="flex items-center gap-1 flex-wrap max-w-[160px]">
                           {img.tags && img.tags.length > 0 ? (
                             img.tags.slice(0, 2).map((t, idx) => (
                               <span
@@ -639,12 +639,12 @@ export const AdminImagesPage: React.FC = () => {
                       </td>
 
                       {/* Date */}
-                      <td className="p-3.5 text-muted-foreground text-[11px] font-mono">
+                      <td className="p-3.5 text-muted-foreground text-[11px] font-mono whitespace-nowrap">
                         {formatDate(img.createdAt)}
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3.5 text-right pr-4">
+                      <td className="p-3.5 text-right pr-4 whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"

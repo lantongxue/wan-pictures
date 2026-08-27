@@ -13,6 +13,8 @@ import {
   Calendar,
   Layers,
   ArrowRight,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Album, ImageItem } from '../../types';
@@ -21,6 +23,7 @@ import { formatFileSize, formatDate } from '../../utils/imageProcessing';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
+import { Paginator } from '../../components/ui/pagination';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +60,11 @@ export const AdminAlbumsPage: React.FC = () => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // View mode & Pagination
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
@@ -80,6 +88,13 @@ export const AdminAlbumsPage: React.FC = () => {
       duration: 3000,
     });
   };
+
+  // Client-side pagination over the full album list (kept sorted like the backend: default first, then by creation time)
+  const totalAlbums = albums.length;
+  const pagedAlbums = albums
+    .slice()
+    .sort((a, b) => Number(b.isDefault || false) - Number(a.isDefault || false) || a.createdAt - b.createdAt)
+    .slice((page - 1) * pageSize, page * pageSize);
 
   const loadData = async () => {
     setLoading(true);
@@ -203,6 +218,38 @@ export const AdminAlbumsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* View mode toggle */}
+          <div className="flex items-center p-1 rounded-xl border border-border/80 bg-muted/30">
+            <button
+              onClick={() => {
+                setViewMode('table');
+                setPage(1);
+              }}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-background shadow-xs text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title={t('adminImages.viewTable')}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('grid');
+                setPage(1);
+              }}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-background shadow-xs text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title={t('adminImages.viewGrid')}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -225,15 +272,157 @@ export const AdminAlbumsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Album Cards Grid */}
+      {/* Album Content: Table or Grid */}
       {loading ? (
         <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-6 h-6 animate-spin text-primary" />
           <p className="text-xs text-muted-foreground">{t('adminAlbums.loading')}</p>
         </div>
+      ) : albums.length === 0 ? (
+        <div className="py-20 text-center border border-dashed border-border/80 rounded-3xl bg-muted/10 space-y-3">
+          <FolderKanban className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-foreground">{t('adminAlbums.emptyTitle')}</p>
+          </div>
+        </div>
+      ) : viewMode === 'table' ? (
+        <>
+          {/* TABLE VIEW */}
+          <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold whitespace-nowrap">
+                    <th className="p-3.5 w-[72px]">{t('adminAlbums.colCover')}</th>
+                    <th className="p-3.5 w-[220px]">{t('adminAlbums.colName')}</th>
+                    <th className="p-3.5 min-w-[200px]">{t('adminAlbums.colDesc')}</th>
+                    <th className="p-3.5 whitespace-nowrap">{t('adminAlbums.colColor')}</th>
+                    <th className="p-3.5 whitespace-nowrap">{t('adminAlbums.colCount')}</th>
+                    <th className="p-3.5 whitespace-nowrap">{t('adminAlbums.colSize')}</th>
+                    <th className="p-3.5 whitespace-nowrap">{t('adminAlbums.colTime')}</th>
+                    <th className="p-3.5 text-right pr-4 whitespace-nowrap">{t('adminImages.colAction')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {pagedAlbums.map((alb) => {
+                    const albumImages = images.filter((img) => img.albumId === alb.id);
+                    const count = alb.imageCount !== undefined ? alb.imageCount : albumImages.length;
+                    const totalBytes =
+                      alb.totalSize !== undefined
+                        ? alb.totalSize
+                        : albumImages.reduce((sum, img) => sum + (img.size || 0), 0);
+                    const coverImage = alb.coverImageUrl || albumImages[0]?.thumbUrl || albumImages[0]?.dataUrl || albumImages[0]?.url;
+
+                    return (
+                      <tr key={alb.id} className="hover:bg-muted/20 transition-colors">
+                        {/* Cover */}
+                        <td className="p-3.5">
+                          <div className="w-14 h-10 rounded-xl overflow-hidden border border-border/80 bg-muted/40">
+                            {coverImage ? (
+                              <img
+                                src={coverImage}
+                                alt={alb.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <FolderKanban
+                                  className="w-4 h-4 opacity-40"
+                                  style={{ color: alb.color || '#6366F1' }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Name */}
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border-2 border-card shadow-xs shrink-0"
+                              style={{ backgroundColor: alb.color || '#6366F1' }}
+                            />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-foreground truncate max-w-[180px]" title={alb.name}>
+                                {alb.name}
+                              </div>
+                              {alb.isDefault && (
+                                <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4 mt-0.5">
+                                  DEFAULT
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Description */}
+                        <td className="p-3.5 text-muted-foreground max-w-[240px]">
+                          <div className="truncate" title={alb.description || ''}>
+                            {alb.description || <span className="text-muted-foreground/50">—</span>}
+                          </div>
+                        </td>
+
+                        {/* Color */}
+                        <td className="p-3.5">
+                          <span
+                            className="inline-block w-4 h-4 rounded-md border border-border/80 align-middle"
+                            style={{ backgroundColor: alb.color || '#6366F1' }}
+                            title={alb.color}
+                          />
+                        </td>
+
+                        {/* Image count */}
+                        <td className="p-3.5 font-mono text-muted-foreground text-[11px] whitespace-nowrap">
+                          {count} {t('adminAlbums.imageUnit')}
+                        </td>
+
+                        {/* Size */}
+                        <td className="p-3.5 font-mono text-foreground font-semibold text-[11px] whitespace-nowrap">
+                          {formatFileSize(totalBytes)}
+                        </td>
+
+                        {/* Created time */}
+                        <td className="p-3.5 text-muted-foreground text-[11px] font-mono whitespace-nowrap">
+                          {formatDate(alb.createdAt)}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-3.5 text-right pr-4 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEdit(alb)}
+                              className="h-8 px-2.5 text-xs rounded-xl gap-1 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>{t('adminAlbums.edit')}</span>
+                            </Button>
+
+                            {!alb.isDefault && alb.id !== DEFAULT_ALBUM_ID && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteAlbum(alb)}
+                                className="h-8 px-2.5 text-xs rounded-xl gap-1 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{t('adminAlbums.delete')}</span>
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {albums.map((alb) => {
+          {pagedAlbums.map((alb) => {
             const albumImages = images.filter((img) => img.albumId === alb.id);
             const count = alb.imageCount !== undefined ? alb.imageCount : albumImages.length;
             const totalBytes =
@@ -358,6 +547,20 @@ export const AdminAlbumsPage: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalAlbums > 0 && (
+        <Paginator
+          page={page}
+          pageSize={pageSize}
+          total={totalAlbums}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
       )}
 
       {/* ========================================================= */}
