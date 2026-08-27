@@ -112,7 +112,7 @@ func (ctrl *AdminController) GetOverviewStats(c *gin.Context) {
 		ActiveStorage:  activeDriver,
 		StorageUsage:   storageUsage,
 		FormatStats:    formatStats,
-		RecentActivity: recentImages,
+		RecentActivity: publicImages(recentImages),
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse(stats))
@@ -176,6 +176,10 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 		query = query.Order("name asc")
 	case "name-desc":
 		query = query.Order("name desc")
+	case "views-desc":
+		query = query.Order("view_count desc")
+	case "views-asc":
+		query = query.Order("view_count asc")
 	default:
 		query = query.Order("created_at desc")
 	}
@@ -200,7 +204,7 @@ func (ctrl *AdminController) ListImages(c *gin.Context) {
 	query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&images)
 
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
-		"items":     images,
+		"items":     publicImages(images),
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
@@ -220,7 +224,7 @@ func (ctrl *AdminController) GetImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, models.ErrorResponse(http.StatusNotFound, "Image not found"))
 		return
 	}
-	c.JSON(http.StatusOK, models.SuccessResponse(image))
+	c.JSON(http.StatusOK, models.SuccessResponse(*image.PublicCopy()))
 }
 
 // CreateImage saves a new image record
@@ -268,7 +272,7 @@ func (ctrl *AdminController) CreateImage(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, models.SuccessResponse(img, "Image saved successfully"))
+	c.JSON(http.StatusCreated, models.SuccessResponse(*img.PublicCopy(), "Image saved successfully"))
 }
 
 // UpdateImage updates image metadata
@@ -316,7 +320,7 @@ func (ctrl *AdminController) UpdateImage(c *gin.Context) {
 	}
 
 	database.DB.First(&img, "id = ?", id)
-	c.JSON(http.StatusOK, models.SuccessResponse(img, "Image updated successfully"))
+	c.JSON(http.StatusOK, models.SuccessResponse(*img.PublicCopy(), "Image updated successfully"))
 }
 
 // DeleteImage deletes a single image using reference counting safe deletion

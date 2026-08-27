@@ -30,6 +30,7 @@ export interface ImageItem {
   ownerId?: number;
   tags: string[];
   favorite?: boolean;
+  viewCount?: number; // total views recorded through the /image proxy
   compressed?: boolean;
   originalSize?: number;
   storageDriver?: 'local' | 'webdav' | 's3' | string;
@@ -187,6 +188,7 @@ export type SortOption =
   | 'size-asc'
   | 'name-asc'
   | 'name-desc'
+  | 'views-desc'
   | 'dimension-desc';
 
 export type AspectRatioFilter = 'all' | 'landscape' | 'portrait' | 'square';

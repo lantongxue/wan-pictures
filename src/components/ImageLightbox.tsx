@@ -13,6 +13,7 @@ import {
   Info,
   Heart,
   Trash2,
+  Eye,
 } from 'lucide-react';
 import { ImageItem, Album, LinkFormatType } from '../types';
 import { formatFileSize, formatDate, formatAspectRatio } from '../utils/imageProcessing';
@@ -381,6 +382,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         <span className="text-muted-foreground">{t('lightbox.uploadTime')}</span>
                         <span className="font-mono text-foreground">
                           {formatDate(image.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-border/60">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5" />
+                          {t('lightbox.views')}
+                        </span>
+                        <span className="font-mono text-foreground">
+                          {image.viewCount ?? 0}
                         </span>
                       </div>
 

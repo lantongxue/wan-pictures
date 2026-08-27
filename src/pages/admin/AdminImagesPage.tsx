@@ -420,6 +420,7 @@ export const AdminImagesPage: React.FC = () => {
                 <SelectItem value="size-desc">{t('adminImages.sortSizeDesc')}</SelectItem>
                 <SelectItem value="size-asc">{t('adminImages.sortSizeAsc')}</SelectItem>
                 <SelectItem value="name-asc">{t('adminImages.sortNameAsc')}</SelectItem>
+                <SelectItem value="views-desc">{t('adminImages.sortViewsDesc')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -520,8 +521,9 @@ export const AdminImagesPage: React.FC = () => {
                   <th className="p-3.5 min-w-[200px]">{t('adminImages.colName')}</th>
                   <th className="p-3.5">{t('adminImages.colAlbum')}</th>
                   <th className="p-3.5">{t('adminImages.colEngine')}</th>
-                  <th className="p-3.5">{t('adminImages.colSpec')}</th>
-                  <th className="p-3.5">{t('adminImages.colSize')}</th>
+<th className="p-3.5">{t('adminImages.colSpec')}</th>
+                 <th className="p-3.5">{t('adminImages.colViews')}</th>
+                 <th className="p-3.5">{t('adminImages.colSize')}</th>
                   <th className="p-3.5">{t('adminImages.colTags')}</th>
                   <th className="p-3.5">{t('adminImages.colTime')}</th>
                   <th className="p-3.5 text-right pr-4">{t('adminImages.colAction')}</th>
@@ -610,6 +612,14 @@ export const AdminImagesPage: React.FC = () => {
                       {/* Dimension */}
                       <td className="p-3.5 font-mono text-muted-foreground text-[11px]">
                         {img.width && img.height ? `${img.width} × ${img.height}` : '—'}
+                      </td>
+
+                      {/* Views */}
+                      <td className="p-3.5 font-mono text-muted-foreground text-[11px]">
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          {img.viewCount ?? 0}
+                        </span>
                       </td>
 
                       {/* Size */}
@@ -753,6 +763,10 @@ export const AdminImagesPage: React.FC = () => {
                   <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
                     <span className="text-[11px] text-muted-foreground truncate max-w-[90px]">
                       {alb?.name || t('adminImages.defaultAlbum')}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-mono shrink-0">
+                      <Eye className="w-3 h-3" />
+                      {img.viewCount ?? 0}
                     </span>
 
                     <div className="flex items-center gap-1">

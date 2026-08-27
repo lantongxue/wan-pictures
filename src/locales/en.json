@@ -123,7 +123,8 @@
     "showingAssets": "Showing {{count}} of {{total}} assets",
     "format": "Format",
     "emptyTitle": "No Assets Found",
-    "emptyDesc": "Try adjusting your search criteria, album categories, or drag-and-drop to upload new media."
+    "emptyDesc": "Try adjusting your search criteria, album categories, or drag-and-drop to upload new media.",
+    "sortViewsDesc": "Most Viewed"
   },
   "card": {
     "optimized": "OPTIMIZED",
@@ -136,7 +137,8 @@
     "select": "Select this item",
     "deselect": "Deselect item",
     "copyUrlSuccess": "Direct URL copied to clipboard",
-    "copyMarkdownSuccess": "Markdown code copied to clipboard"
+    "copyMarkdownSuccess": "Markdown code copied to clipboard",
+    "views": "Views"
   },
   "plaza": {
     "badge": "DISCOVERY PLAZA · WATERFALL GALLERY",
@@ -160,7 +162,8 @@
     "sortDateAsc": "Oldest First",
     "sortDimensionDesc": "Highest Resolution",
     "sortSizeDesc": "Largest File Size",
-    "sortNameAsc": "Name (A-Z)"
+    "sortNameAsc": "Name (A-Z)",
+    "sortViewsDesc": "Most Viewed"
   },
   "dimension": {
     "title": "Resolution & Dimensions Filter",
@@ -246,7 +249,8 @@
     "renameSuccess": "Renamed Successfully",
     "tags": "Image Tags",
     "noTags": "No tags",
-    "noAlbum": "No album"
+    "noAlbum": "No album",
+    "views": "Views"
   },
   "links": {
     "modalTitle": "Link Generator & Extraction Center",
@@ -859,7 +863,8 @@
     "batchMoved": "Moved {{count}} images into the new album",
     "batchMoveFailed": "Failed to move albums",
     "batchTagged": "Added tag #{{tag}} to {{count}} images",
-    "batchTagFailed": "Failed to add tags"
+    "batchTagFailed": "Failed to add tags",
+    "sortViewsDesc": "Most Viewed"
   },
   "adminUsersTab": {
     "loadFailed": "Failed to fetch user list",

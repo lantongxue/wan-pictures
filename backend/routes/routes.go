@@ -36,9 +36,18 @@ func SetupRouter() *gin.Engine {
 	adminCtrl := controllers.NewAdminController()
 	userCtrl := controllers.NewUserController()
 	uploadCtrl := controllers.NewUploadController()
+	imageCtrl := controllers.NewImageController()
 
-	// Static route to serve uploaded local image assets
+	// Static route to serve uploaded local image assets (legacy; new links go
+	// through the counting proxy /image/... below)
 	r.Static("/uploads", "./uploads")
+
+	// Public image proxy routes: every image/thumbnail request flows through
+	// Go so the view count can be recorded (Sqids-obfuscated id + extension).
+	// The token is decoded, validated against the image extension, and the
+	// bytes are streamed from the storage engine.
+	r.GET("/image/:file", imageCtrl.GetImageFile)
+	r.GET("/image/thumb/:file", imageCtrl.GetImageThumb)
 
 	// API v1 group
 	v1 := r.Group("/api/v1")

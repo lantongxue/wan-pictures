@@ -66,6 +66,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     { label: t('gallery.sortSizeDesc'), value: 'size-desc' },
     { label: t('gallery.sortSizeAsc'), value: 'size-asc' },
     { label: t('gallery.sortNameAsc'), value: 'name-asc' },
+    { label: t('gallery.sortViewsDesc'), value: 'views-desc' },
   ];
 
   const isAllSelected = images.length > 0 && images.every((img) => selectedIds.has(img.id));

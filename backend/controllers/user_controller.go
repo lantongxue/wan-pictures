@@ -92,7 +92,7 @@ func (ctrl *UserController) CreateImage(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, models.SuccessResponse(img, "Image saved successfully"))
+	c.JSON(http.StatusCreated, models.SuccessResponse(*img.PublicCopy(), "Image saved successfully"))
 }
 
 // UpdateImage updates image metadata for the authenticated user
@@ -140,7 +140,7 @@ func (ctrl *UserController) UpdateImage(c *gin.Context) {
 	}
 
 	database.DB.First(&img, "id = ?", id)
-	c.JSON(http.StatusOK, models.SuccessResponse(img, "Image updated successfully"))
+	c.JSON(http.StatusOK, models.SuccessResponse(*img.PublicCopy(), "Image updated successfully"))
 }
 
 // UpdateImageMetadata updates ONLY tags of an image.
@@ -222,7 +222,7 @@ func (ctrl *UserController) UpdateImageMetadata(c *gin.Context) {
 	}
 
 	database.DB.First(&img, "id = ?", id)
-	c.JSON(http.StatusOK, models.SuccessResponse(img, "图片元信息更新成功"))
+	c.JSON(http.StatusOK, models.SuccessResponse(*img.PublicCopy(), "图片元信息更新成功"))
 }
 
 // DeleteImage deletes a single image using reference counting safe deletion

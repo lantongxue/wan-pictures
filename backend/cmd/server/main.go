@@ -14,6 +14,7 @@ import (
 	"wanpictures-backend/database"
 	"wanpictures-backend/routes"
 	"wanpictures-backend/services/thumbnail"
+	"wanpictures-backend/services/viewcount"
 )
 
 func main() {
@@ -32,6 +33,10 @@ func main() {
 	if err := database.InitRedis(); err != nil {
 		log.Fatalf("[Redis] Initialization failed: %v (upload rate limiting is fail-closed)", err)
 	}
+
+	// 3b. Start the async view-count worker (consumes the Redis queue and
+	// batch-updates images.view_count in the background)
+	viewcount.Start()
 
 	// 4. Initialize Router
 	router := routes.SetupRouter()
@@ -59,6 +64,9 @@ func main() {
 	<-quit
 	log.Println("Shutting down server...")
 
+	// Stop the view-count worker first so its final flush lands before Redis
+	// and the DB are torn down.
+	viewcount.Stop()
 	database.CloseRedis()
 	thumbnail.Shutdown()
 

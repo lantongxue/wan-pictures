@@ -28,6 +28,10 @@ export default defineConfig(() => {
           target: BACKEND_ORIGIN,
           changeOrigin: true,
         },
+        '/image': {
+          target: BACKEND_ORIGIN,
+          changeOrigin: true,
+        },
       },
     },
   };

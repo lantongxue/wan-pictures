@@ -12,6 +12,7 @@ import {
   Tag,
   Upload,
   RefreshCw,
+  Eye,
 } from 'lucide-react';
 import { ImageItem, Album, SortOption, AspectRatioFilter } from '../types';
 import { copyToClipboard, toAbsoluteImageUrl } from '../utils/linkFormatter';
@@ -145,6 +146,8 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
           return a.size - b.size;
         case 'name-asc':
           return a.name.localeCompare(b.name);
+        case 'views-desc':
+          return (b.viewCount ?? 0) - (a.viewCount ?? 0);
         case 'dimension-desc':
           return (b.width * b.height) - (a.width * a.height);
         case 'date-desc':
@@ -309,6 +312,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                     <SelectItem value="dimension-desc">{t('plaza.sortDimensionDesc')}</SelectItem>
                     <SelectItem value="size-desc">{t('plaza.sortSizeDesc')}</SelectItem>
                     <SelectItem value="name-asc">{t('plaza.sortNameAsc')}</SelectItem>
+                    <SelectItem value="views-desc">{t('plaza.sortViewsDesc')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -628,6 +632,11 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
 
                     {/* Tags Strip */}
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground shrink-0">
+                        <Eye className="w-3 h-3" />
+                        {img.viewCount ?? 0}
+                      </span>
+                      <span className="text-muted-foreground/30 shrink-0">·</span>
                       {img.tags && img.tags.slice(0, 3).map((tag, tagIdx) => (
                         <span
                           key={`plaza-card-${img.id}-tag-${tag}-${tagIdx}`}

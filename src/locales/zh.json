@@ -123,7 +123,8 @@
     "showingAssets": "显示 {{count}} / {{total}} 项资产",
     "format": "格式",
     "emptyTitle": "暂无匹配的图片资产",
-    "emptyDesc": "请尝试调整搜索关键词、相册分类、宽高条件或上传新的图片资产。"
+    "emptyDesc": "请尝试调整搜索关键词、相册分类、宽高条件或上传新的图片资产。",
+    "sortViewsDesc": "按访问量排序"
   },
   "card": {
     "optimized": "已优化",
@@ -136,7 +137,8 @@
     "select": "勾选此图片",
     "deselect": "取消选中",
     "copyUrlSuccess": "直链已复制到剪贴板",
-    "copyMarkdownSuccess": "Markdown 链接已复制"
+    "copyMarkdownSuccess": "Markdown 链接已复制",
+    "views": "访问次数"
   },
   "plaza": {
     "badge": "DISCOVERY PLAZA · 瀑布流画廊",
@@ -160,7 +162,8 @@
     "sortDateAsc": "最早发布优先",
     "sortDimensionDesc": "超清分辨率优先",
     "sortSizeDesc": "文件体积最大",
-    "sortNameAsc": "名称拼音 (A-Z)"
+    "sortNameAsc": "名称拼音 (A-Z)",
+    "sortViewsDesc": "访问量 (从高到低)"
   },
   "dimension": {
     "title": "图片分辨率与宽高筛选",
@@ -246,7 +249,8 @@
     "renameSuccess": "名称更新成功",
     "tags": "图片标签",
     "noTags": "暂无标签",
-    "noAlbum": "未加入相册"
+    "noAlbum": "未加入相册",
+    "views": "访问次数"
   },
   "links": {
     "modalTitle": "外链生成器与提取中心",
@@ -859,7 +863,8 @@
     "batchMoved": "已将 {{count}} 个图片移入新相册",
     "batchMoveFailed": "移动相册失败",
     "batchTagged": "已为 {{count}} 个图片添加标签 #{{tag}}",
-    "batchTagFailed": "添加标签失败"
+    "batchTagFailed": "添加标签失败",
+    "sortViewsDesc": "访问量 (从高到低)"
   },
   "adminUsersTab": {
     "loadFailed": "获取用户列表失败",

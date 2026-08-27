@@ -291,6 +291,7 @@ export const publicApi = {
           ownerId: Number(img.user_id) || undefined,
           tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
           favorite: img.favorite,
+          viewCount: Number(img.view_count || 0),
           storageDriver: img.storage_driver || 'local',
         }));
         return {
@@ -370,6 +371,7 @@ export const adminApi = {
             ownerId: Number(img.user_id) || undefined,
             tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
             favorite: img.favorite,
+            viewCount: Number(img.view_count || 0),
             storageDriver: img.storage_driver || 'local',
           })),
         },
@@ -421,6 +423,7 @@ export const adminApi = {
         ownerId: Number(img.user_id) || undefined,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
+        viewCount: Number(img.view_count || 0),
         storageDriver: img.storage_driver || 'local',
       }));
       return {
@@ -476,6 +479,7 @@ export const adminApi = {
         ownerId: Number(img.user_id) || undefined,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
+        viewCount: Number(img.view_count || 0),
         storageDriver: img.storage_driver || 'local',
       };
       return { success: true, data: updated, message: res.message };
@@ -520,6 +524,7 @@ export const adminApi = {
         ownerId: Number(img.user_id) || undefined,
         tags: typeof img.tags === 'string' ? JSON.parse(img.tags || '[]') : img.tags || [],
         favorite: img.favorite,
+        viewCount: Number(img.view_count || 0),
         storageDriver: img.storage_driver || 'local',
       };
       return { success: true, data: updated, message: res.message };
@@ -1179,6 +1184,7 @@ export const uploadApi = {
             ownerId: Number(d.image.user_id) || undefined,
             tags: typeof d.image.tags === 'string' ? JSON.parse(d.image.tags || '[]') : d.image.tags || [],
             favorite: d.image.favorite,
+            viewCount: Number(d.image.view_count || 0),
             storageDriver: d.image.storage_driver || 'local',
           };
           return { success: true, exists: true, isInstant: true, image: img, message: res.message, isBackendOnline: true };
@@ -1242,6 +1248,7 @@ export const uploadApi = {
               ownerId: Number(raw.user_id) || undefined,
               tags: typeof raw.tags === 'string' ? JSON.parse(raw.tags || '[]') : raw.tags || [],
               favorite: raw.favorite,
+              viewCount: Number(raw.view_count || 0),
               storageDriver: raw.storage_driver || 'local',
             };
             resolve({

@@ -7,6 +7,7 @@ import {
   Trash2,
   Heart,
   FileCode,
+  Eye,
 } from 'lucide-react';
 import { ImageItem, Album } from '../types';
 import { formatFileSize, formatDate } from '../utils/imageProcessing';
@@ -126,6 +127,11 @@ export const ImageCard: React.FC<ImageCardProps> = ({
             <span>·</span>
             <span>
               {image.width} × {image.height}
+            </span>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <Eye className="w-3 h-3" />
+              {image.viewCount ?? 0}
             </span>
             <span>·</span>
             <span>{formatDate(image.createdAt)}</span>
@@ -364,7 +370,13 @@ export const ImageCard: React.FC<ImageCardProps> = ({
           <span>
             {image.width} × {image.height}
           </span>
-          <span>{formatDate(image.createdAt)}</span>
+          <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <Eye className="w-3 h-3" />
+              {image.viewCount ?? 0}
+            </span>
+            <span>{formatDate(image.createdAt)}</span>
+          </span>
         </div>
       </div>
     </div>

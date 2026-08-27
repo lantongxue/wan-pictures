@@ -405,7 +405,7 @@ func (ctrl *UploadController) CheckHash(c *gin.Context) {
 	c.JSON(http.StatusOK, models.SuccessResponse(models.CheckHashResponse{
 		Exists:    true,
 		IsInstant: true,
-		Image:     newImage,
+		Image:     newImage.PublicCopy(),
 	}, "⚡ 秒传成功 (Instant Upload Success)"))
 }
 
@@ -465,7 +465,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		if linkErr == nil {
 			c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
 				"is_instant": true,
-				"image":      newImage,
+				"image":      newImage.PublicCopy(),
 			}, "⚡ 秒传成功"))
 			return
 		}
@@ -599,14 +599,14 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 			var winner models.FileAsset
 			if ferr := database.DB.Where("file_hash = ?", sha256Hash).First(&winner).Error; ferr == nil {
-				newImage, linkErr := persistInstantImage(&winner, formattedName, fileHeader.Filename, albumID, userID, clientIP)
-				if linkErr == nil {
-					c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
-						"is_instant": true,
-						"image":      newImage,
-					}, "⚡ 秒传成功"))
-					return
-				}
+newImage, linkErr := persistInstantImage(&winner, formattedName, fileHeader.Filename, albumID, userID, clientIP)
+			if linkErr == nil {
+				c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
+					"is_instant": true,
+					"image":      newImage.PublicCopy(),
+				}, "⚡ 秒传成功"))
+				return
+			}
 				if !errors.Is(linkErr, gorm.ErrRecordNotFound) {
 					c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create image record: "+linkErr.Error()))
 					return
@@ -625,7 +625,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
 		"is_instant": false,
-		"image":      createdImage,
+		"image":      createdImage.PublicCopy(),
 	}, "上传成功"))
 }
 
