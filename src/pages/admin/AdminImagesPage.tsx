@@ -22,6 +22,8 @@ import {
   ChevronRight,
   ArrowUpDown,
   Download,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { ImageItem, Album, TagItem, StorageDriverType } from '../../types';
 import { adminApi, DEFAULT_ALBUM_ID } from '../../services/api';
@@ -47,6 +49,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../components/ui/alert-dialog';
 import {
   Field,
   FieldSet,
@@ -90,6 +102,12 @@ export const AdminImagesPage: React.FC = () => {
   const [batchTargetAlbum, setBatchTargetAlbum] = useState<number>(DEFAULT_ALBUM_ID);
   const [isBatchTagOpen, setIsBatchTagOpen] = useState(false);
   const [batchNewTag, setBatchNewTag] = useState('');
+
+  // AlertDialog states for delete confirmations
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [batchDeleting, setBatchDeleting] = useState(false);
 
   // Toast / Feedback message
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -201,33 +219,49 @@ export const AdminImagesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteImage = async (id: number, name: string) => {
-    if (!confirm(t('adminImages.confirmDelete', { name }))) return;
+  const handleDeleteImage = (id: number, name: string) => {
+    setPendingDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      const res = await adminApi.deleteImage(id);
+      const res = await adminApi.deleteImage(pendingDelete.id);
       if (!res.success) {
         showNotification(res.message || t('adminImages.deleteFailed'), 'error');
         return;
       }
       showNotification(t('adminImages.deleted'));
-      setSelectedIds((prev) => prev.filter((i) => i !== id));
+      setSelectedIds((prev) => prev.filter((i) => i !== pendingDelete.id));
+      setPendingDelete(null);
       loadData();
     } catch (err: any) {
       showNotification(err.message || t('adminImages.deleteFailed'), 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
   // Batch actions
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(t('adminImages.confirmBatchDelete', { count: selectedIds.length }))) return;
+    setIsBatchDeleteOpen(true);
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBatchDeleting(true);
     try {
       await adminApi.batchImageAction(selectedIds, 'delete');
       showNotification(t('adminImages.batchDeleted', { count: selectedIds.length }));
       setSelectedIds([]);
+      setIsBatchDeleteOpen(false);
       loadData();
     } catch (err: any) {
       showNotification(err.message || t('adminImages.batchDeleteFailed'), 'error');
+    } finally {
+      setBatchDeleting(false);
     }
   };
 
@@ -1073,6 +1107,72 @@ export const AdminImagesPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Single delete confirm - shadcn AlertDialog */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span>{t('common.delete')}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {pendingDelete ? t('adminImages.confirmDelete', { name: pendingDelete.name }) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel disabled={deleting} className="text-xs h-9 rounded-xl">
+              {t('adminImages.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleting}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              <span>{t('common.delete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch delete confirm - shadcn AlertDialog */}
+      <AlertDialog open={isBatchDeleteOpen} onOpenChange={(open) => !open && !batchDeleting && setIsBatchDeleteOpen(false)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span>{t('adminImages.batchDelete')}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {t('adminImages.confirmBatchDelete', { count: selectedIds.length })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel disabled={batchDeleting} className="text-xs h-9 rounded-xl">
+              {t('adminImages.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmBatchDelete();
+              }}
+              disabled={batchDeleting}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              {batchDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              <span>{t('adminImages.batchDelete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

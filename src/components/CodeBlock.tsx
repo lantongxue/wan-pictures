@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Highlight, themes, type Language } from 'prism-react-renderer';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { copyToClipboard } from '../utils/linkFormatter';
 import { Check, Copy } from 'lucide-react';
 
@@ -39,22 +40,27 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, label }) =
       </div>
 
       {/* Highlighted code */}
-      <Highlight theme={themes.vsDark} code={code.trim()} language={language as Language}>
-        {({ style, tokens, getLineProps, getTokenProps }) => (
-          <pre
-            className="p-4 overflow-x-auto text-[13px] leading-relaxed font-mono"
-            style={{ ...style, background: 'transparent' }}
-          >
-            {tokens.map((line, i) => (
-              <div key={i} {...getLineProps({ line })}>
-                {line.map((token, key) => (
-                  <span key={key} {...getTokenProps({ token })} />
-                ))}
-              </div>
-            ))}
-          </pre>
-        )}
-      </Highlight>
+      <SyntaxHighlighter
+        language={language}
+        style={vscDarkPlus}
+        customStyle={{
+          margin: 0,
+          padding: '1rem',
+          background: 'transparent',
+          fontSize: '13px',
+          lineHeight: '1.625',
+          fontFamily: 'var(--font-mono)',
+        }}
+        codeTagProps={{
+          style: {
+            fontFamily: 'var(--font-mono)',
+            fontSize: '13px',
+          },
+        }}
+        wrapLongLines={false}
+      >
+        {code.trim()}
+      </SyntaxHighlighter>
     </div>
   );
 };

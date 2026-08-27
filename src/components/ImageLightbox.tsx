@@ -14,6 +14,12 @@ import {
   Heart,
   Trash2,
   Eye,
+  QrCode,
+  Link,
+  Link2,
+  FileText,
+  CodeXml,
+  Braces,
 } from 'lucide-react';
 import { ImageItem, Album, LinkFormatType } from '../types';
 import { formatFileSize, formatDate, formatAspectRatio } from '../utils/imageProcessing';
@@ -21,7 +27,9 @@ import {
   LINK_FORMAT_OPTIONS,
   formatSingleImageLink,
   copyToClipboard,
+  toAbsoluteImageUrl,
 } from '../utils/linkFormatter';
+import QRCode from 'react-qr-code';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -66,6 +74,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [showQrCode, setShowQrCode] = useState(false);
 
   useEffect(() => {
     if (image) {
@@ -73,6 +82,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       setRotation(0);
       setEditedName(image.name);
       setIsEditingName(false);
+      setShowQrCode(false);
     }
   }, [image?.id]);
 
@@ -303,20 +313,74 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       {t('lightbox.linkExport')}
                     </h4>
 
-                    {/* Format selection */}
-                    <div className="grid grid-cols-3 gap-1.5 mb-2.5">
-                      {LINK_FORMAT_OPTIONS.map((opt) => (
-                        <Button
-                          key={opt.type}
-                          variant={selectedFormat === opt.type ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setSelectedFormat(opt.type)}
-                          className="rounded-full text-[10px] font-mono uppercase h-7 px-2 cursor-pointer"
-                        >
-                          {opt.type.toUpperCase()}
-                        </Button>
-                      ))}
+                    {/* Format selection — redesigned to fully display labels without truncation */}
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {LINK_FORMAT_OPTIONS.map((opt) => {
+                        const IconMap: Record<LinkFormatType, React.ElementType> = {
+                          raw: Link,
+                          markdown: FileText,
+                          html: CodeXml,
+                          bbcode: Braces,
+                          markdown_link: Link2,
+                        };
+                        const Icon = IconMap[opt.type];
+                        return (
+                          <Button
+                            key={opt.type}
+                            variant={selectedFormat === opt.type && !showQrCode ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                              setSelectedFormat(opt.type);
+                              setShowQrCode(false);
+                            }}
+                            className="rounded-full text-[10px] font-mono uppercase h-7 px-3 cursor-pointer gap-1.5 whitespace-nowrap flex-none flex items-center justify-start"
+                          >
+                            {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
+                            {opt.type.toUpperCase()}
+                          </Button>
+                        );
+                      })}
+                      <Button
+                        variant={showQrCode ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setShowQrCode((v) => !v)}
+                        className="rounded-full text-[10px] font-mono uppercase h-7 px-3 cursor-pointer gap-1.5 whitespace-nowrap flex-none flex items-center justify-start"
+                      >
+                        <QrCode className="w-3.5 h-3.5 shrink-0" />
+                        QRCODE
+                      </Button>
                     </div>
+
+                    {/* QR Code direct display — uses react-qr-code */}
+                    {showQrCode && (
+                      <div className="p-4 rounded-2xl border border-border/80 bg-background/80 flex flex-col items-center text-center space-y-3 mb-2.5">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+                            <QrCode className="w-3.5 h-3.5 text-primary" />
+                            IMAGE QR CODE
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowQrCode(false)}
+                            className="rounded-full h-6 w-6 text-muted-foreground cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                        <div className="p-3 bg-white rounded-xl shadow-sm border border-neutral-200">
+                          <QRCode
+                            value={toAbsoluteImageUrl(image.dataUrl)}
+                            size={160}
+                            style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+                            viewBox="0 0 256 256"
+                          />
+                        </div>
+                        <p className="text-[11px] font-mono break-all text-muted-foreground px-2 select-all">
+                          {toAbsoluteImageUrl(image.dataUrl)}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Formatted Link Box */}
                     <div className="p-3.5 rounded-2xl border border-border/80 bg-background/80 space-y-2">

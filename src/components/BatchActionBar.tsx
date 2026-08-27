@@ -8,6 +8,7 @@ import {
   X,
   CheckCircle2,
   FileCode,
+  AlertTriangle,
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { ImageItem, Album } from '../types';
@@ -21,6 +22,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface BatchActionBarProps {
   selectedImages: ImageItem[];
@@ -43,6 +54,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isZipping, setIsZipping] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
   if (selectedImages.length === 0) return null;
 
@@ -88,11 +100,12 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   };
 
   return (
-    <div
-      id="batch-action-dock"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[90%] sm:w-auto"
-    >
-      <motion.div
+    <>
+      <div
+        id="batch-action-dock"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[90%] sm:w-auto"
+      >
+        <motion.div
         initial={{ y: 50, opacity: 0, scale: 0.95 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 50, opacity: 0, scale: 0.95 }}
@@ -173,7 +186,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           id="batch-delete-btn"
           variant="destructive"
           size="sm"
-          onClick={onBatchDelete}
+          onClick={() => setIsDeleteAlertOpen(true)}
           className="rounded-full gap-1.5 bg-destructive/15 text-destructive hover:bg-destructive/25 shadow-none border border-destructive/30 shrink-0 whitespace-nowrap cursor-pointer h-8"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -192,5 +205,37 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
         </Button>
       </motion.div>
     </div>
+
+      {/* Batch delete confirm - shadcn AlertDialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span>{t('batch.deleteSelected')}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {t('adminImages.confirmBatchDelete', { count: selectedImages.length })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs h-9 rounded-xl">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setIsDeleteAlertOpen(false);
+                onBatchDelete();
+              }}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{t('common.delete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

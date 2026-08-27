@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   X,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TagItem, ImageItem } from '../../types';
@@ -36,6 +37,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../components/ui/alert-dialog';
 import {
   Field,
   FieldSet,
@@ -72,6 +83,10 @@ export const AdminTagsPage: React.FC = () => {
 
   // Edit Tag Modal
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+
+  // AlertDialog state for delete confirmation
+  const [pendingDelete, setPendingDelete] = useState<TagItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Merge Tags Modal
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
@@ -146,20 +161,22 @@ export const AdminTagsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteTag = async (tag: TagItem) => {
-    if (
-      !confirm(
-        t('adminTags.confirmDelete', { name: tag.name })
-      )
-    )
-      return;
+  const handleDeleteTag = (tag: TagItem) => {
+    setPendingDelete(tag);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await adminApi.deleteTag(tag.id, tag.name);
-      showNotification(t('adminTags.deletedSuccess', { name: tag.name }));
+      await adminApi.deleteTag(pendingDelete.id, pendingDelete.name);
+      showNotification(t('adminTags.deletedSuccess', { name: pendingDelete.name }));
+      setPendingDelete(null);
       loadData();
     } catch (err: any) {
       showNotification(err.message || t('adminTags.deleteError'), 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -576,6 +593,39 @@ export const AdminTagsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete tag confirm - shadcn AlertDialog */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span className="truncate">#{pendingDelete?.name ?? ''}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {pendingDelete ? t('adminTags.confirmDelete', { name: pendingDelete.name }) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel disabled={deleting} className="text-xs h-9 rounded-xl">
+              {t('adminTags.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleting}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              <span>{t('adminTags.delete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

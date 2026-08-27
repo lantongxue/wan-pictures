@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -88,9 +88,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onShowToast,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, i18n } = useTranslation();
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, backendOnline, logout } = useAuth();
+  const isDeveloperActive = location.pathname.startsWith('/developer');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -177,12 +179,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id="nav-tab-plaza"
                   onClick={() => onTabChange('plaza')}
                   className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
-                    currentTab === 'plaza'
+                    currentTab === 'plaza' && !isDeveloperActive
                       ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {currentTab === 'plaza' && (
+                  {currentTab === 'plaza' && !isDeveloperActive && (
                     <motion.span
                       layoutId="nav-tab-indicator"
                       className="absolute inset-0 rounded-full bg-background shadow-xs"
@@ -203,12 +205,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id="nav-tab-workspace"
                   onClick={() => onTabChange('workspace')}
                   className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
-                    currentTab === 'workspace'
+                    currentTab === 'workspace' && !isDeveloperActive
                       ? 'text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {currentTab === 'workspace' && (
+                  {currentTab === 'workspace' && !isDeveloperActive && (
                     <motion.span
                       layoutId="nav-tab-indicator"
                       className="absolute inset-0 rounded-full bg-background shadow-xs"
@@ -220,6 +222,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>{t('nav.workspace')}</span>
                   </span>
                 </button>
+
+                {isAuthenticated && (
+                  <button
+                    id="nav-tab-developer"
+                    onClick={() => {
+                      if (onOpenDeveloper) onOpenDeveloper();
+                    }}
+                    className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors cursor-pointer ${
+                      isDeveloperActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {isDeveloperActive && (
+                      <motion.span
+                        layoutId="nav-tab-indicator"
+                        className="absolute inset-0 rounded-full bg-background shadow-xs"
+                        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{t('nav.developer')}</span>
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -390,17 +416,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          id="dropdown-item-developer"
-                          onClick={onOpenDeveloper}
-                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
-                        >
-                          <Code2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <span className="text-foreground">{t('nav.developer')}</span>
-                          </div>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
                           id="dropdown-item-albums"
                           onClick={onOpenAlbums}
                           className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
@@ -422,24 +437,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </div>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                          id="dropdown-item-admin"
-                          onClick={() => {
-                            if (onOpenAdmin) onOpenAdmin();
-                            else navigate('/admin');
-                          }}
-                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer"
-                        >
-                          <Shield className="w-4 h-4 text-primary shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold">{t('nav.adminCenter')}</span>
-                              <Badge variant="default" className="text-[8px] px-1 py-0 h-3.5">
-                                {t('nav.systemRoleAdmin')}
-                              </Badge>
+                        {user?.role === 'admin' && (
+                          <DropdownMenuItem
+                            id="dropdown-item-admin"
+                            onClick={() => {
+                              if (onOpenAdmin) onOpenAdmin();
+                              else navigate('/admin');
+                            }}
+                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer"
+                          >
+                            <Shield className="w-4 h-4 text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold">{t('nav.adminCenter')}</span>
+                                <Badge variant="default" className="text-[8px] px-1 py-0 h-3.5">
+                                  {t('nav.systemRoleAdmin')}
+                                </Badge>
+                              </div>
                             </div>
-                          </div>
-                        </DropdownMenuItem>
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuGroup>
 
                       <DropdownMenuSeparator className="my-1" />
@@ -581,7 +598,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </AnimatePresence>
 
           {/* Mobile Main Tab Switcher */}
-          <div className="sm:hidden grid grid-cols-2 gap-1.5 pb-2.5 pt-0.5">
+          <div className={`sm:hidden grid gap-1.5 pb-2.5 pt-0.5 ${isAuthenticated ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <button
               id="mobile-nav-tab-plaza"
               onClick={() => {
@@ -589,7 +606,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsMobileMenuOpen(false);
               }}
               className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
-                currentTab === 'plaza'
+                currentTab === 'plaza' && !isDeveloperActive
                   ? 'bg-primary/10 text-primary border-primary/30 shadow-xs'
                   : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60'
               }`}
@@ -605,7 +622,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsMobileMenuOpen(false);
               }}
               className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
-                currentTab === 'workspace'
+                currentTab === 'workspace' && !isDeveloperActive
                   ? 'bg-primary/10 text-primary border-primary/30 shadow-xs'
                   : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60'
               }`}
@@ -613,6 +630,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Upload className="w-3.5 h-3.5 text-primary" />
               <span>{t('nav.workspace')}</span>
             </button>
+
+            {isAuthenticated && (
+              <button
+                id="mobile-nav-tab-developer"
+                onClick={() => {
+                  if (onOpenDeveloper) onOpenDeveloper();
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
+                  isDeveloperActive
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 shadow-xs'
+                    : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60'
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{t('nav.developer')}</span>
+              </button>
+            )}
           </div>
 
           {/* Sub-bar for Workspace Mode (Album Filters & View Switcher) */}
@@ -905,36 +940,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   )}
 
-                  {isAuthenticated && (
+                  {user?.role === 'admin' && (
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
-                        if (onOpenDeveloper) onOpenDeveloper();
+                        if (onOpenAdmin) onOpenAdmin();
+                        else navigate('/admin');
                       }}
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-muted/20 hover:bg-muted/50 border border-border/40 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-primary/10 hover:bg-primary/15 border border-primary/30 text-primary transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Code2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span className="text-foreground">{t('nav.developer')}</span>
+                        <Shield className="w-4 h-4 text-primary shrink-0" />
+                        <span className="font-semibold">{t('nav.adminCenter')}</span>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   )}
-
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      if (onOpenAdmin) onOpenAdmin();
-                      else navigate('/admin');
-                    }}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium bg-primary/10 hover:bg-primary/15 border border-primary/30 text-primary transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Shield className="w-4 h-4 text-primary shrink-0" />
-                      <span className="font-semibold">{t('nav.adminCenter')}</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
 
                 {/* Theme, Language & Logout Footer */}

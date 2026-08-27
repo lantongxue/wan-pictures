@@ -15,6 +15,8 @@ import {
   ArrowRight,
   LayoutGrid,
   List,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Album, ImageItem } from '../../types';
@@ -32,6 +34,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '../../components/ui/alert-dialog';
 import {
   Field,
   FieldSet,
@@ -68,6 +80,10 @@ export const AdminAlbumsPage: React.FC = () => {
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
+
+  // AlertDialog state for delete confirmation
+  const [pendingDelete, setPendingDelete] = useState<Album | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form states - Create
   const [createName, setCreateName] = useState('');
@@ -174,28 +190,30 @@ export const AdminAlbumsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteAlbum = async (alb: Album) => {
+  const handleDeleteAlbum = (alb: Album) => {
     if (alb.isDefault || alb.id === DEFAULT_ALBUM_ID) {
       showNotification(t('adminAlbums.defaultAlbumNotDeletable'), 'error');
       return;
     }
-    if (
-      !confirm(
-        t('adminAlbums.confirmDelete', { name: alb.name })
-      )
-    )
-      return;
+    setPendingDelete(alb);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      const res = await adminApi.deleteAlbum(alb.id);
+      const res = await adminApi.deleteAlbum(pendingDelete.id);
       if (!res.success) {
         showNotification(res.message || t('adminAlbums.deleteFailed'), 'error');
         return;
       }
-      showNotification(t('adminAlbums.deletedSuccess', { name: alb.name }));
+      showNotification(t('adminAlbums.deletedSuccess', { name: pendingDelete.name }));
+      setPendingDelete(null);
       loadData();
     } catch (err: any) {
       showNotification(err.message || t('adminAlbums.deleteFailed'), 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -752,6 +770,39 @@ export const AdminAlbumsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete album confirm - shadcn AlertDialog */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span className="truncate">{pendingDelete ? pendingDelete.name : ''}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {pendingDelete ? t('adminAlbums.confirmDelete', { name: pendingDelete.name }) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel disabled={deleting} className="text-xs h-9 rounded-xl">
+              {t('adminAlbums.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleting}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              <span>{t('adminAlbums.delete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

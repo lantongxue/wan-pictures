@@ -737,20 +737,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     const ids: number[] = Array.from(selectedIds);
-    if (window.confirm(`Confirm batch delete ${ids.length} images?`)) {
-      let failed = 0;
-      for (const id of ids) {
-        const res = await adminApi.deleteImage(id);
-        if (!res.success) failed++;
-      }
-      if (failed > 0) {
-        showToast(t('common.warning'), `${failed} 张图片删除失败`, 'warning');
-      }
-      const deletedIds = new Set(ids);
-      setImages((prev) => prev.filter((img) => !deletedIds.has(img.id)));
-      setSelectedIds(new Set());
-      showToast(t('toast.batchDeleteSuccess', { count: ids.length - failed }), undefined, 'info');
+    if (ids.length === 0) return;
+    let failed = 0;
+    for (const id of ids) {
+      const res = await adminApi.deleteImage(id);
+      if (!res.success) failed++;
     }
+    if (failed > 0) {
+      showToast(t('common.warning'), `${failed} 张图片删除失败`, 'warning');
+    }
+    const deletedIds = new Set(ids);
+    setImages((prev) => prev.filter((img) => !deletedIds.has(img.id)));
+    setSelectedIds(new Set());
+    showToast(t('toast.batchDeleteSuccess', { count: ids.length - failed }), undefined, 'info');
   }, [isAuthenticated, selectedIds, showToast, t]);
 
   const handleOpenBatchLinks = useCallback(() => {

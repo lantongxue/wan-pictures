@@ -10,6 +10,7 @@ import {
   Layers,
   Lock,
   LogIn,
+  AlertTriangle,
 } from 'lucide-react';
 import { Album, ImageItem } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
@@ -26,6 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { ScrollArea } from './ui/scroll-area';
 
 interface AlbumManagerModalProps {
@@ -72,6 +83,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
   const [editingAlbumId, setEditingAlbumId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<Album | null>(null);
 
   if (!isOpen) return null;
 
@@ -156,9 +168,17 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
     setEditingAlbumId(null);
   };
 
+  const handleConfirmDelete = () => {
+    if (!pendingDelete) return;
+    onDeleteAlbum(pendingDelete.id);
+    onShowToast(t('albumModal.deletedSuccess'), pendingDelete.name, 'info');
+    setPendingDelete(null);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-3xl">
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-3xl">
         {/* Header */}
         <DialogHeader className="p-6 pb-4 border-b border-border/80 text-left shrink-0">
           <div className="flex items-center gap-3">
@@ -370,16 +390,7 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    t('albumModal.confirmDeletePrompt', { name: album.name })
-                                  )
-                                ) {
-                                  onDeleteAlbum(album.id);
-                                  onShowToast(t('albumModal.deletedSuccess'), album.name, 'info');
-                                }
-                              }}
+                              onClick={() => setPendingDelete(album)}
                               className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                               title={t('albumModal.deleteTooltip')}
                             >
@@ -407,5 +418,36 @@ export const AlbumManagerModal: React.FC<AlbumManagerModalProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      {/* Delete album confirm - shadcn AlertDialog */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+              <span className="truncate">{pendingDelete?.name ?? ''}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
+              {pendingDelete ? t('albumModal.confirmDeletePrompt', { name: pendingDelete.name }) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel className="text-xs h-9 rounded-xl">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{t('common.delete')}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

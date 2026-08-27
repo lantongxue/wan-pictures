@@ -39,6 +39,7 @@ func SetupRouter() *gin.Engine {
 	imageCtrl := controllers.NewImageController()
 	devCtrl := controllers.NewDevController()
 	adminApiKeyCtrl := controllers.NewAdminApiKeyController()
+	openapiCtrl := controllers.NewOpenApiController()
 
 	// Static route to serve uploaded local image assets (legacy; new links go
 	// through the counting proxy /image/... below)
@@ -176,7 +177,7 @@ func SetupRouter() *gin.Engine {
 	openapi := r.Group("/openapi/v1")
 	{
 		uploadRateLimit := middleware.UploadRateLimit()
-		openapi.POST("/upload", middleware.ApiKeyAuthMiddleware(), uploadRateLimit, devCtrl.ApiUpload)
+		openapi.POST("/upload", middleware.ApiKeyAuthMiddleware(), uploadRateLimit, openapiCtrl.ApiUpload)
 	}
 
 	return r

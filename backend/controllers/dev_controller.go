@@ -11,9 +11,9 @@ import (
 	"wanpictures-backend/utils"
 )
 
-// DevController handles the Developer Module:
-//   - API KEY management (JWT authenticated): GET/POST/DELETE /api/v1/dev/keys
-//   - Dedicated open upload (API KEY Bearer):   POST /openapi/v1/upload
+// DevController handles the Developer Module — API KEY management only:
+//   - GET/POST/DELETE /api/v1/dev/keys (JWT authenticated)
+// Open upload is handled separately by OpenApiController (/openapi/v1/upload).
 type DevController struct{}
 
 func NewDevController() *DevController {
@@ -133,49 +133,4 @@ func (ctrl *DevController) RevokeApiKey(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{"id": key.ID}, "API KEY 已吊销，立即失效"))
-}
-
-// ApiUpload is the dedicated open upload endpoint authenticated exclusively by
-// developer API keys (Bearer wpk_...). It reuses the full shared upload
-// pipeline (instant deduplication, quota enforcement, thumbnails, persistence)
-// and additionally accepts an optional 'tags' field (max 10 tags).
-// POST /openapi/v1/upload
-func (ctrl *DevController) ApiUpload(c *gin.Context) {
-	// Strictly require API-key authentication — JWT is never accepted here
-	if _, exists := c.Get("apiKey"); !exists {
-		c.JSON(http.StatusUnauthorized, models.ErrorResponse(http.StatusUnauthorized, "this endpoint requires a valid API key"))
-		c.Abort()
-		return
-	}
-
-	fileHeader, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "No file uploaded: "+err.Error()))
-		return
-	}
-
-	// Optional tags field: comma/semicolon separated, max 10 tags
-	var tags []string
-	if raw := c.PostForm("tags"); strings.TrimSpace(raw) != "" {
-		tags, err = parseUploadTags(raw)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		}
-	}
-
-	// Reuse the shared upload pipeline of the UploadController (same package)
-	uploader := NewUploadController()
-	role, userID, clientIP := uploader.getUserContext(c)
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, models.ErrorResponse(http.StatusUnauthorized, "invalid api key identity"))
-		return
-	}
-
-	status, payload, message, err := uploader.processUpload(c, role, userID, clientIP, fileHeader, tags)
-	if err != nil {
-		c.JSON(status, models.ErrorResponse(status, err.Error()))
-		return
-	}
-	c.JSON(status, models.SuccessResponse(payload, message))
 }

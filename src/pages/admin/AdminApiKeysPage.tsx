@@ -11,6 +11,7 @@ import {
   Clock,
   CheckCircle2,
   Copy,
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminApiKeyItem } from '../../types';
@@ -35,6 +36,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { toast } from '../../components/ui/use-toast';
 
 const PAGE_SIZE = 20;
@@ -372,47 +383,42 @@ export const AdminApiKeysPage: React.FC = () => {
         )}
       </div>
 
-      {/* Revoke confirm dialog */}
-      <Dialog open={!!revokingKey} onOpenChange={(open) => !open && setRevokingKey(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
-              <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+      {/* Revoke confirm dialog - shadcn AlertDialog */}
+      <AlertDialog open={!!revokingKey} onOpenChange={(open) => !open && !revoking && setRevokingKey(null)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
                 <AlertTriangle className="w-4 h-4" />
-              </div>
+              </span>
               <span>{t('adminApiKeys.revokeTitle', { name: revokingKey?.name })}</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left">
               {t('adminApiKeys.revokeDesc', {
                 name: revokingKey?.name,
                 owner: revokingKey ? ownerLabel(revokingKey) : '',
               })}
-            </DialogDescription>
-          </DialogHeader>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setRevokingKey(null)}
-              className="text-xs h-9 rounded-xl"
-            >
+          <AlertDialogFooter className="gap-2 sm:gap-0 pt-2">
+            <AlertDialogCancel disabled={revoking} className="text-xs h-9 rounded-xl">
               {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRevoke();
+              }}
               disabled={revoking}
-              onClick={handleRevoke}
-              className="text-xs h-9 rounded-xl px-5 gap-1.5 cursor-pointer bg-rose-500 hover:bg-rose-600 text-white font-semibold"
+              className="text-xs h-9 rounded-xl px-5 gap-1.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold focus:ring-rose-500"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              {revoking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
               <span>{t('dev.deleteBtn')}</span>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Key detail dialog */}
       <Dialog open={!!viewKey} onOpenChange={(open) => !open && setViewKey(null)}>
