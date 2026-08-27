@@ -62,6 +62,22 @@ export function formatDate(timestamp: number): string {
   });
 }
 
+import { calcAspectRatio } from 'calc-aspect-ratio';
+
+/**
+ * Display aspect ratio (e.g. "16:9"). Delegates to the calc-aspect-ratio
+ * library, which maps resolutions to standard ratios (16:9, 4:3, ...),
+ * marks close matches with "≈" and falls back to a decimal for truly
+ * non-standard sizes. Portrait images keep their vertical orientation.
+ */
+export function formatAspectRatio(width: number, height: number): string {
+  const result = calcAspectRatio(width, height);
+  if (height <= width) return result.value;
+  const prefix = result.value.startsWith('≈') ? '≈' : '';
+  const [x, y] = result.value.replace(/^≈/, '').split(':');
+  return `${prefix}${y}:${x}`;
+}
+
 export function extractExtension(filename: string, mimeType: string): string {
   const extMatch = filename.match(/\.([a-zA-Z0-9]+)$/);
   if (extMatch) return extMatch[1].toLowerCase();

@@ -26,6 +26,7 @@ export interface ImageItem {
   createdAt: number;
   updatedAt: number;
   albumId: number;
+  ownerId?: number;
   tags: string[];
   favorite?: boolean;
   compressed?: boolean;

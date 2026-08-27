@@ -244,7 +244,8 @@
     "copySuccess": "Copied Successfully",
     "renameSuccess": "Renamed Successfully",
     "tags": "Image Tags",
-    "noTags": "No tags"
+    "noTags": "No tags",
+    "noAlbum": "No album"
   },
   "links": {
     "modalTitle": "Link Generator & Extraction Center",

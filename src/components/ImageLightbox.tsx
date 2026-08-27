@@ -15,7 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ImageItem, Album, LinkFormatType } from '../types';
-import { formatFileSize, formatDate } from '../utils/imageProcessing';
+import { formatFileSize, formatDate, formatAspectRatio } from '../utils/imageProcessing';
 import {
   LINK_FORMAT_OPTIONS,
   formatSingleImageLink,
@@ -24,13 +24,6 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 import { ScrollArea } from './ui/scroll-area';
 import {
   Dialog,
@@ -38,6 +31,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from './ui/dialog';
+import { useAuth } from '../context/AuthContext';
 
 interface ImageLightboxProps {
   image: ImageItem | null;
@@ -63,6 +57,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onShowToast,
 }) => {
   const { t } = useTranslation();
+  const { isAuthenticated, user } = useAuth();
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [showInfo, setShowInfo] = useState(true);
@@ -96,6 +91,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const currentIndex = images.findIndex((i) => i.id === image.id);
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < images.length - 1;
+  const currentAlbum = albums.find((a) => a.id === image.albumId);
 
   const handlePrev = () => {
     if (hasPrev) onNavigate(images[currentIndex - 1]);
@@ -378,7 +374,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       <div className="flex justify-between py-1 border-b border-border/60">
                         <span className="text-muted-foreground">{t('lightbox.aspectRatio')}</span>
                         <span className="font-mono text-foreground">
-                          {image.aspectRatio.toFixed(2)} : 1
+                          {formatAspectRatio(image.width, image.height)}
                         </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/60">
@@ -388,27 +384,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         </span>
                       </div>
 
-                      {/* Album select */}
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-muted-foreground">{t('lightbox.album')}</span>
-                        <div className="w-36">
-                          <Select
-                            value={String(image.albumId)}
-                            onValueChange={(val) => onUpdateImage(image.id, { albumId: Number(val) })}
-                          >
-                            <SelectTrigger className="h-7 text-xs rounded-full font-normal">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {albums.map((alb) => (
-                                <SelectItem key={alb.id} value={String(alb.id)}>
-                                  {alb.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      {/* Album (read-only; only the uploader can view) */}
+                      {isAuthenticated && user && image.ownerId && user.id === image.ownerId && (
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-muted-foreground">{t('lightbox.album')}</span>
+                          <span className="font-mono text-foreground">
+                            {currentAlbum ? currentAlbum.name : t('lightbox.noAlbum')}
+                          </span>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                   {/* Tags */}
