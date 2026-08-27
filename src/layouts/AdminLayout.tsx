@@ -26,6 +26,9 @@ import {
   Cloud,
   CheckCircle2,
   AlertTriangle,
+  User as UserIcon,
+  Mail,
+  ChevronDown,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -35,11 +38,13 @@ import { formatFileSize } from '../utils/imageProcessing';
 import { adminApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { UserProfileModal } from '../components/UserProfileModal';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu';
 
@@ -59,6 +64,8 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [stats, setStats] = useState<{
     totalImages: number;
     totalAlbums: number;
@@ -161,6 +168,11 @@ export const AdminLayout: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setFeedback({ message, type });
+    setTimeout(() => setFeedback(null), 3000);
   };
 
   // Get current page title for breadcrumbs
@@ -558,13 +570,13 @@ export const AdminLayout: React.FC = () => {
             {/* Admin User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 transition-all cursor-pointer">
+                <button className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 data-[state=open]:bg-muted/80 data-[state=open]:border-primary/50 transition-all cursor-pointer select-none outline-none">
                   <img
                     src={
                       user?.avatar ||
                       `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'admin'}`
                     }
-                    alt={user?.username}
+                    alt={user?.nickname || user?.username}
                     className="w-7 h-7 rounded-full object-cover border border-border bg-muted"
                   />
                   <div className="hidden sm:block text-left">
@@ -575,35 +587,113 @@ export const AdminLayout: React.FC = () => {
                       {user?.role?.toUpperCase()}
                     </p>
                   </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 p-1.5 rounded-2xl">
-                <div className="px-3 py-2 border-b border-border/60">
-                  <p className="text-xs font-bold text-foreground">{user?.nickname || user?.username}</p>
-                  <p className="text-[11px] font-mono text-muted-foreground truncate">
-                    @{user?.username}
-                  </p>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="w-72 p-2 rounded-2xl shadow-xl border border-border/80 bg-popover/95 backdrop-blur-xl"
+              >
+                {/* User Identity Header */}
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 border border-border/40 mb-2">
+                  <img
+                    src={
+                      user?.avatar ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'admin'}`
+                    }
+                    alt={user?.nickname || user?.username}
+                    className="w-10 h-10 rounded-full border-2 border-primary/30 bg-background object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-foreground truncate">
+                        {user?.nickname || user?.username}
+                      </p>
+                      <Badge
+                        variant={user?.role === 'admin' ? 'default' : 'secondary'}
+                        className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-medium"
+                      >
+                        {user?.role === 'admin' ? t('nav.systemRoleAdmin') : t('nav.systemRoleUser')}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate">{user?.email}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[10px] font-medium text-emerald-500">
+                        {backendOnline
+                          ? t('admin.layout.statusOnline')
+                          : t('admin.layout.statusOffline')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <DropdownMenuItem
-                  onClick={() => navigate('/admin/users')}
-                  className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl cursor-pointer"
-                >
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span>{t('admin.layout.menuUserManagement')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate('/admin/settings')}
-                  className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-muted-foreground" />
-                  <span>{t('admin.layout.menuSettings')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+
+                {/* Storage Usage & Status Box */}
+                <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-2 mb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                      <HardDrive className="w-3.5 h-3.5 text-primary" />
+                      <span>{t('nav.storageUsed')}</span>
+                    </div>
+                    <Badge variant="subtle" className="text-[10px] font-mono px-1.5 py-0">
+                      {stats?.totalImages ?? 0} {t('common.items')}
+                    </Badge>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-mono font-semibold text-foreground">
+                      {formatFileSize(stats?.totalSize || 0)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground font-mono">/ 50 GB</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-muted/80 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-primary rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          ((stats?.totalSize || 0) / (50 * 1024 * 1024 * 1024)) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator className="my-1" />
+
+                {/* Menu Actions */}
+                <DropdownMenuGroup className="space-y-0.5">
+                  <DropdownMenuItem
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                  >
+                    <UserIcon className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-foreground">{t('nav.userProfile')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate('/admin/users')}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span className="text-foreground">{t('admin.layout.menuUserManagement')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate('/admin/settings')}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-foreground">{t('admin.layout.menuSettings')}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+
+                <DropdownMenuSeparator className="my-1" />
+
+                {/* Logout */}
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4 h-4 shrink-0" />
                   <span>{t('admin.layout.menuLogout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -616,6 +706,38 @@ export const AdminLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Toast notification */}
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className={`fixed top-20 right-6 z-50 px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 ${
+              feedback.type === 'success'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-rose-500 text-white'
+            }`}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{feedback.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onShowToast={(title, desc, type) =>
+          showNotification(desc || title, type === 'error' ? 'error' : 'success')
+        }
+      />
     </div>
   );
 };
