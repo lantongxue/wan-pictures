@@ -20,6 +20,7 @@ type FileAsset struct {
 	StorageDriver string         `gorm:"type:varchar(32);not null;index" json:"storage_driver"` // 'local', 's3', 'webdav'
 	StorageKey    string         `gorm:"type:varchar(512);not null" json:"storage_key"`         // Relative path or S3 object key
 	URL           string         `gorm:"type:varchar(1024);not null" json:"url"`                // Public accessible URL
+	ThumbUrl      string         `gorm:"type:varchar(1024)" json:"thumb_url"`                   // Thumbnail URL shared by all deduplicated copies
 	RefCount      int            `gorm:"type:int;default:1;not null" json:"ref_count"` // Number of logical Image records referencing this file
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`

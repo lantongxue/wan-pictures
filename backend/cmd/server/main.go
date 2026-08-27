@@ -13,6 +13,7 @@ import (
 	"wanpictures-backend/config"
 	"wanpictures-backend/database"
 	"wanpictures-backend/routes"
+	"wanpictures-backend/services/thumbnail"
 )
 
 func main() {
@@ -59,6 +60,7 @@ func main() {
 	log.Println("Shutting down server...")
 
 	database.CloseRedis()
+	thumbnail.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

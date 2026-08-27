@@ -24,10 +24,13 @@ type Config struct {
         RedisPassword string
         RedisDB       int
 
-        AdminUsername string
-        AdminEmail    string
-        AdminPassword string
-}
+AdminUsername string
+		AdminEmail    string
+		AdminPassword string
+
+		ThumbMaxDim  int // Thumbnail max edge length in pixels
+		ThumbQuality int // JPEG quality used when encoding thumbnails
+	}
 
 var AppConfig *Config
 
@@ -73,12 +76,21 @@ func LoadConfig() *Config {
         adminEmail := getEnv("ADMIN_EMAIL", "admin@wanpictures.dev")
         adminPassword := getEnv("ADMIN_PASSWORD", "admin123456")
 
-        redisAddr := getEnv("REDIS_ADDR", "127.0.0.1:6379")
-        redisPassword := getEnv("REDIS_PASSWORD", "")
-        redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
-        if err != nil || redisDB < 0 {
-                redisDB = 0
-        }
+redisAddr := getEnv("REDIS_ADDR", "127.0.0.1:6379")
+	redisPassword := getEnv("REDIS_PASSWORD", "")
+	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	if err != nil || redisDB < 0 {
+		redisDB = 0
+	}
+
+	thumbMaxDim, err := strconv.Atoi(getEnv("THUMB_MAX_DIM", "600"))
+	if err != nil || thumbMaxDim <= 0 {
+		thumbMaxDim = 600
+	}
+	thumbQuality, err := strconv.Atoi(getEnv("THUMB_QUALITY", "80"))
+	if err != nil || thumbQuality <= 0 || thumbQuality > 100 {
+		thumbQuality = 80
+	}
 
         AppConfig = &Config{
                 Host:           host,
@@ -94,13 +106,15 @@ func LoadConfig() *Config {
                         "http://localhost:5173",
                         "*",
                 },
-                RedisAddr:     redisAddr,
-                RedisPassword: redisPassword,
-                RedisDB:       redisDB,
-                AdminUsername: adminUsername,
-                AdminEmail:    adminEmail,
-                AdminPassword: adminPassword,
-        }
+RedisAddr:     redisAddr,
+		RedisPassword: redisPassword,
+		RedisDB:       redisDB,
+		AdminUsername: adminUsername,
+		AdminEmail:    adminEmail,
+		AdminPassword: adminPassword,
+		ThumbMaxDim:   thumbMaxDim,
+		ThumbQuality:  thumbQuality,
+	}
 
         return AppConfig
 }

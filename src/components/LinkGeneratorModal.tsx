@@ -204,7 +204,7 @@ export const LinkGeneratorModal: React.FC<LinkGeneratorModalProps> = ({
                         className="w-12 h-12 rounded-xl border border-border overflow-hidden shrink-0 cursor-pointer relative group bg-background"
                       >
                         <img
-                          src={img.dataUrl}
+                          src={img.thumbUrl || img.dataUrl}
                           alt={img.name}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"

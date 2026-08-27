@@ -83,6 +83,18 @@ func (l *LocalEngine) Exists(ctx context.Context, storageKey string) (bool, erro
 	return false, err
 }
 
+func (l *LocalEngine) Read(ctx context.Context, storageKey string) (io.ReadCloser, error) {
+	cleanKey := strings.TrimPrefix(storageKey, "/")
+	cleanKey = strings.TrimPrefix(cleanKey, "uploads/")
+	fullPath := filepath.Join(l.StoragePath, cleanKey)
+
+	f, err := os.Open(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open local file: %w", err)
+	}
+	return f, nil
+}
+
 func (l *LocalEngine) TestConnection(ctx context.Context) error {
 	if err := os.MkdirAll(l.StoragePath, 0755); err != nil {
 		return err

@@ -13,6 +13,8 @@ type StorageEngine interface {
 	Delete(ctx context.Context, storageKey string) error
 	// Exists checks if the file exists on the backend
 	Exists(ctx context.Context, storageKey string) (bool, error)
+	// Read opens the stored file for reading (used by thumbnail backfill & similar jobs)
+	Read(ctx context.Context, storageKey string) (io.ReadCloser, error)
 	// TestConnection performs a lightweight connectivity / health check
 	TestConnection(ctx context.Context) error
 }

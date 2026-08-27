@@ -23,6 +23,7 @@ export interface ImageItem {
   aspectRatio: number;
   dataUrl: string; // Base64 or Blob URL for rendering
   url?: string; // Public external URL
+  thumbUrl?: string; // Downscaled thumbnail URL for gallery cards
   createdAt: number;
   updatedAt: number;
   albumId: number;

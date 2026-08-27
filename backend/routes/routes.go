@@ -100,6 +100,7 @@ func SetupRouter() *gin.Engine {
 			admin.PUT("/images/:id", adminCtrl.UpdateImage)
 			admin.DELETE("/images/:id", adminCtrl.DeleteImage)
 			admin.POST("/images/batch", adminCtrl.BatchImageAction)
+			admin.POST("/images/backfill-thumbs", adminCtrl.BackfillThumbnails)
 
 			// 3. Albums Management CRUD
 			admin.GET("/albums", adminCtrl.ListAlbums)

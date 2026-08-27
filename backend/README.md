@@ -49,6 +49,15 @@ backend/
 go version
 ```
 
+> **依赖 libvips（CGo）**：缩略图生成基于 [govips](https://github.com/davidbyttow/govips)（libvips 绑定），编译与运行都需要系统安装 libvips 及其常见格式库：
+> ```bash
+> # Debian / Ubuntu
+> apt-get install -y libvips-dev librsvg2-dev
+> # CentOS / RHEL / Fedora
+> dnf install -y vips-devel
+> ```
+> 未安装时 `go build` 会因缺少 C 依赖失败。
+
 ### 2. 下载依赖
 ```bash
 cd backend

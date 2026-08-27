@@ -494,7 +494,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   {/* Image Container */}
                   <div className="relative w-full overflow-hidden flex items-center justify-center bg-muted/40 min-h-[120px]">
                     <img
-                      src={img.dataUrl}
+                      src={img.thumbUrl || img.dataUrl}
                       alt={img.name}
                       loading="lazy"
                       className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-105"

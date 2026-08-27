@@ -9,13 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -24,9 +22,11 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"wanpictures-backend/config"
 	"wanpictures-backend/database"
 	"wanpictures-backend/models"
 	"wanpictures-backend/services/storage"
+	"wanpictures-backend/services/thumbnail"
 	"wanpictures-backend/utils"
 )
 
@@ -225,6 +225,7 @@ func buildImageFromAsset(asset *models.FileAsset, name, originalName string, alb
 		Height:        asset.Height,
 		AspectRatio:   asset.AspectRatio,
 		Url:           asset.URL,
+		ThumbUrl:      asset.ThumbUrl,
 		AlbumID:       albumID,
 		UserID:        userID,
 		Tags:          []string{strings.ToUpper(asset.Extension)},
@@ -234,6 +235,72 @@ func buildImageFromAsset(asset *models.FileAsset, name, originalName string, alb
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
+}
+
+// saveThumbnail generates a downscaled copy of an upload and stores it next to
+// the original under the same storage driver (uploads/thumbs/<date>/<name>).
+// Any failure (unrasterizable format, decode error, storage error) is logged
+// and swallowed so the upload itself always succeeds - the frontend then
+// falls back to the original URL. Returns the stored thumbnail public URL.
+func saveThumbnail(ctx context.Context, engine storage.StorageEngine, fileBytes []byte, contentType, storageKey string) string {
+	cfg := config.AppConfig
+	thumbBytes, thumbMime, err := thumbnail.Generate(fileBytes, contentType, cfg.ThumbMaxDim, cfg.ThumbQuality)
+	if err != nil {
+		log.Printf("[Thumbnail] skipped for %s: %v", storageKey, err)
+		return ""
+	}
+	thumbKey := thumbnail.ThumbKey(storageKey)
+	thumbURL, err := engine.Save(ctx, thumbKey, bytes.NewReader(thumbBytes), int64(len(thumbBytes)), thumbMime)
+	if err != nil {
+		log.Printf("[Thumbnail] failed to store %s: %v", thumbKey, err)
+		return ""
+	}
+	return thumbURL
+}
+
+var (
+	svgSizeAttrRe    = regexp.MustCompile(`(?i)(width|height)\s*=\s*["']\s*([\d.]+)\s*(?:px)?\s*["']`)
+	svgViewBoxSizeRe = regexp.MustCompile(`(?i)viewBox\s*=\s*["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*["']`)
+)
+
+// parseSVGDimensions extracts the intrinsic dimensions of an SVG document from
+// its width/height attributes, falling back to viewBox when those are missing.
+// Returns an error when neither can be determined.
+func parseSVGDimensions(data []byte) (int, int, error) {
+	s := string(data)
+
+	var w, h float64
+	for _, m := range svgSizeAttrRe.FindAllStringSubmatch(s, -1) {
+		v, err := strconv.ParseFloat(m[2], 64)
+		if err != nil {
+			continue
+		}
+		switch strings.ToLower(m[1]) {
+		case "width":
+			w = v
+		case "height":
+			h = v
+		}
+	}
+	if w > 0 && h > 0 {
+		return int(w), int(h), nil
+	}
+
+	if m := svgViewBoxSizeRe.FindStringSubmatch(s); len(m) == 3 {
+		vw, _ := strconv.ParseFloat(m[1], 64)
+		vh, _ := strconv.ParseFloat(m[2], 64)
+		if vw > 0 && vh > 0 {
+			switch {
+			case w > 0:
+				return int(w), int(vh * w / vw), nil
+			case h > 0:
+				return int(vw * h / vh), int(h), nil
+			default:
+				return int(vw), int(vh), nil
+			}
+		}
+	}
+	return 0, 0, fmt.Errorf("svg dimensions not found")
 }
 
 // persistInstantImage atomically links a new logical Image to an existing FileAsset:
@@ -410,10 +477,16 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		// concurrently) - fall through and store the file as a fresh upload.
 	}
 
-	// 5. Decode Image Dimensions
-	cfg, format, imgErr := image.DecodeConfig(bytes.NewReader(fileBytes))
-	width := cfg.Width
-	height := cfg.Height
+	// 5. Decode Image Dimensions via libvips (covers jpeg/png/webp/gif/avif/svg/bmp/ico)
+	width, height, dimErr := thumbnail.Dimensions(fileBytes)
+	fileNameExt := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileHeader.Filename), "."))
+	if dimErr != nil && fileNameExt == "svg" {
+		// librsvg may be unavailable; fall back to parsing the SVG markup's
+		// width/height (or viewBox) so cards still display real dimensions.
+		if w, h, perr := parseSVGDimensions(fileBytes); perr == nil {
+			width, height = w, h
+		}
+	}
 	aspectRatio := 1.0
 	if width > 0 && height > 0 {
 		aspectRatio = float64(width) / float64(height)
@@ -421,11 +494,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	if ext == "" {
-		if format != "" {
-			ext = "." + format
-		} else {
-			ext = ".png"
-		}
+		ext = ".png"
 	}
 	cleanExt := strings.TrimPrefix(ext, ".")
 
@@ -453,6 +522,10 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		return
 	}
 
+	// 8b. Generate a downscaled thumbnail next to the original so gallery
+	// cards never download the full-resolution file. Failure is non-fatal.
+	thumbURL := saveThumbnail(c.Request.Context(), engine, fileBytes, contentType, storageKey)
+
 	// 9-11. Persist FileAsset + Image (+ upload log) atomically so a partial
 	// failure never leaves an orphaned asset with a phantom reference.
 	newAsset := models.FileAsset{
@@ -467,6 +540,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 		StorageDriver: string(driver),
 		StorageKey:    storageKey,
 		URL:           publicURL,
+		ThumbUrl:      thumbURL,
 		RefCount:      1,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
@@ -488,6 +562,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 			Height:        height,
 			AspectRatio:   aspectRatio,
 			Url:           publicURL,
+			ThumbUrl:      thumbURL,
 			AlbumID:       albumID,
 			UserID:        userID,
 			Tags:          []string{strings.ToUpper(cleanExt)},
@@ -520,6 +595,7 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 			// The transaction rolled back; clean up our redundant object and
 			// degrade gracefully to instant-upload reuse of the winner's asset.
 			_ = engine.Delete(c.Request.Context(), storageKey)
+			_ = engine.Delete(c.Request.Context(), thumbnail.ThumbKey(storageKey))
 
 			var winner models.FileAsset
 			if ferr := database.DB.Where("file_hash = ?", sha256Hash).First(&winner).Error; ferr == nil {
@@ -542,11 +618,11 @@ func (ctrl *UploadController) UploadFile(c *gin.Context) {
 
 		// Transaction rolled back - remove the object we saved to storage
 		_ = engine.Delete(c.Request.Context(), storageKey)
+		_ = engine.Delete(c.Request.Context(), thumbnail.ThumbKey(storageKey))
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to persist upload: "+err.Error()))
 		return
 	}
 
-	_ = imgErr // keep compiler happy if image decode error
 	c.JSON(http.StatusOK, models.SuccessResponse(gin.H{
 		"is_instant": false,
 		"image":      createdImage,
@@ -682,6 +758,7 @@ func DeleteImageWithRefCount(imageID uint) error {
 		mgr := storage.GetManager()
 		if eng, derr := mgr.GetEngineByDriver(models.StorageDriver(purgeDriver)); derr == nil {
 			_ = eng.Delete(context.Background(), purgeKey)
+			_ = eng.Delete(context.Background(), thumbnail.ThumbKey(purgeKey))
 		}
 	}
 

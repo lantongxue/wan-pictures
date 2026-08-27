@@ -18,6 +18,7 @@ type Image struct {
 	Height        int            `gorm:"type:int" json:"height"`
 	AspectRatio   float64        `gorm:"type:decimal(6,3)" json:"aspect_ratio"`
 	Url           string         `gorm:"type:varchar(1024)" json:"url"`
+	ThumbUrl      string         `gorm:"type:varchar(1024)" json:"thumb_url"` // downscaled thumbnail, generated at upload time
 	AlbumID       uint           `gorm:"index;default:1" json:"album_id"`
 	UserID        uint           `gorm:"type:bigint;index;default:1" json:"user_id"`
 	Tags          []string       `gorm:"type:json;serializer:json" json:"tags"` // JSON array of strings: ["WALLPAPER","4K"]

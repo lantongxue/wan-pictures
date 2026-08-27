@@ -459,7 +459,7 @@ export const AdminOverviewPage: React.FC = () => {
               className="group relative rounded-2xl overflow-hidden border border-border/60 aspect-square bg-muted/40 cursor-pointer shadow-xs"
             >
               <img
-                src={item.dataUrl || item.url}
+                src={item.thumbUrl || item.dataUrl || item.url}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />

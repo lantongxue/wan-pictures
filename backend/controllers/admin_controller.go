@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,8 +13,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"wanpictures-backend/config"
 	"wanpictures-backend/database"
 	"wanpictures-backend/models"
+	"wanpictures-backend/services/storage"
+	"wanpictures-backend/services/thumbnail"
 	"wanpictures-backend/utils"
 )
 
@@ -327,6 +332,109 @@ func (ctrl *AdminController) DeleteImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, models.SuccessResponse(nil, "Image deleted successfully"))
+}
+
+// BackfillThumbnails generates thumbnails for images uploaded before the
+// thumbnail feature existed (images whose thumb_url is empty). Originals are
+// read through their storage driver, downscaled, stored next to the original
+// and the thumb_url is written back to both the Image and its FileAsset so
+// future instant-upload copies inherit it. Idempotent: already-generated and
+// unrasterizable (svg etc.) images are skipped; call repeatedly to drain the
+// queue in batches.
+// POST /api/v1/admin/images/backfill-thumbs?batch=50
+func (ctrl *AdminController) BackfillThumbnails(c *gin.Context) {
+	mgr := storage.GetManager()
+	cfg := config.AppConfig
+
+	type ThumbStats struct {
+		Total     int `json:"total"`
+		Processed int `json:"processed"`
+		Failed    int `json:"failed"`
+		Skipped   int `json:"skipped"`
+	}
+
+	batch := 50
+	if b := c.Query("batch"); b != "" {
+		if n, err := strconv.Atoi(b); err == nil && n > 0 && n <= 500 {
+			batch = n
+		}
+	}
+
+	var images []models.Image
+	if err := database.DB.Where("thumb_url = '' OR thumb_url IS NULL").Limit(batch).Find(&images).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	stats := ThumbStats{Total: len(images)}
+	for i := range images {
+		img := &images[i]
+
+		var asset models.FileAsset
+		assetQuery := database.DB
+		if img.FileAssetID > 0 {
+			assetQuery = assetQuery.Where("id = ?", img.FileAssetID)
+		} else if img.FileHash != "" {
+			assetQuery = assetQuery.Where("file_hash = ?", img.FileHash)
+		} else {
+			// Manually imported record without dedup linkage: no physical
+			// file can be read through a driver key.
+			stats.Skipped++
+			continue
+		}
+		if err := assetQuery.First(&asset).Error; err != nil {
+			stats.Failed++
+			continue
+		}
+
+		if asset.ThumbUrl != "" {
+			// The asset (and its deduplicated siblings) already has one:
+			// just copy the URL down to this image record.
+			database.DB.Model(img).Update("thumb_url", asset.ThumbUrl)
+			stats.Skipped++
+			continue
+		}
+
+		engine, err := mgr.GetEngineByDriver(models.StorageDriver(asset.StorageDriver))
+		if err != nil {
+			stats.Failed++
+			continue
+		}
+
+		rc, err := engine.Read(c.Request.Context(), asset.StorageKey)
+		if err != nil {
+			stats.Failed++
+			continue
+		}
+		fileBytes, readErr := io.ReadAll(rc)
+		rc.Close()
+		if readErr != nil {
+			stats.Failed++
+			continue
+		}
+
+		thumbBytes, thumbMime, err := thumbnail.Generate(fileBytes, asset.MimeType, cfg.ThumbMaxDim, cfg.ThumbQuality)
+		if err != nil {
+			stats.Skipped++ // not rasterizable (svg, corrupted...)
+			continue
+		}
+
+		thumbKey := thumbnail.ThumbKey(asset.StorageKey)
+		thumbURL, err := engine.Save(c.Request.Context(), thumbKey, bytes.NewReader(thumbBytes), int64(len(thumbBytes)), thumbMime)
+		if err != nil {
+			stats.Failed++
+			continue
+		}
+
+		if err := database.DB.Model(&asset).Update("thumb_url", thumbURL).Error; err != nil {
+			stats.Failed++
+			continue
+		}
+		database.DB.Model(img).Update("thumb_url", thumbURL)
+		stats.Processed++
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse(stats, "Thumbnail backfill complete"))
 }
 
 // BatchImageAction handles batch operations (delete, move, tag)

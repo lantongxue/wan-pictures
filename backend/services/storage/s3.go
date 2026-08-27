@@ -248,6 +248,33 @@ func (s *S3Engine) Exists(ctx context.Context, storageKey string) (bool, error) 
 	return false, fmt.Errorf("S3 HEAD returned HTTP %d", resp.StatusCode)
 }
 
+func (s *S3Engine) Read(ctx context.Context, storageKey string) (io.ReadCloser, error) {
+	reqURL, _, err := s.buildURL(storageKey)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	emptyHash := hex.EncodeToString(sha256.New().Sum(nil))
+	s.signRequest(req, emptyHash)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("S3 read request failed: %w", err)
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return resp.Body, nil
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return nil, fmt.Errorf("S3 read failed with HTTP %d: %s", resp.StatusCode, string(body))
+}
+
 func (s *S3Engine) TestConnection(ctx context.Context) error {
 	if s.Config.Endpoint == "" || s.Config.Bucket == "" {
 		return fmt.Errorf("S3 endpoint and bucket are required")

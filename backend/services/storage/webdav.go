@@ -159,6 +159,28 @@ func (w *WebDAVEngine) Exists(ctx context.Context, storageKey string) (bool, err
 	return false, fmt.Errorf("WebDAV PROPFIND returned HTTP %d", resp.StatusCode)
 }
 
+func (w *WebDAVEngine) Read(ctx context.Context, storageKey string) (io.ReadCloser, error) {
+	targetURL := w.buildTargetURL(storageKey)
+	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	w.setAuth(req)
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("WebDAV read failed: %w", err)
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return resp.Body, nil
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return nil, fmt.Errorf("WebDAV read returned HTTP %d: %s", resp.StatusCode, string(body))
+}
+
 func (w *WebDAVEngine) TestConnection(ctx context.Context) error {
 	if w.Config.ServerURL == "" {
 		return fmt.Errorf("WebDAV server URL is required")

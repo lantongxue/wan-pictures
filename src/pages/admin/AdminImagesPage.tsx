@@ -560,7 +560,7 @@ export const AdminImagesPage: React.FC = () => {
                           className="w-12 h-12 rounded-xl overflow-hidden border border-border/80 bg-muted/40 cursor-pointer hover:opacity-80 transition-opacity"
                         >
                           <img
-                            src={img.dataUrl || img.url}
+                            src={img.thumbUrl || img.dataUrl || img.url}
                             alt={img.name}
                             className="w-full h-full object-cover"
                           />
@@ -709,7 +709,7 @@ export const AdminImagesPage: React.FC = () => {
                 {/* Image Preview Container */}
                 <div className="relative aspect-4/3 bg-muted/40 overflow-hidden cursor-pointer">
                   <img
-                    src={img.dataUrl || img.url}
+                    src={img.thumbUrl || img.dataUrl || img.url}
                     alt={img.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     onClick={() => setPreviewImage(img)}

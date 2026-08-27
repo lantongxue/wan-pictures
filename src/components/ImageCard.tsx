@@ -99,7 +99,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         {/* Thumbnail */}
         <div className="w-14 h-14 rounded-xl border border-border overflow-hidden shrink-0 relative bg-background">
           <img
-            src={image.dataUrl}
+            src={image.thumbUrl || image.dataUrl}
             alt={image.name}
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -227,7 +227,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         }`}
       >
         <img
-          src={image.dataUrl}
+          src={image.thumbUrl || image.dataUrl}
           alt={image.name}
           loading="lazy"
           referrerPolicy="no-referrer"

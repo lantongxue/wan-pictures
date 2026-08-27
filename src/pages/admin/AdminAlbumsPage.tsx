@@ -256,7 +256,7 @@ export const AdminAlbumsPage: React.FC = () => {
               alb.totalSize !== undefined
                 ? alb.totalSize
                 : albumImages.reduce((sum, img) => sum + (img.size || 0), 0);
-            const coverImage = alb.coverImageUrl || albumImages[0]?.dataUrl || albumImages[0]?.url;
+            const coverImage = alb.coverImageUrl || albumImages[0]?.thumbUrl || albumImages[0]?.dataUrl || albumImages[0]?.url;
 
             return (
               <motion.div
