@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"testing"
 
 	"gorm.io/driver/sqlite"
@@ -16,10 +17,24 @@ func setupRefCountTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.FileAsset{}, &models.Image{}); err != nil {
+	if err := db.AutoMigrate(&models.FileAsset{}, &models.Image{}, &models.StorageConfig{}); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 	database.DB = db
+
+	// Seed the local storage config so purge paths resolve through the real
+	// engine; the storage path points at a temp dir so NewLocalEngine's
+	// MkdirAll never leaves a stray ./uploads in the package directory.
+	storagePath := t.TempDir()
+	if err := database.DB.Create(&models.StorageConfig{
+		Driver:     models.StorageDriverLocal,
+		Name:       "Local",
+		IsEnabled:  true,
+		IsActive:   true,
+		ConfigJSON: fmt.Sprintf(`{"storage_path":%q,"public_url_prefix":"/uploads/"}`, storagePath),
+	}).Error; err != nil {
+		t.Fatalf("failed to seed storage config: %v", err)
+	}
 }
 
 // seedAssetWithImages creates a FileAsset plus n logical Image references to it
