@@ -52,6 +52,8 @@ export interface UserContextType {
   setAuthModalMode: (mode: 'login' | 'register') => void;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
+  isPasswordModalOpen: boolean;
+  setIsPasswordModalOpen: (open: boolean) => void;
   previewImage: ImageItem | null;
   setPreviewImage: (image: ImageItem | null) => void;
 
@@ -96,6 +98,7 @@ export interface UserContextType {
   handleOpenAlbums: () => void;
   handleOpenSettings: () => void;
   handleOpenProfile: () => void;
+  handleOpenPassword: () => void;
   handleOpenAuth: (mode?: 'login' | 'register') => void;
 }
 
@@ -139,6 +142,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
 
   // Selection & Filters
@@ -803,6 +807,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsProfileModalOpen(true);
   }, []);
 
+  const handleOpenPassword = useCallback(() => {
+    setIsPasswordModalOpen(true);
+  }, []);
+
   const handleOpenAuth = useCallback((mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
@@ -837,6 +845,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthModalMode,
     isProfileModalOpen,
     setIsProfileModalOpen,
+    isPasswordModalOpen,
+    setIsPasswordModalOpen,
     previewImage,
     setPreviewImage,
     selectedIds,
@@ -869,6 +879,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleOpenAlbums,
     handleOpenSettings,
     handleOpenProfile,
+    handleOpenPassword,
     handleOpenAuth,
   };
 

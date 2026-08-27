@@ -15,6 +15,7 @@ import { AlbumManagerModal } from '../../components/AlbumManagerModal';
 import { SettingsModal } from '../../components/SettingsModal';
 import { AuthModal } from '../../components/AuthModal';
 import { UserProfileModal } from '../../components/UserProfileModal';
+import { ChangePasswordModal } from '../../components/ChangePasswordModal';
 
 const UserLayoutContent: React.FC = () => {
   const { t } = useTranslation();
@@ -43,6 +44,8 @@ const UserLayoutContent: React.FC = () => {
     authModalMode,
     isProfileModalOpen,
     setIsProfileModalOpen,
+    isPasswordModalOpen,
+    setIsPasswordModalOpen,
     previewImage,
     setPreviewImage,
     filters,
@@ -69,6 +72,7 @@ const UserLayoutContent: React.FC = () => {
     handleOpenSettings,
     handleOpenAuth,
     handleOpenProfile,
+    handleOpenPassword,
   } = useUser();
 
   return (
@@ -95,6 +99,7 @@ const UserLayoutContent: React.FC = () => {
         onOpenAdmin={() => navigate('/admin')}
         onOpenAuth={handleOpenAuth}
         onOpenProfile={handleOpenProfile}
+        onOpenPassword={handleOpenPassword}
         onShowToast={showToast}
       />
 
@@ -203,6 +208,13 @@ const UserLayoutContent: React.FC = () => {
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+        onShowToast={showToast}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
         onShowToast={showToast}
       />
     </div>

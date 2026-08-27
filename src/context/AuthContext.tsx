@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User, RegisterPayload, LoginPayload, UpdateProfilePayload } from '../types';
+import { User, RegisterPayload, LoginPayload, UpdateProfilePayload, ChangePasswordPayload } from '../types';
 import { authApi, authStorage } from '../services/api';
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateProfile: (payload: UpdateProfilePayload) => Promise<{ success: boolean; message?: string }>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<{ success: boolean; message?: string }>;
   checkBackend: () => Promise<boolean>;
 }
 
@@ -80,6 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res;
   };
 
+  const changePassword = async (payload: ChangePasswordPayload) => {
+    return await authApi.changePassword(payload);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         updateProfile,
+        changePassword,
         checkBackend,
       }}
     >

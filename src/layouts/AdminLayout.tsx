@@ -29,6 +29,7 @@ import {
   User as UserIcon,
   Mail,
   ChevronDown,
+  KeyRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +40,7 @@ import { adminApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { UserProfileModal } from '../components/UserProfileModal';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -65,6 +67,7 @@ export const AdminLayout: React.FC = () => {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [stats, setStats] = useState<{
     totalImages: number;
@@ -671,6 +674,13 @@ export const AdminLayout: React.FC = () => {
                     <span className="text-foreground">{t('nav.userProfile')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => setIsPasswordModalOpen(true)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                  >
+                    <KeyRound className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-foreground">{t('nav.changePassword')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => navigate('/admin/users')}
                     className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
                   >
@@ -734,6 +744,15 @@ export const AdminLayout: React.FC = () => {
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+        onShowToast={(title, desc, type) =>
+          showNotification(desc || title, type === 'error' ? 'error' : 'success')
+        }
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
         onShowToast={(title, desc, type) =>
           showNotification(desc || title, type === 'error' ? 'error' : 'success')
         }

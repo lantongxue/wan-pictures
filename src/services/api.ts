@@ -12,6 +12,7 @@ import {
   RegisterPayload,
   LoginPayload,
   UpdateProfilePayload,
+  ChangePasswordPayload,
   AdminOverviewStats,
   ImageItem,
   Album,
@@ -180,6 +181,18 @@ export const authApi = {
     }
 
     return { success: false, message: res.message || '更新失败' };
+  },
+
+  /**
+   * Change the current user's password (Go backend)
+   * POST /api/v1/auth/password
+   */
+  async changePassword(payload: ChangePasswordPayload): Promise<{ success: boolean; message?: string }> {
+    const res = await request<any>('/auth/password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return { success: res.success, message: res.message };
   },
 
   /**
