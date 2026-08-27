@@ -100,7 +100,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         <div className="w-14 h-14 rounded-xl border border-border overflow-hidden shrink-0 relative bg-background">
           <img
             src={image.thumbUrl || image.dataUrl}
-            alt={image.name}
+            alt={image.originalName || image.name}
             loading="lazy"
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -111,7 +111,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h4 className="text-xs sm:text-sm font-medium truncate transition-colors text-foreground group-hover:text-primary">
-              {image.name}
+              {image.originalName || image.name}
             </h4>
             {image.compressed && (
               <Badge variant="subtle" className="text-[9px] text-emerald-600 bg-emerald-500/10">
@@ -228,7 +228,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
       >
         <img
           src={image.thumbUrl || image.dataUrl}
-          alt={image.name}
+          alt={image.originalName || image.name}
           loading="lazy"
           referrerPolicy="no-referrer"
           className="w-full h-full block object-cover transition-transform duration-500 group-hover:scale-105"
@@ -350,8 +350,11 @@ export const ImageCard: React.FC<ImageCardProps> = ({
       {/* Card Info Footer */}
       <div className="p-3.5 border-t border-border/60 bg-muted/20">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium truncate transition-colors text-foreground group-hover:text-primary">
-            {image.name}
+          <p
+            className="text-xs font-medium truncate transition-colors text-foreground group-hover:text-primary"
+            title={image.originalName || image.name}
+          >
+            {image.originalName || image.name}
           </p>
           <span className="text-[10px] font-mono shrink-0 text-muted-foreground">
             {formatFileSize(image.size)}

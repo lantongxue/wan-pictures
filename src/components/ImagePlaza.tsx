@@ -495,7 +495,7 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   <div className="relative w-full overflow-hidden flex items-center justify-center bg-muted/40 min-h-[120px]">
                     <img
                       src={img.thumbUrl || img.dataUrl}
-                      alt={img.name}
+                      alt={img.originalName || img.name}
                       loading="lazy"
                       className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-105"
                       referrerPolicy="no-referrer"
@@ -607,8 +607,11 @@ export const ImagePlaza: React.FC<ImagePlazaProps> = ({
                   {/* Card Info Footer */}
                   <div className="p-3.5 border-t border-border/60 bg-muted/20 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium truncate text-foreground group-hover:text-primary transition-colors flex-1" title={img.name}>
-                        {img.name}
+                      <p
+                        className="text-xs font-medium truncate text-foreground group-hover:text-primary transition-colors flex-1"
+                        title={img.originalName || img.name}
+                      >
+                        {img.originalName || img.name}
                       </p>
                       {album && (
                         <span
