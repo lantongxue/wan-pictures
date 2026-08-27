@@ -19,6 +19,7 @@ import { AdminAlbumsPage } from './pages/admin/AdminAlbumsPage';
 import { AdminTagsPage } from './pages/admin/AdminTagsPage';
 import { AdminStoragePage } from './pages/admin/AdminStoragePage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminApiKeysPage } from './pages/admin/AdminApiKeysPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminLogsPage } from './pages/admin/AdminLogsPage';
 
@@ -46,6 +47,7 @@ export default function App() {
                 <Route path="tags" element={<AdminTagsPage />} />
                 <Route path="storage" element={<AdminStoragePage />} />
                 <Route path="users" element={<AdminUsersPage />} />
+                <Route path="api-keys" element={<AdminApiKeysPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="logs" element={<AdminLogsPage />} />
               </Route>

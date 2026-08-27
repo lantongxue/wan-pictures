@@ -43,12 +43,14 @@ func (ctrl *AdminController) GetOverviewStats(c *gin.Context) {
 	var totalAlbums int64
 	var totalTags int64
 	var totalUsers int64
+	var totalApiKeys int64
 	var totalSize int64
 
 	database.DB.Model(&models.Image{}).Count(&totalImages)
 	database.DB.Model(&models.Album{}).Count(&totalAlbums)
 	database.DB.Model(&models.Tag{}).Count(&totalTags)
 	database.DB.Model(&models.User{}).Count(&totalUsers)
+	database.DB.Model(&models.ApiKey{}).Count(&totalApiKeys)
 
 	// Calculate total size
 	type SumResult struct {
@@ -108,6 +110,7 @@ func (ctrl *AdminController) GetOverviewStats(c *gin.Context) {
 		TotalAlbums:    totalAlbums,
 		TotalTags:      totalTags,
 		TotalUsers:     totalUsers,
+		TotalApiKeys:   totalApiKeys,
 		TotalSize:      totalSize,
 		ActiveStorage:  activeDriver,
 		StorageUsage:   storageUsage,

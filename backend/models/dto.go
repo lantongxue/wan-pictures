@@ -104,6 +104,7 @@ type AdminOverviewStats struct {
 	TotalAlbums    int64            `json:"total_albums"`
 	TotalTags      int64            `json:"total_tags"`
 	TotalUsers     int64            `json:"total_users"`
+	TotalApiKeys   int64            `json:"total_api_keys"`
 	TotalSize      int64            `json:"total_size"`
 	ActiveStorage  StorageDriver    `json:"active_storage"`
 	StorageUsage   map[string]int64 `json:"storage_usage"` // local: bytes, s3: bytes, webdav: bytes
@@ -282,6 +283,23 @@ type ApiKeyResponse struct {
 	LastUsedAt *time.Time `json:"last_used_at"`
 	ExpiresAt  *time.Time `json:"expires_at"`
 	CreatedAt  time.Time  `json:"created_at"`
+}
+
+// AdminApiKeyResponse is the admin-facing view of any user's API key.
+// It includes the owning account and supports the management console list.
+type AdminApiKeyResponse struct {
+	ID          uint       `json:"id"`
+	UserID      uint       `json:"user_id"`
+	Username    string     `json:"username"`
+	Nickname    string     `json:"nickname"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Key         string     `json:"key"` // plaintext, viewable by admins
+	LastUsedAt  *time.Time `json:"last_used_at"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	IsExpired   bool       `json:"is_expired"`
+	IsRevoked   bool       `json:"is_revoked"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 

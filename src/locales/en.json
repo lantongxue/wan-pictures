@@ -28,7 +28,8 @@
     "error": "Error",
     "info": "Info",
     "warning": "Warning",
-    "actions": "Actions"
+    "actions": "Actions",
+    "refresh": "Refresh"
   },
   "nav": {
     "plaza": "Discovery Plaza",
@@ -530,6 +531,7 @@
       "navTags": "Tag Taxonomy & Merge",
       "navStorage": "Multi-Cloud Storage Engine",
       "navUsers": "User & Permission Management",
+      "navApiKeys": "API Key Management",
       "navSettings": "Maintenance & Backup",
       "navLogs": "Operation & Audit Logs",
       "defaultPageTitle": "Control Center",
@@ -668,6 +670,33 @@
     "title": "User & Permission Management",
     "count": "{{count}} users",
     "subtitle": "Tenant account management, role assignment (Admin / User), random strong password reset & security"
+  },
+  "adminApiKeys": {
+    "title": "API Key Management",
+    "count": "{{count}} keys",
+    "subtitle": "Site-wide view of developer API keys: inspect owners, plaintext secrets and usage, and force-revoke any key",
+    "searchPlaceholder": "Search key name / username / email...",
+    "searchBtn": "Search",
+    "filterAll": "All statuses",
+    "filterActive": "Active only",
+    "filterExpired": "Expired only",
+    "filterRevoked": "Revoked",
+    "statusRevoked": "Revoked",
+    "neverUsed": "Never used",
+    "colName": "Key Name",
+    "colOwner": "Owner",
+    "colKey": "Secret",
+    "colStatus": "Status",
+    "owner": "Owner",
+    "show": "Reveal full key",
+    "hide": "Hide key",
+    "loadFailed": "Failed to load API keys",
+    "emptyTitle": "No API keys yet",
+    "emptyDesc": "Users can create API keys from the Developer Center; new keys will appear here.",
+    "revokeTitle": "Revoke API key \"{{name}}\"?",
+    "revokeDesc": "This key belongs to \"{{owner}}\". Once revoked it stops working immediately — every integration using it breaks, and this cannot be undone.",
+    "revokeSuccess": "API key \"{{name}}\" revoked",
+    "revokeFailed": "Failed to revoke"
   },
   "adminAlbums": {
     "title": "Album Spaces & Archiving",

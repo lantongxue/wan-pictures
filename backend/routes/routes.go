@@ -38,6 +38,7 @@ func SetupRouter() *gin.Engine {
 	uploadCtrl := controllers.NewUploadController()
 	imageCtrl := controllers.NewImageController()
 	devCtrl := controllers.NewDevController()
+	adminApiKeyCtrl := controllers.NewAdminApiKeyController()
 
 	// Static route to serve uploaded local image assets (legacy; new links go
 	// through the counting proxy /image/... below)
@@ -143,6 +144,10 @@ func SetupRouter() *gin.Engine {
 			admin.PUT("/users/:id", adminCtrl.UpdateUser)
 			admin.DELETE("/users/:id", adminCtrl.DeleteUser)
 			admin.POST("/users/:id/reset-password", adminCtrl.ResetUserPassword)
+
+			// 8. Developer API Keys Management (cross-account view & revoke)
+			admin.GET("/api-keys", adminApiKeyCtrl.ListApiKeys)
+			admin.DELETE("/api-keys/:id", adminApiKeyCtrl.RevokeApiKey)
 		}
 
 		// Ping test route

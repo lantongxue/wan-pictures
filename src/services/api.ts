@@ -22,6 +22,7 @@ import {
   StorageTestResult,
   UploadQuotaInfo,
   ApiKeyItem,
+  AdminApiKeyItem,
   CreateApiKeyPayload,
 } from '../types';
 import { sha256 } from 'js-sha256';
@@ -346,6 +347,7 @@ export const adminApi = {
           totalAlbums: Number(d.total_albums || 0),
           totalTags: Number(d.total_tags || 0),
           totalUsers: Number(d.total_users || 0),
+          totalApiKeys: Number(d.total_api_keys || 0),
           totalSize: Number(d.total_size || 0),
           activeStorage: d.active_storage || 'local',
           storageUsage: {
@@ -1120,6 +1122,56 @@ export const adminApi = {
       return { success: true, message: res.message || '密码重置成功' };
     }
     throw new Error(res.message || '重置密码失败');
+  },
+
+  /**
+   * List all users' API keys with search / status filter / pagination.
+   * GET /api/v1/admin/api-keys
+   */
+  async getApiKeys(params?: {
+    q?: string;
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ success: boolean; data: { items: AdminApiKeyItem[]; total: number; page: number; pageSize: number }; message?: string }> {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.status && params.status !== 'all') query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('page_size', String(params.pageSize));
+    const qs = query.toString();
+    const res = await request<any>(`/admin/api-keys${qs ? `?${qs}` : ''}`);
+    if (res.success && res.data) {
+      const items: AdminApiKeyItem[] = (res.data.items || []).map((k: any) => ({
+        id: Number(k.id),
+        userId: Number(k.user_id),
+        username: k.username || '',
+        nickname: k.nickname || '',
+        email: k.email || '',
+        name: k.name || '',
+        key: k.key || '',
+        lastUsedAt: k.last_used_at || null,
+        expiresAt: k.expires_at || null,
+        isExpired: Boolean(k.is_expired),
+        isRevoked: Boolean(k.is_revoked),
+        createdAt: k.created_at,
+      }));
+      return {
+        success: true,
+        data: { items, total: Number(res.data.total || 0), page: Number(res.data.page || 1), pageSize: Number(res.data.page_size || 20) },
+        message: res.message,
+      };
+    }
+    return { success: false, data: { items: [], total: 0, page: 1, pageSize: 20 }, message: res.message || '无法加载 API KEY 列表' };
+  },
+
+  /**
+   * Revoke any user's API key (immediately invalidates it).
+   * DELETE /api/v1/admin/api-keys/:id
+   */
+  async revokeApiKey(id: number): Promise<{ success: boolean; message?: string }> {
+    const res = await request(`/admin/api-keys/${id}`, { method: 'DELETE' });
+    return { success: res.success, message: res.message };
   },
 };
 

@@ -151,6 +151,7 @@ export interface AdminOverviewStats {
   totalAlbums: number;
   totalTags: number;
   totalUsers: number;
+  totalApiKeys?: number;
   totalSize: number;
   activeStorage: StorageDriverType;
   storageUsage: {
@@ -298,5 +299,20 @@ export interface ApiKeyItem {
 export interface CreateApiKeyPayload {
   name: string;
   expires_in_days?: number;
+}
+
+export interface AdminApiKeyItem {
+  id: number;
+  userId: number;
+  username: string;
+  nickname: string;
+  email: string;
+  name: string;
+  key: string;
+  lastUsedAt?: string | null;
+  expiresAt?: string | null;
+  isExpired: boolean;
+  isRevoked?: boolean;
+  createdAt: string;
 }
 

@@ -73,6 +73,7 @@ export const AdminLayout: React.FC = () => {
     totalAlbums: number;
     totalTags: number;
     totalUsers: number;
+    totalApiKeys: number;
     totalSize: number;
     activeStorage: string;
   } | null>(null);
@@ -88,6 +89,7 @@ export const AdminLayout: React.FC = () => {
           totalAlbums: res.data.totalAlbums,
           totalTags: res.data.totalTags,
           totalUsers: res.data.totalUsers,
+          totalApiKeys: res.data.totalApiKeys ?? 0,
           totalSize: res.data.totalSize,
           activeStorage: res.data.activeStorage,
         });
@@ -146,6 +148,13 @@ export const AdminLayout: React.FC = () => {
       label: t('admin.layout.navUsers'),
       icon: Users,
       badge: stats?.totalUsers,
+      group: 'security',
+    },
+    {
+      to: '/admin/api-keys',
+      label: t('admin.layout.navApiKeys'),
+      icon: KeyRound,
+      badge: stats?.totalApiKeys,
       group: 'security',
     },
     {

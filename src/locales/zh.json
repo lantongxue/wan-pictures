@@ -28,7 +28,8 @@
     "error": "错误",
     "info": "提示",
     "warning": "警告",
-    "actions": "操作"
+    "actions": "操作",
+    "refresh": "刷新"
   },
   "nav": {
     "plaza": "图片广场",
@@ -530,6 +531,7 @@
       "navTags": "标签体系与合并",
       "navStorage": "多云存储引擎",
       "navUsers": "用户与权限管理",
+      "navApiKeys": "API KEY 管理",
       "navSettings": "系统维护与备份",
       "navLogs": "操作与审计日志",
       "defaultPageTitle": "控制中心",
@@ -668,6 +670,33 @@
     "title": "用户与权限体系管理",
     "count": "{{count}} 位用户",
     "subtitle": "团队租户账号管理、角色权限分配 (Admin / User)、随机强密码重置与安全防护"
+  },
+  "adminApiKeys": {
+    "title": "API KEY 管理",
+    "count": "{{count}} 个 KEY",
+    "subtitle": "全站开发者 API KEY 统一视图：查看归属、密钥明文与使用状态，并可强制吊销任意 KEY",
+    "searchPlaceholder": "搜索 KEY 名称 / 用户名 / 邮箱...",
+    "searchBtn": "搜索",
+    "filterAll": "全部状态",
+    "filterActive": "仅有效",
+    "filterExpired": "仅过期",
+    "filterRevoked": "已吊销",
+    "statusRevoked": "已吊销",
+    "neverUsed": "从未使用",
+    "colName": "KEY 名称",
+    "colOwner": "所属用户",
+    "colKey": "密钥",
+    "colStatus": "状态",
+    "owner": "所属用户",
+    "show": "显示完整密钥",
+    "hide": "隐藏密钥",
+    "loadFailed": "API KEY 列表加载失败",
+    "emptyTitle": "暂无 API KEY 记录",
+    "emptyDesc": "用户可在前台「开发者中心」创建 API KEY，创建后会显示在这里。",
+    "revokeTitle": "吊销 API KEY「{{name}}」？",
+    "revokeDesc": "该 KEY 由用户「{{owner}}」持有。吊销后将立即失效，所有使用该 KEY 的接入会中断，且无法恢复。",
+    "revokeSuccess": "API KEY「{{name}}」已吊销",
+    "revokeFailed": "吊销失败"
   },
   "adminAlbums": {
     "title": "相册空间与归档管理",
