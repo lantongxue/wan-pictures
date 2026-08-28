@@ -1,0 +1,25 @@
+# Keep the build context small — only package.json, lockfile, sources,
+# and backend Go code are needed by the two build stages.
+node_modules/
+dist/
+build/
+coverage/
+.git/
+.gitignore
+*.log
+.DS_Store
+
+# Local env files and dev databases — never bake into the image
+.env
+.env.*
+!.env.example
+backend/.env
+backend/wanpictures.db
+*.db
+
+# User-uploaded content
+backend/uploads/
+
+# Docs and tooling not needed in the image
+*.md
+.claude/
