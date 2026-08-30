@@ -60,12 +60,12 @@ export const AdminStoragePage: React.FC = () => {
 
   // Local Form state
   const [localConfig, setLocalConfig] = useState<LocalStorageConfig>({
-    storagePath: './uploads/images',
-    publicUrlPrefix: '/uploads/',
-    subfolderFormat: 'YYYY/MM',
-    maxSizeMB: 10240,
-    autoCleanEnabled: false,
-    retentionDays: 0,
+    storage_path: './uploads/images',
+    public_url_prefix: '/uploads/',
+    subfolder_format: 'YYYY/MM',
+    max_size_mb: 10240,
+    auto_clean_enabled: false,
+    retention_days: 0,
   });
 
   // S3 Form state
@@ -73,21 +73,21 @@ export const AdminStoragePage: React.FC = () => {
     endpoint: 'https://s3.us-east-1.amazonaws.com',
     region: 'us-east-1',
     bucket: '',
-    accessKeyId: '',
-    secretAccessKey: '',
-    customDomain: '',
-    pathPrefix: 'uploads/{year}/{month}/',
-    forcePathStyle: false,
+    access_key_id: '',
+    secret_access_key: '',
+    custom_domain: '',
+    path_prefix: 'uploads/{year}/{month}/',
+    force_path_style: false,
     acl: 'public-read',
   });
 
   // WebDAV Form state
   const [webdavConfig, setWebdavConfig] = useState<WebDAVConfig>({
-    serverUrl: 'https://dav.jianguoyun.com/dav/',
+    server_url: 'https://dav.jianguoyun.com/dav/',
     username: '',
     password: '',
-    rootPath: '/wanpictures/uploads/',
-    publicProxy: '',
+    root_path: '/wanpictures/uploads/',
+    public_proxy: '',
   });
 
   // Toast feedback
@@ -333,7 +333,7 @@ export const AdminStoragePage: React.FC = () => {
 
           <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
             <span className="text-[11px] font-mono text-muted-foreground">
-              {localConfig.storagePath}
+              {localConfig.storage_path}
             </span>
             <Button
               variant="ghost"
@@ -477,7 +477,7 @@ export const AdminStoragePage: React.FC = () => {
 
           <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
             <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[150px]">
-              {webdavConfig.serverUrl}
+              {webdavConfig.server_url}
             </span>
             <Button
               variant="ghost"
@@ -571,9 +571,9 @@ export const AdminStoragePage: React.FC = () => {
                     id="local-storage-path"
                     type="text"
                     required
-                    value={localConfig.storagePath}
+                    value={localConfig.storage_path}
                     onChange={(e) =>
-                      setLocalConfig({ ...localConfig, storagePath: e.target.value })
+                      setLocalConfig({ ...localConfig, storage_path: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
@@ -590,9 +590,9 @@ export const AdminStoragePage: React.FC = () => {
                     id="local-public-prefix"
                     type="text"
                     required
-                    value={localConfig.publicUrlPrefix}
+                    value={localConfig.public_url_prefix}
                     onChange={(e) =>
-                      setLocalConfig({ ...localConfig, publicUrlPrefix: e.target.value })
+                      setLocalConfig({ ...localConfig, public_url_prefix: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
@@ -610,9 +610,9 @@ export const AdminStoragePage: React.FC = () => {
                   <Input
                     id="local-subfolder-format"
                     type="text"
-                    value={localConfig.subfolderFormat || 'YYYY/MM'}
+                    value={localConfig.subfolder_format || 'YYYY/MM'}
                     onChange={(e) =>
-                      setLocalConfig({ ...localConfig, subfolderFormat: e.target.value })
+                      setLocalConfig({ ...localConfig, subfolder_format: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
@@ -628,9 +628,9 @@ export const AdminStoragePage: React.FC = () => {
                   <Input
                     id="local-max-size"
                     type="number"
-                    value={localConfig.maxSizeMB || 10240}
+                    value={localConfig.max_size_mb || 10240}
                     onChange={(e) =>
-                      setLocalConfig({ ...localConfig, maxSizeMB: Number(e.target.value) })
+                      setLocalConfig({ ...localConfig, max_size_mb: Number(e.target.value) })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
@@ -733,8 +733,8 @@ export const AdminStoragePage: React.FC = () => {
                     type="text"
                     required
                     placeholder="AKIAIOSFODNN7EXAMPLE"
-                    value={s3Config.accessKeyId}
-                    onChange={(e) => setS3Config({ ...s3Config, accessKeyId: e.target.value })}
+                    value={s3Config.access_key_id}
+                    onChange={(e) => setS3Config({ ...s3Config, access_key_id: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                 </Field>
@@ -749,9 +749,9 @@ export const AdminStoragePage: React.FC = () => {
                       type={showS3Secret ? 'text' : 'password'}
                       required
                       placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                      value={s3Config.secretAccessKey}
+                      value={s3Config.secret_access_key}
                       onChange={(e) =>
-                        setS3Config({ ...s3Config, secretAccessKey: e.target.value })
+                        setS3Config({ ...s3Config, secret_access_key: e.target.value })
                       }
                       className="text-xs h-9 rounded-xl font-mono pr-9"
                     />
@@ -775,8 +775,8 @@ export const AdminStoragePage: React.FC = () => {
                     id="s3-domain"
                     type="text"
                     placeholder={t('adminStorage.customDomainPlaceholder')}
-                    value={s3Config.customDomain}
-                    onChange={(e) => setS3Config({ ...s3Config, customDomain: e.target.value })}
+                    value={s3Config.custom_domain}
+                    onChange={(e) => setS3Config({ ...s3Config, custom_domain: e.target.value })}
                     className="text-xs h-9 rounded-xl font-mono"
                   />
                 </Field>
@@ -855,9 +855,9 @@ export const AdminStoragePage: React.FC = () => {
                     type="text"
                     required
                     placeholder={t('adminStorage.webdavUrlPlaceholder')}
-                    value={webdavConfig.serverUrl}
+                    value={webdavConfig.server_url}
                     onChange={(e) =>
-                      setWebdavConfig({ ...webdavConfig, serverUrl: e.target.value })
+                      setWebdavConfig({ ...webdavConfig, server_url: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />
@@ -871,9 +871,9 @@ export const AdminStoragePage: React.FC = () => {
                     id="dav-root"
                     type="text"
                     placeholder={t('adminStorage.webdavRootPlaceholder')}
-                    value={webdavConfig.rootPath}
+                    value={webdavConfig.root_path}
                     onChange={(e) =>
-                      setWebdavConfig({ ...webdavConfig, rootPath: e.target.value })
+                      setWebdavConfig({ ...webdavConfig, root_path: e.target.value })
                     }
                     className="text-xs h-9 rounded-xl font-mono"
                   />

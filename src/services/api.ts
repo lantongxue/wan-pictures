@@ -910,7 +910,7 @@ export const adminApi = {
 
     // 2. Client-side simulated test fallback
     if (driver === 'local') {
-      const pathVal = (config && config.storagePath) ? config.storagePath.trim() : './uploads/images';
+      const pathVal = (config && config.storage_path) ? config.storage_path.trim() : './uploads/images';
       if (!pathVal) {
         return {
           success: false,
@@ -962,7 +962,7 @@ export const adminApi = {
     }
 
     if (driver === 'webdav') {
-      if (!config.serverUrl) {
+      if (!config.server_url) {
         return {
           success: false,
           driver: 'webdav',
@@ -972,16 +972,16 @@ export const adminApi = {
       }
 
       try {
-        const url = config.serverUrl.startsWith('http') ? config.serverUrl : `https://${config.serverUrl}`;
+        const url = config.server_url.startsWith('http') ? config.server_url : `https://${config.server_url}`;
         await fetch(url, { mode: 'no-cors' }).catch(() => null);
         const latency = Math.round(performance.now() - startTime) || 24;
         return {
           success: true,
           driver: 'webdav',
           latencyMs: latency,
-          message: `WebDAV 网盘服务器响应正常 (根目录: ${config.rootPath || '/'})`,
-          serverUrl: config.serverUrl,
-          rootPath: config.rootPath,
+          message: `WebDAV 网盘服务器响应正常 (根目录: ${config.root_path || '/'})`,
+          serverUrl: config.server_url,
+          rootPath: config.root_path,
         };
       } catch (err: any) {
         return {

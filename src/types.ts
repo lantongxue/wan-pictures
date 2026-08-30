@@ -60,34 +60,37 @@ export interface TagItem {
 
 export type StorageDriverType = 'local' | 'webdav' | 's3';
 
+// Field names must mirror the Go backend JSON tags exactly
+// (models/storage.go) — the config object is JSON.stringify-ed and stored
+// verbatim as storage_configs.config_json, then unmarshalled server-side.
 export interface LocalStorageConfig {
-  storagePath: string;
-  pathPrefix?: string;
-  subfolderFormat?: string;
-  maxSizeMB?: number;
-  retentionDays?: number;
-  autoCleanEnabled?: boolean;
-  publicUrlPrefix?: string;
+  storage_path: string;
+  path_prefix?: string;
+  subfolder_format?: string;
+  max_size_mb?: number;
+  retention_days?: number;
+  auto_clean_enabled?: boolean;
+  public_url_prefix?: string;
 }
 
 export interface S3Config {
   endpoint: string;
   region: string;
   bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  customDomain?: string;
-  pathPrefix?: string;
-  forcePathStyle?: boolean;
+  access_key_id: string;
+  secret_access_key: string;
+  custom_domain?: string;
+  path_prefix?: string;
+  force_path_style?: boolean;
   acl?: string;
 }
 
 export interface WebDAVConfig {
-  serverUrl: string;
+  server_url: string;
   username: string;
   password: string;
-  rootPath: string;
-  publicProxy?: string;
+  root_path: string;
+  public_proxy?: string;
 }
 
 export interface StorageConfigItem {

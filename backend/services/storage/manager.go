@@ -3,6 +3,8 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 
 	"wanpictures-backend/database"
@@ -12,7 +14,43 @@ import (
 var (
 	managerInstance *Manager
 	once            sync.Once
+
+	camelKeyRe = regexp.MustCompile(`([a-z0-9])([A-Z])`)
 )
+
+// NormalizeConfigJSON rewrites camelCase JSON object keys (e.g. "serverUrl")
+// to the snake_case names used by the storage config structs (e.g.
+// "server_url"). Older builds of the admin UI persisted camelCase config_json
+// and also merged the backend's snake_case response into the same form object,
+// so stored rows can carry BOTH spellings with conflicting values. Keys are
+// normalized in two passes: snake_case keys first, then camelCase keys —
+// camelCase wins collisions because the admin form only renders camelCase
+// fields, so those hold the values the operator last entered, while a
+// coexisting snake_case twin is stale seed data.
+func NormalizeConfigJSON(raw string) string {
+	var obj map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
+		return raw
+	}
+
+	normalized := make(map[string]interface{}, len(obj))
+	for k, v := range obj {
+		if !camelKeyRe.MatchString(k) {
+			normalized[strings.ToLower(k)] = v
+		}
+	}
+	for k, v := range obj {
+		if camelKeyRe.MatchString(k) {
+			normalized[strings.ToLower(camelKeyRe.ReplaceAllString(k, "${1}_${2}"))] = v
+		}
+	}
+
+	out, err := json.Marshal(normalized)
+	if err != nil {
+		return raw
+	}
+	return string(out)
+}
 
 type Manager struct {
 	mu sync.RWMutex
@@ -66,27 +104,28 @@ func (m *Manager) GetEngineByDriver(driver models.StorageDriver) (StorageEngine,
 
 // CreateEngineFromConfig parses StorageConfig JSON and instantiates the proper engine
 func (m *Manager) CreateEngineFromConfig(cfg models.StorageConfig) (StorageEngine, error) {
+	configJSON := NormalizeConfigJSON(cfg.ConfigJSON)
 	switch cfg.Driver {
 	case models.StorageDriverLocal:
 		var localParams struct {
 			StoragePath     string `json:"storage_path"`
 			PublicURLPrefix string `json:"public_url_prefix"`
 		}
-		if cfg.ConfigJSON != "" {
-			_ = json.Unmarshal([]byte(cfg.ConfigJSON), &localParams)
+		if configJSON != "" {
+			_ = json.Unmarshal([]byte(configJSON), &localParams)
 		}
 		return NewLocalEngine(localParams.StoragePath, localParams.PublicURLPrefix), nil
 
 	case models.StorageDriverS3:
 		var s3 models.S3Config
-		if err := json.Unmarshal([]byte(cfg.ConfigJSON), &s3); err != nil {
+		if err := json.Unmarshal([]byte(configJSON), &s3); err != nil {
 			return nil, fmt.Errorf("invalid S3 config JSON: %w", err)
 		}
 		return NewS3Engine(s3), nil
 
 	case models.StorageDriverWebDAV:
 		var dav models.WebDAVConfig
-		if err := json.Unmarshal([]byte(cfg.ConfigJSON), &dav); err != nil {
+		if err := json.Unmarshal([]byte(configJSON), &dav); err != nil {
 			return nil, fmt.Errorf("invalid WebDAV config JSON: %w", err)
 		}
 		return NewWebDAVEngine(dav), nil

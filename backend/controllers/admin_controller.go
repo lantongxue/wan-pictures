@@ -841,23 +841,26 @@ func (ctrl *AdminController) GetStorageConfigs(c *gin.Context) {
 	var safeList []SafeStorageConfig
 	for _, cfg := range configs {
 		var parsedConfig interface{}
+		// Legacy rows can carry mixed camelCase/snake_case keys with
+		// conflicting values; normalize so the UI shows the effective config.
+		normalizedJSON := storage.NormalizeConfigJSON(cfg.ConfigJSON)
 		if cfg.Driver == models.StorageDriverS3 {
 			var s3 models.S3Config
-			json.Unmarshal([]byte(cfg.ConfigJSON), &s3)
+			json.Unmarshal([]byte(normalizedJSON), &s3)
 			if len(s3.SecretAccessKey) > 4 {
 				s3.SecretAccessKey = s3.SecretAccessKey[:2] + "********" + s3.SecretAccessKey[len(s3.SecretAccessKey)-2:]
 			}
 			parsedConfig = s3
 		} else if cfg.Driver == models.StorageDriverWebDAV {
 			var dav models.WebDAVConfig
-			json.Unmarshal([]byte(cfg.ConfigJSON), &dav)
+			json.Unmarshal([]byte(normalizedJSON), &dav)
 			if len(dav.Password) > 2 {
 				dav.Password = "********"
 			}
 			parsedConfig = dav
 		} else {
 			var m map[string]interface{}
-			json.Unmarshal([]byte(cfg.ConfigJSON), &m)
+			json.Unmarshal([]byte(normalizedJSON), &m)
 			parsedConfig = m
 		}
 
@@ -874,6 +877,50 @@ func (ctrl *AdminController) GetStorageConfigs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse(safeList))
+}
+
+// maskedSecretPlaceholder is the value GetStorageConfigs returns instead of a
+// real credential. When the admin UI echoes it back on save, the stored
+// secret must be kept — otherwise any re-save of the form silently destroys
+// the credential and every subsequent upload fails with HTTP 401.
+const maskedSecretPlaceholder = "********"
+
+// isMaskedS3Secret reports whether sk matches the "xx********yy" mask shape
+// produced by GetStorageConfigs.
+func isMaskedS3Secret(sk string) bool {
+	return len(sk) >= 12 && sk[2:10] == maskedSecretPlaceholder
+}
+
+// preserveMaskedSecrets overlays next (incoming request config, already
+// normalized) onto stored (persisted config, already normalized), keeping the
+// stored credential wherever next carries the masked placeholder. Returns the
+// config JSON to persist.
+func preserveMaskedSecrets(driver models.StorageDriver, next, stored string) string {
+	switch driver {
+	case models.StorageDriverWebDAV:
+		var n, s models.WebDAVConfig
+		if json.Unmarshal([]byte(next), &n) != nil || json.Unmarshal([]byte(stored), &s) != nil {
+			return next
+		}
+		if n.Password == maskedSecretPlaceholder {
+			n.Password = s.Password
+		}
+		if out, err := json.Marshal(n); err == nil {
+			return string(out)
+		}
+	case models.StorageDriverS3:
+		var n, s models.S3Config
+		if json.Unmarshal([]byte(next), &n) != nil || json.Unmarshal([]byte(stored), &s) != nil {
+			return next
+		}
+		if isMaskedS3Secret(n.SecretAccessKey) {
+			n.SecretAccessKey = s.SecretAccessKey
+		}
+		if out, err := json.Marshal(n); err == nil {
+			return string(out)
+		}
+	}
+	return next
 }
 
 // SaveStorageConfig saves/updates a storage config
@@ -895,6 +942,11 @@ func (ctrl *AdminController) SaveStorageConfig(c *gin.Context) {
 
 	if err == nil {
 		// Update existing
+		req.ConfigJSON = preserveMaskedSecrets(
+			req.Driver,
+			storage.NormalizeConfigJSON(req.ConfigJSON),
+			storage.NormalizeConfigJSON(existing.ConfigJSON),
+		)
 		existing.Name = req.Name
 		existing.IsEnabled = req.IsEnabled
 		existing.IsActive = req.IsActive
@@ -909,7 +961,7 @@ func (ctrl *AdminController) SaveStorageConfig(c *gin.Context) {
 			Name:       req.Name,
 			IsEnabled:  req.IsEnabled,
 			IsActive:   req.IsActive,
-			ConfigJSON: req.ConfigJSON,
+			ConfigJSON: storage.NormalizeConfigJSON(req.ConfigJSON),
 			CreatedAt:  time.Now(),
 			UpdatedAt:  time.Now(),
 		}
@@ -1082,13 +1134,26 @@ func (ctrl *AdminController) TestStorageConnection(c *gin.Context) {
 
 	case models.StorageDriverWebDAV:
 		var dav models.WebDAVConfig
-		if err := json.Unmarshal([]byte(req.ConfigJSON), &dav); err != nil {
+		if err := json.Unmarshal([]byte(storage.NormalizeConfigJSON(req.ConfigJSON)), &dav); err != nil {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "Invalid WebDAV config JSON"))
 			return
 		}
 		if dav.ServerURL == "" {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, "WebDAV Server URL is required"))
 			return
+		}
+
+		// The admin UI echoes the masked placeholder back whenever the
+		// operator did not retype the password; test against the stored
+		// credential instead of the literal "********".
+		if dav.Password == maskedSecretPlaceholder {
+			var stored models.StorageConfig
+			if err := database.DB.Where("driver = ?", models.StorageDriverWebDAV).First(&stored).Error; err == nil {
+				var storedDav models.WebDAVConfig
+				if json.Unmarshal([]byte(storage.NormalizeConfigJSON(stored.ConfigJSON)), &storedDav) == nil {
+					dav.Password = storedDav.Password
+				}
+			}
 		}
 
 		client := http.Client{Timeout: 5 * time.Second}

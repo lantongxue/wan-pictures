@@ -22,8 +22,21 @@ type WebDAVEngine struct {
 func NewWebDAVEngine(cfg models.WebDAVConfig) *WebDAVEngine {
 	return &WebDAVEngine{
 		Config: cfg,
-		client: &http.Client{Timeout: 30 * time.Second},
+		// Generous overall timeout: the same client streams large originals,
+		// and a short timeout aborts mid-upload on slow uplinks.
+		client: &http.Client{Timeout: 300 * time.Second},
 	}
+}
+
+// escapeSegments URL-escapes each path segment so keys containing spaces,
+// '#', '%' or non-ASCII characters (possible under the "original" naming
+// rule) still address the right resource on the WebDAV server.
+func escapeSegments(segments []string) string {
+	escaped := make([]string, len(segments))
+	for i, seg := range segments {
+		escaped[i] = url.PathEscape(seg)
+	}
+	return strings.Join(escaped, "/")
 }
 
 func (w *WebDAVEngine) buildTargetURL(storageKey string) string {
@@ -31,17 +44,19 @@ func (w *WebDAVEngine) buildTargetURL(storageKey string) string {
 	rootPath := strings.TrimPrefix(strings.TrimSuffix(w.Config.RootPath, "/"), "/")
 	cleanKey := strings.TrimPrefix(storageKey, "/")
 
+	segments := make([]string, 0, 2)
 	if rootPath != "" {
-		return fmt.Sprintf("%s/%s/%s", baseURL, rootPath, cleanKey)
+		segments = append(segments, strings.Split(rootPath, "/")...)
 	}
-	return fmt.Sprintf("%s/%s", baseURL, cleanKey)
+	segments = append(segments, strings.Split(cleanKey, "/")...)
+	return baseURL + "/" + escapeSegments(segments)
 }
 
 func (w *WebDAVEngine) publicURL(storageKey string) string {
 	cleanKey := strings.TrimPrefix(storageKey, "/")
 	if w.Config.PublicProxy != "" {
 		proxy := strings.TrimSuffix(w.Config.PublicProxy, "/")
-		return fmt.Sprintf("%s/%s", proxy, cleanKey)
+		return proxy + "/" + escapeSegments(strings.Split(cleanKey, "/"))
 	}
 	return w.buildTargetURL(storageKey)
 }
@@ -66,7 +81,7 @@ func (w *WebDAVEngine) ensureParentDirs(ctx context.Context, targetURL string) {
 	parts := strings.Split(strings.Trim(dirPath, "/"), "/")
 	current := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
 	for _, part := range parts {
-		current += "/" + part
+		current += "/" + url.PathEscape(part)
 		req, _ := http.NewRequestWithContext(ctx, "MKCOL", current, nil)
 		if req != nil {
 			w.setAuth(req)
