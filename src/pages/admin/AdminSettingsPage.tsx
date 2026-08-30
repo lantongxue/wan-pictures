@@ -56,6 +56,8 @@ export const AdminSettingsPage: React.FC = () => {
     user_upload_qps: 10,
     anonymous_upload_rpm: 30,
     user_upload_rpm: 200,
+    free_storage_quota_gb: 5,
+    vip_storage_quota_gb: 20,
     naming_rule: 'uuid',
     auto_compress: false,
     compress_quality: 85,
@@ -419,6 +421,26 @@ export const AdminSettingsPage: React.FC = () => {
                         className="h-8 text-xs rounded-xl"
                       />
                     </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="free-storage-quota-gb" className="text-[11px]">
+                        {t('adminSettings.storageQuotaGb')}
+                      </FieldLabel>
+                      <Input
+                        id="free-storage-quota-gb"
+                        type="number"
+                        min={1}
+                        max={1048576}
+                        value={quotaSettings.free_storage_quota_gb ?? 5}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            free_storage_quota_gb: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl"
+                      />
+                    </Field>
                   </FieldGroup>
                 </div>
 
@@ -477,6 +499,26 @@ export const AdminSettingsPage: React.FC = () => {
                           setQuotaSettings({
                             ...quotaSettings,
                             vip_max_size_mb: Math.max(1, parseInt(e.target.value) || 1),
+                          })
+                        }
+                        className="h-8 text-xs rounded-xl bg-background"
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="vip-storage-quota-gb" className="text-[11px]">
+                        {t('adminSettings.storageQuotaGb')}
+                      </FieldLabel>
+                      <Input
+                        id="vip-storage-quota-gb"
+                        type="number"
+                        min={1}
+                        max={1048576}
+                        value={quotaSettings.vip_storage_quota_gb ?? 20}
+                        onChange={(e) =>
+                          setQuotaSettings({
+                            ...quotaSettings,
+                            vip_storage_quota_gb: Math.max(1, parseInt(e.target.value) || 1),
                           })
                         }
                         className="h-8 text-xs rounded-xl bg-background"

@@ -8,20 +8,23 @@ import (
 
 // User represents a user record in the database
 type User struct {
-	ID        uint           `gorm:"primaryKey;autoIncrement" json:"id"`
-	Username  string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"`
-	Email     string         `gorm:"type:varchar(128);uniqueIndex;not null" json:"email"`
-	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // never expose password in json
-	Nickname  string         `gorm:"type:varchar(64)" json:"nickname"`
-	Avatar    string         `gorm:"type:varchar(255)" json:"avatar"`
-	Role        string         `gorm:"type:varchar(32);default:'user'" json:"role"` // 'user', 'admin', 'vip'
-	VIPExpireAt *time.Time     `json:"vip_expire_at,omitempty"`
-	UploadQPS   *int           `gorm:"column:upload_qps" json:"upload_qps"` // per-account upload QPS override: NULL=follow global, 0=unlimited, >0=custom
-	UploadRPM   *int           `gorm:"column:upload_rpm" json:"upload_rpm"` // per-account upload RPM override: NULL=follow global, 0=unlimited, >0=custom
-	Bio         string         `gorm:"type:varchar(255)" json:"bio"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	ID          uint       `gorm:"primaryKey;autoIncrement" json:"id"`
+	Username    string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"`
+	Email       string     `gorm:"type:varchar(128);uniqueIndex;not null" json:"email"`
+	Password    string     `gorm:"type:varchar(255);not null" json:"-"` // never expose password in json
+	Nickname    string     `gorm:"type:varchar(64)" json:"nickname"`
+	Avatar      string     `gorm:"type:varchar(255)" json:"avatar"`
+	Role        string     `gorm:"type:varchar(32);default:'user'" json:"role"` // 'user', 'admin', 'vip'
+	VIPExpireAt *time.Time `json:"vip_expire_at,omitempty"`
+	UploadQPS   *int       `gorm:"column:upload_qps" json:"upload_qps"` // per-account upload QPS override: NULL=follow global, 0=unlimited, >0=custom
+	UploadRPM   *int       `gorm:"column:upload_rpm" json:"upload_rpm"` // per-account upload RPM override: NULL=follow global, 0=unlimited, >0=custom
+	// StorageQuotaBytes is the per-account total storage quota override:
+	// NULL=follow role default (user 5GB / vip 20GB / admin unlimited), 0=unlimited, >0=custom bytes.
+	StorageQuotaBytes *int64         `gorm:"column:storage_quota_bytes" json:"storage_quota_bytes"`
+	Bio               string         `gorm:"type:varchar(255)" json:"bio"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // TableName overrides the default table name to 'users'

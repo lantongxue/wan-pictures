@@ -22,10 +22,11 @@ import {
   Dice5,
   CheckCircle2,
   Gauge,
+  HardDrive,
 } from 'lucide-react';
 import { AdminUserItem, CreateUserPayload, UpdateUserPayload, User } from '../../types';
 import { adminApi } from '../../services/api';
-import { formatDate } from '../../utils/imageProcessing';
+import { formatDate, formatFileSize } from '../../utils/imageProcessing';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -68,6 +69,8 @@ const AVATAR_PRESETS = [
   'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
 ];
+
+const GB = 1024 * 1024 * 1024;
 
 export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   currentUser,
@@ -121,6 +124,12 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const [editQpsCustom, setEditQpsCustom] = useState('5');
   const [editRpmMode, setEditRpmMode] = useState<QpsMode>('global');
   const [editRpmCustom, setEditRpmCustom] = useState('30');
+
+  // Per-account storage quota override states (create & edit); custom input is in GB
+  const [createQuotaMode, setCreateQuotaMode] = useState<QpsMode>('global');
+  const [createQuotaCustomGb, setCreateQuotaCustomGb] = useState('5');
+  const [editQuotaMode, setEditQuotaMode] = useState<QpsMode>('global');
+  const [editQuotaCustomGb, setEditQuotaCustomGb] = useState('5');
 
   // Form States - Reset Password
   const [newPassword, setNewPassword] = useState('');
@@ -196,16 +205,33 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
     return Math.max(1, parseInt(custom) || 1);
   };
 
+  // Storage quota: 'global'=follow role default (-1), 0=unlimited, custom GB -> bytes
+  const resolveQuotaPayload = (mode: QpsMode, customGb: string): number => {
+    if (mode === 'global') return -1;
+    if (mode === 'unlimited') return 0;
+    return Math.max(1, parseInt(customGb) || 1) * GB;
+  };
+
   const initLimitMode = (value: number | null | undefined): QpsMode => {
     if (value === null || value === undefined) return 'global';
     if (Number(value) === 0) return 'unlimited';
     return 'custom';
   };
 
+  const initQuotaCustomGb = (value: number): string => {
+    return String(parseFloat((value / GB).toFixed(2)));
+  };
+
   const formatLimitLabel = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return t('adminUsersTab.global');
     if (Number(value) === 0) return '∞';
     return String(value);
+  };
+
+  const formatQuotaLabel = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return t('adminUsersTab.quotaRoleDefault');
+    if (Number(value) === 0) return '∞';
+    return formatFileSize(Number(value));
   };
 
   const handleSubmitCreate = async (e: React.FormEvent) => {
@@ -225,6 +251,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
         ...createForm,
         uploadQps: resolveLimitPayload(createQpsMode, createQpsCustom),
         uploadRpm: resolveLimitPayload(createRpmMode, createRpmCustom),
+        storageQuotaBytes: resolveQuotaPayload(createQuotaMode, createQuotaCustomGb),
       });
       if (res.success) {
         onShowToast(t('adminUsersTab.createSuccess'), t('adminUsersTab.createSuccessDesc', { username: createForm.username }), 'success');
@@ -262,6 +289,15 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
       setEditRpmMode(initLimitMode(u.uploadRpm));
       setEditRpmCustom(String(u.uploadRpm));
     }
+    if (u.storageQuotaBytes === null || u.storageQuotaBytes === undefined) {
+      setEditQuotaMode('global');
+      setEditQuotaCustomGb('5');
+    } else if (Number(u.storageQuotaBytes) === 0) {
+      setEditQuotaMode('unlimited');
+    } else {
+      setEditQuotaMode('custom');
+      setEditQuotaCustomGb(initQuotaCustomGb(Number(u.storageQuotaBytes)));
+    }
   };
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
@@ -274,6 +310,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
         ...editForm,
         uploadQps: resolveLimitPayload(editQpsMode, editQpsCustom),
         uploadRpm: resolveLimitPayload(editRpmMode, editRpmCustom),
+        storageQuotaBytes: resolveQuotaPayload(editQuotaMode, editQuotaCustomGb),
       });
       if (res.success) {
         onShowToast(t('adminUsersTab.updateSuccess'), t('adminUsersTab.updateSuccessDesc', { username: editingUser.username }), 'success');
@@ -520,12 +557,15 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
               <thead>
                 <tr className="border-b border-border/80 bg-muted/30 text-muted-foreground font-semibold">
                   <th className="p-3.5">{t('adminUsersTab.colUser')}</th>
-                  <th className="p-3.5">{t('adminUsersTab.colRole')}</th>
+                  <th className="p-3.5 min-w-[96px]">{t('adminUsersTab.colRole')}</th>
                   <th className="p-3.5 min-w-[180px]">{t('adminUsersTab.colEmail')}</th>
                   <th className="p-3.5">{t('adminUsersTab.colStats')}</th>
                   <th className="p-3.5">{t('adminUsersTab.colRateLimit')}</th>
+                  <th className="p-3.5 min-w-[150px]">{t('adminUsersTab.colStorageQuota')}</th>
                   <th className="p-3.5 whitespace-nowrap">{t('adminUsersTab.colRegistered')}</th>
-                  <th className="p-3.5 text-right pr-4">{t('adminUsersTab.colAction')}</th>
+                  <th className="sticky right-0 z-10 p-3.5 text-right pr-4 min-w-[230px] bg-muted border-l border-border/60 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
+                    {t('adminUsersTab.colAction')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -534,7 +574,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   const isSelf = currentUser && (u.id === currentUser.id || u.username === currentUser.username);
 
                   return (
-                    <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={u.id} className="group hover:bg-muted/20 transition-colors">
                       {/* User */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-3">
@@ -601,7 +641,7 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                       {/* Role */}
                       <td className="p-3.5">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider shrink-0 ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 ${
                             u.role === 'admin'
                               ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
                               : u.role === 'vip'
@@ -670,6 +710,24 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         </span>
                       </td>
 
+                      {/* Storage Quota */}
+                      <td className="p-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[11px] font-mono whitespace-nowrap ${
+                            u.storageQuotaBytes !== null && u.storageQuotaBytes !== undefined
+                              ? 'text-indigo-500'
+                              : 'text-muted-foreground/60'
+                          }`}
+                          title={t('adminUsersTab.quotaTitle', {
+                            used: formatFileSize(u.usedSpaceBytes || 0),
+                            quota: formatQuotaLabel(u.storageQuotaBytes),
+                          })}
+                        >
+                          <HardDrive className="w-3 h-3" />
+                          {formatFileSize(u.usedSpaceBytes || 0)} / {formatQuotaLabel(u.storageQuotaBytes)}
+                        </span>
+                      </td>
+
                       {/* Created */}
                       <td className="p-3.5 text-muted-foreground whitespace-nowrap">
                         <span className="flex items-center gap-1 text-[11px]" title={t('adminUsersTab.registeredTitle')}>
@@ -678,8 +736,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                         </span>
                       </td>
 
-                      {/* Actions */}
-                      <td className="p-3.5 text-right pr-4">
+                      {/* Actions — pinned to the right edge, always visible */}
+                      <td className="sticky right-0 z-10 p-3.5 text-right pr-4 bg-card group-hover:bg-muted border-l border-border/60 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
@@ -902,6 +960,40 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 </div>
                 <FieldDescription>
                   {t('adminUsersTab.rpmDesc')}
+                </FieldDescription>
+              </Field>
+
+              {/* Storage Quota Override */}
+              <Field>
+                <FieldLabel htmlFor="create-user-quota-mode">{t('adminUsersTab.quotaModeLabel')}</FieldLabel>
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    value={createQuotaMode}
+                    onValueChange={(val: QpsMode) => setCreateQuotaMode(val)}
+                  >
+                    <SelectTrigger id="create-user-quota-mode" className="w-full text-xs h-9 rounded-xl">
+                      <SelectValue placeholder={t('adminUsersTab.limitPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">{t('adminUsersTab.quotaRoleDefault')}</SelectItem>
+                      <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                      <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="create-user-quota-custom"
+                    type="number"
+                    min={1}
+                    max={1048576}
+                    disabled={createQuotaMode !== 'custom'}
+                    value={createQuotaCustomGb}
+                    onChange={(e) => setCreateQuotaCustomGb(e.target.value)}
+                    placeholder={t('adminUsersTab.quotaGbPlaceholder')}
+                    className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                  />
+                </div>
+                <FieldDescription>
+                  {t('adminUsersTab.quotaDesc')}
                 </FieldDescription>
               </Field>
 
@@ -1195,6 +1287,42 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                   </div>
                   <FieldDescription>
                     {t('adminUsersTab.rpmDesc')}
+                  </FieldDescription>
+                </Field>
+
+                {/* Storage Quota Override */}
+                <Field>
+                  <FieldLabel htmlFor="edit-user-quota-mode">{t('adminUsersTab.quotaModeLabel')}</FieldLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select
+                      value={editQuotaMode}
+                      onValueChange={(val: QpsMode) => setEditQuotaMode(val)}
+                    >
+                      <SelectTrigger id="edit-user-quota-mode" className="w-full text-xs h-9 rounded-xl">
+                        <SelectValue placeholder={t('adminUsersTab.editLimitPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">{t('adminUsersTab.quotaRoleDefault')}</SelectItem>
+                        <SelectItem value="unlimited">{t('adminUsersTab.limitUnlimited')}</SelectItem>
+                        <SelectItem value="custom">{t('adminUsersTab.limitCustom')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="edit-user-quota-custom"
+                      type="number"
+                      min={1}
+                      max={1048576}
+                      disabled={editQuotaMode !== 'custom'}
+                      value={editQuotaCustomGb}
+                      onChange={(e) => setEditQuotaCustomGb(e.target.value)}
+                      placeholder={t('adminUsersTab.quotaGbPlaceholder')}
+                      className="text-xs h-9 rounded-xl font-mono disabled:opacity-50"
+                    />
+                  </div>
+                  <FieldDescription>
+                    {t('adminUsersTab.quotaDescWithUsed', {
+                      used: formatFileSize(editingUser.usedSpaceBytes || 0),
+                    })}
                   </FieldDescription>
                 </Field>
 

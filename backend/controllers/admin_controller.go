@@ -1189,6 +1189,27 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 		return
 	}
 
+	// Per-user used space for this page, in one aggregate query
+	usedByUser := make(map[uint]int64, len(users))
+	if len(users) > 0 {
+		ids := make([]uint, 0, len(users))
+		for _, u := range users {
+			ids = append(ids, u.ID)
+		}
+		var rows []struct {
+			UserID    uint
+			TotalSize int64
+		}
+		database.DB.Model(&models.Image{}).
+			Select("user_id, COALESCE(SUM(size), 0) as total_size").
+			Where("user_id IN ?", ids).
+			Group("user_id").
+			Scan(&rows)
+		for _, r := range rows {
+			usedByUser[r.UserID] = r.TotalSize
+		}
+	}
+
 	// Calculate counts for each user
 	items := make([]models.AdminUserItemResponse, 0, len(users))
 	for _, u := range users {
@@ -1203,19 +1224,21 @@ func (ctrl *AdminController) ListUsers(c *gin.Context) {
 		}
 
 		items = append(items, models.AdminUserItemResponse{
-			ID:         u.ID,
-			Username:   u.Username,
-			Email:      u.Email,
-			Nickname:   nickname,
-			Avatar:     u.Avatar,
-			Role:       u.Role,
-			Bio:        u.Bio,
-			UploadQPS:  u.UploadQPS,
-			UploadRPM:  u.UploadRPM,
-			ImageCount: imgCount,
-			AlbumCount: albCount,
-			CreatedAt:  u.CreatedAt,
-			UpdatedAt:  u.UpdatedAt,
+			ID:                u.ID,
+			Username:          u.Username,
+			Email:             u.Email,
+			Nickname:          nickname,
+			Avatar:            u.Avatar,
+			Role:              u.Role,
+			Bio:               u.Bio,
+			UploadQPS:         u.UploadQPS,
+			UploadRPM:         u.UploadRPM,
+			StorageQuotaBytes: u.StorageQuotaBytes,
+			UsedSpaceBytes:    usedByUser[u.ID],
+			ImageCount:        imgCount,
+			AlbumCount:        albCount,
+			CreatedAt:         u.CreatedAt,
+			UpdatedAt:         u.UpdatedAt,
 		})
 	}
 
@@ -1252,19 +1275,21 @@ func (ctrl *AdminController) GetUser(c *gin.Context) {
 	}
 
 	res := models.AdminUserItemResponse{
-		ID:         user.ID,
-		Username:   user.Username,
-		Email:      user.Email,
-		Nickname:   nickname,
-		Avatar:     user.Avatar,
-		Role:       user.Role,
-		Bio:        user.Bio,
-		UploadQPS:  user.UploadQPS,
-		UploadRPM:  user.UploadRPM,
-		ImageCount: imgCount,
-		AlbumCount: albCount,
-		CreatedAt:  user.CreatedAt,
-		UpdatedAt:  user.UpdatedAt,
+		ID:                user.ID,
+		Username:          user.Username,
+		Email:             user.Email,
+		Nickname:          nickname,
+		Avatar:            user.Avatar,
+		Role:              user.Role,
+		Bio:               user.Bio,
+		UploadQPS:         user.UploadQPS,
+		UploadRPM:         user.UploadRPM,
+		StorageQuotaBytes: user.StorageQuotaBytes,
+		UsedSpaceBytes:    GetUserUsedSpaceBytes(user.ID),
+		ImageCount:        imgCount,
+		AlbumCount:        albCount,
+		CreatedAt:         user.CreatedAt,
+		UpdatedAt:         user.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse(res))
@@ -1331,6 +1356,10 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 	if req.UploadRPM != nil && *req.UploadRPM >= 0 {
 		newUser.UploadRPM = req.UploadRPM
 	}
+	// Per-account storage quota override (-1/NULL=follow role default, 0=unlimited, >0=custom)
+	if req.StorageQuotaBytes != nil && *req.StorageQuotaBytes >= 0 {
+		newUser.StorageQuotaBytes = req.StorageQuotaBytes
+	}
 
 	if err := database.DB.Create(&newUser).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse(http.StatusInternalServerError, "Failed to create user: "+err.Error()))
@@ -1338,19 +1367,21 @@ func (ctrl *AdminController) CreateUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, models.SuccessResponse(models.AdminUserItemResponse{
-		ID:         newUser.ID,
-		Username:   newUser.Username,
-		Email:      newUser.Email,
-		Nickname:   newUser.Nickname,
-		Avatar:     newUser.Avatar,
-		Role:       newUser.Role,
-		Bio:        newUser.Bio,
-		UploadQPS:  newUser.UploadQPS,
-		UploadRPM:  newUser.UploadRPM,
-		ImageCount: 0,
-		AlbumCount: 0,
-		CreatedAt:  newUser.CreatedAt,
-		UpdatedAt:  newUser.UpdatedAt,
+		ID:                newUser.ID,
+		Username:          newUser.Username,
+		Email:             newUser.Email,
+		Nickname:          newUser.Nickname,
+		Avatar:            newUser.Avatar,
+		Role:              newUser.Role,
+		Bio:               newUser.Bio,
+		UploadQPS:         newUser.UploadQPS,
+		UploadRPM:         newUser.UploadRPM,
+		StorageQuotaBytes: newUser.StorageQuotaBytes,
+		UsedSpaceBytes:    0,
+		ImageCount:        0,
+		AlbumCount:        0,
+		CreatedAt:         newUser.CreatedAt,
+		UpdatedAt:         newUser.UpdatedAt,
 	}, "User created successfully"))
 }
 
@@ -1432,6 +1463,15 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 			user.UploadRPM = &rpm
 		}
 	}
+	// Per-account storage quota override (-1=follow role default/NULL, 0=unlimited, >0=custom bytes)
+	if req.StorageQuotaBytes != nil {
+		if *req.StorageQuotaBytes < 0 {
+			user.StorageQuotaBytes = nil
+		} else {
+			quota := *req.StorageQuotaBytes
+			user.StorageQuotaBytes = &quota
+		}
+	}
 
 	user.UpdatedAt = time.Now()
 	if err := database.DB.Save(&user).Error; err != nil {
@@ -1445,19 +1485,21 @@ func (ctrl *AdminController) UpdateUser(c *gin.Context) {
 	database.DB.Model(&models.Album{}).Where("user_id = ?", user.ID).Count(&albCount)
 
 	c.JSON(http.StatusOK, models.SuccessResponse(models.AdminUserItemResponse{
-		ID:         user.ID,
-		Username:   user.Username,
-		Email:      user.Email,
-		Nickname:   user.Nickname,
-		Avatar:     user.Avatar,
-		Role:       user.Role,
-		Bio:        user.Bio,
-		UploadQPS:  user.UploadQPS,
-		UploadRPM:  user.UploadRPM,
-		ImageCount: imgCount,
-		AlbumCount: albCount,
-		CreatedAt:  user.CreatedAt,
-		UpdatedAt:  user.UpdatedAt,
+		ID:                user.ID,
+		Username:          user.Username,
+		Email:             user.Email,
+		Nickname:          user.Nickname,
+		Avatar:            user.Avatar,
+		Role:              user.Role,
+		Bio:               user.Bio,
+		UploadQPS:         user.UploadQPS,
+		UploadRPM:         user.UploadRPM,
+		StorageQuotaBytes: user.StorageQuotaBytes,
+		UsedSpaceBytes:    GetUserUsedSpaceBytes(user.ID),
+		ImageCount:        imgCount,
+		AlbumCount:        albCount,
+		CreatedAt:         user.CreatedAt,
+		UpdatedAt:         user.UpdatedAt,
 	}, "User updated successfully"))
 }
 

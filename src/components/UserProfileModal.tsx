@@ -12,7 +12,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { useAuth } from '../context/AuthContext';
-import { Mail, LogOut, Check, RefreshCw } from 'lucide-react';
+import { useUserOptional } from '../pages/user/UserContext';
+import { formatFileSize } from '../utils/imageProcessing';
+import { Mail, LogOut, Check, RefreshCw, HardDrive } from 'lucide-react';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -27,6 +29,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { user, logout, updateProfile, backendOnline } = useAuth();
+  // This modal also mounts in the admin layout, outside UserProvider — there the
+  // context is null and the storage card is simply hidden.
+  const { quotaInfo } = useUserOptional() ?? { quotaInfo: null };
   const [nickname, setNickname] = useState('');
   const [bio, setBio] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +44,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   }, [user]);
 
   if (!user) return null;
+
+  const hasStorageInfo = quotaInfo?.storage_used_bytes !== undefined;
+  const storageUnlimited = quotaInfo?.storage_unlimited ?? false;
+  const storageQuotaBytes = quotaInfo?.storage_quota_bytes ?? 0;
+  const storageUsedBytes = quotaInfo?.storage_used_bytes ?? 0;
+  const storagePercentage =
+    storageUnlimited || storageQuotaBytes <= 0
+      ? 0
+      : Math.min(100, (storageUsedBytes / storageQuotaBytes) * 100);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +143,34 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               className="text-xs h-9"
             />
           </div>
+
+          {/* Storage Usage (only when quota data is available) */}
+          {hasStorageInfo && (
+            <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-2">
+              <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <HardDrive className="w-3 h-3" />
+                  {t('nav.storageUsed')}:
+                </span>
+                <span className="font-mono font-medium text-foreground">
+                  {formatFileSize(storageUsedBytes)}
+                  {storageUnlimited ? ' / ∞' : storageQuotaBytes > 0 ? ` / ${formatFileSize(storageQuotaBytes)}` : ''}
+                </span>
+              </div>
+              {!storageUnlimited && storageQuotaBytes > 0 && (
+                <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      storagePercentage >= 100
+                        ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                        : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-primary'
+                    }`}
+                    style={{ width: `${Math.max(1.5, storagePercentage)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-1.5 text-[11px] text-muted-foreground">
             <div className="flex justify-between items-center">

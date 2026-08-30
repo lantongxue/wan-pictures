@@ -240,6 +240,11 @@ function mapBackendUser(u: any): AdminUserItem {
     bio: u.bio,
     uploadQps: u.upload_qps === undefined || u.upload_qps === null ? null : Number(u.upload_qps),
     uploadRpm: u.upload_rpm === undefined || u.upload_rpm === null ? null : Number(u.upload_rpm),
+    storageQuotaBytes:
+      u.storage_quota_bytes === undefined || u.storage_quota_bytes === null
+        ? null
+        : Number(u.storage_quota_bytes),
+    usedSpaceBytes: Number(u.used_space_bytes || 0),
     imageCount: Number(u.image_count || 0),
     albumCount: Number(u.album_count || 0),
     createdAt: u.created_at,
@@ -1049,8 +1054,13 @@ export const adminApi = {
     // -1=follow global, 0=unlimited, >0=custom
     body.upload_qps = payload.uploadQps === undefined || payload.uploadQps === null ? -1 : payload.uploadQps;
     body.upload_rpm = payload.uploadRpm === undefined || payload.uploadRpm === null ? -1 : payload.uploadRpm;
+    body.storage_quota_bytes =
+      payload.storageQuotaBytes === undefined || payload.storageQuotaBytes === null
+        ? -1
+        : payload.storageQuotaBytes;
     delete body.uploadQps;
     delete body.uploadRpm;
+    delete body.storageQuotaBytes;
 
     const res = await request<any>('/admin/users', {
       method: 'POST',
@@ -1080,6 +1090,9 @@ export const adminApi = {
     // -1=follow global (clears override), 0=unlimited, >0=custom QPS/RPM
     if (payload.uploadQps !== undefined) body.upload_qps = payload.uploadQps === null ? -1 : payload.uploadQps;
     if (payload.uploadRpm !== undefined) body.upload_rpm = payload.uploadRpm === null ? -1 : payload.uploadRpm;
+    // -1=follow role default (clears override), 0=unlimited, >0=custom bytes
+    if (payload.storageQuotaBytes !== undefined)
+      body.storage_quota_bytes = payload.storageQuotaBytes === null ? -1 : payload.storageQuotaBytes;
 
     const res = await request<any>(`/admin/users/${id}`, {
       method: 'PUT',
@@ -1433,6 +1446,10 @@ export const uploadApi = {
           single_max_size_bytes: Number(d.single_max_size_bytes || 0),
           allow_anonymous: !!d.allow_anonymous,
           naming_rule: d.naming_rule || 'uuid',
+          storage_quota_bytes: Number(d.storage_quota_bytes ?? 0),
+          storage_unlimited: !!d.storage_unlimited,
+          storage_used_bytes: Number(d.storage_used_bytes ?? 0),
+          storage_remaining_bytes: Number(d.storage_remaining_bytes ?? 0),
         },
       };
     }

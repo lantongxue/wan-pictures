@@ -9,3 +9,7 @@ coverage/
 package-lock.json
 *.db
 backend/uploads/
+
+# Local tool/editor state
+.zcode/
+.vscode/

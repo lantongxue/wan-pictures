@@ -105,8 +105,8 @@ const jsonResponseExample = `{
   "code": 200,
   "message": "上传成功",
   "data": {
-    "url": "https://your-domain.com/image/xxxx.png",
-    "thumb_url": "https://your-domain.com/image/thumb/xxxx.png",
+    "url": "${window.location.origin}/image/xxxx.png",
+    "thumb_url": "${window.location.origin}/image/thumb/xxxx.png",
     "created_at": "2026-08-27T12:00:00Z"
   }
 }`;

@@ -56,6 +56,17 @@ func (ctrl *UserController) CreateImage(c *gin.Context) {
 		return
 	}
 
+	// Manual import bypasses the upload pipeline, so the total storage quota
+	// must be enforced here too (admin role resolves to unlimited).
+	ownerID := currentUserID(c)
+	var owner models.User
+	if err := database.DB.First(&owner, ownerID).Error; err == nil {
+		if err := CheckUserStorageQuota(&owner, req.Size); err != nil {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse(http.StatusBadRequest, err.Error()))
+			return
+		}
+	}
+
 	storageDriver := req.StorageDriver
 	if storageDriver == "" {
 		storageDriver = "local"
@@ -77,7 +88,7 @@ func (ctrl *UserController) CreateImage(c *gin.Context) {
 		AspectRatio:   req.AspectRatio,
 		Url:           req.Url,
 		AlbumID:       albumID,
-		UserID:        currentUserID(c),
+		UserID:        ownerID,
 		Tags:          req.Tags,
 		Favorite:      req.Favorite,
 		StorageDriver: storageDriver,

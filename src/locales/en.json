@@ -1039,7 +1039,14 @@
     "deleteConfirmText": "Are you sure you want to delete user @{{username}}?",
     "deleteConfirmDesc": "This user will lose system access.",
     "deleteCancel": "Cancel",
-    "deleteConfirm": "Confirm Permanent Delete"
+    "deleteConfirm": "Confirm Permanent Delete",
+    "colStorageQuota": "Storage Quota",
+    "quotaRoleDefault": "Role default",
+    "quotaModeLabel": "Total Storage Quota",
+    "quotaGbPlaceholder": "GB",
+    "quotaDesc": "Caps total storage (sum of all image sizes) per account; falls back to the role default (Free 5GB / VIP 20GB / Admin unlimited) unless overridden",
+    "quotaDescWithUsed": "Currently used by this account: {{used}}. Uploading is blocked once the quota is exhausted",
+    "quotaTitle": "Used {{used}} / Quota {{quota}}"
   },
   "adminSettings": {
     "title": "System Maintenance, Preferences & Backup",
@@ -1087,7 +1094,8 @@
     "saveFailed": "Failed to save settings",
     "exportFailed": "Backend data fetch failed; cannot export",
     "exportSuccess": "Full backend backup file downloaded successfully",
-    "exportError": "Export failed"
+    "exportError": "Export failed",
+    "storageQuotaGb": "Total Storage Quota (GB)"
   },
   "adminStorage": {
     "title": "Multi-Cloud Storage Engine Scheduling & Config",

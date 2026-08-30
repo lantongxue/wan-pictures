@@ -31,6 +31,7 @@ import { Album, ViewMode, FilterOptions } from '../types';
 import { formatFileSize } from '../utils/imageProcessing';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useUserOptional } from '../pages/user/UserContext';
 import { changeLanguage } from '../i18n';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -92,6 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { t, i18n } = useTranslation();
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, backendOnline, logout } = useAuth();
+  const { quotaInfo } = useUserOptional() ?? { quotaInfo: null };
   const isDeveloperActive = location.pathname.startsWith('/developer');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -138,10 +140,16 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const storagePercentage = Math.min(
-    100,
-    (totalStorageBytes / (50 * 1024 * 1024 * 1024)) * 100
-  );
+  // Storage quota from GET /upload/quota (per-account, backend-authoritative).
+  // Used bytes prefer the backend value; the client-side image sum is only a
+  // fallback for older backends / anonymous visitors. Unlimited (admin or
+  // explicit override) renders an ∞ cap with no meaningful percentage.
+  const storageUnlimited = quotaInfo?.storage_unlimited ?? false;
+  const storageQuotaBytes = quotaInfo?.storage_quota_bytes ?? 50 * 1024 * 1024 * 1024;
+  const storageUsedBytes = quotaInfo?.storage_used_bytes ?? totalStorageBytes;
+  const storagePercentage = storageUnlimited
+    ? 0
+    : Math.min(100, (storageUsedBytes / (storageQuotaBytes || 1)) * 100);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -371,17 +379,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                         <div className="flex items-baseline justify-between">
                           <span className="text-xs font-mono font-semibold text-foreground">
-                            {formatFileSize(totalStorageBytes)}
+                            {formatFileSize(storageUsedBytes)}
                           </span>
                           <span className="text-[11px] text-muted-foreground font-mono">
-                            / 50 GB
+                            {storageUnlimited ? '∞' : `/ ${formatFileSize(storageQuotaBytes)}`}
                           </span>
                         </div>
 
                         {/* Progress Bar */}
                         <div className="w-full h-1.5 rounded-full bg-muted/80 overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-primary rounded-full transition-all duration-300"
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              storagePercentage >= 100
+                                ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-primary'
+                            }`}
                             style={{
                               width: `${Math.max(1.5, storagePercentage)}%`,
                             }}
@@ -855,17 +867,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs font-mono font-semibold text-foreground">
-                      {formatFileSize(totalStorageBytes)}
+                      {formatFileSize(storageUsedBytes)}
                     </span>
                     <span className="text-[11px] text-muted-foreground font-mono">
-                      / 50 GB
+                      {storageUnlimited ? '∞' : `/ ${formatFileSize(storageQuotaBytes)}`}
                     </span>
                   </div>
 
                   {/* Progress Bar */}
                   <div className="w-full h-1.5 rounded-full bg-muted/80 overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-primary rounded-full transition-all duration-300"
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        storagePercentage >= 100
+                          ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                          : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-primary'
+                      }`}
                       style={{
                         width: `${Math.max(1.5, storagePercentage)}%`,
                       }}

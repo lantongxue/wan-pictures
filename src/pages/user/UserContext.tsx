@@ -879,3 +879,10 @@ export const useUser = (): UserContextType => {
   }
   return context;
 };
+
+// Tolerant variant for shared components that may render outside the user
+// workspace tree (e.g. UserProfileModal mounted in the admin layout).
+// Returns null instead of throwing when no UserProvider is present.
+export const useUserOptional = (): UserContextType | null => {
+  return useContext(UserContext);
+};

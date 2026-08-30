@@ -1039,7 +1039,14 @@
     "deleteConfirmText": "确定要删除用户 @{{username}} 吗？",
     "deleteConfirmDesc": "该用户将失去系统访问权限。",
     "deleteCancel": "取消",
-    "deleteConfirm": "确认永久删除"
+    "deleteConfirm": "确认永久删除",
+    "colStorageQuota": "空间额度",
+    "quotaRoleDefault": "跟随角色默认",
+    "quotaModeLabel": "空间总额度",
+    "quotaGbPlaceholder": "GB",
+    "quotaDesc": "按账号总存储空间（所有图片体积之和）限制上传；未单独设置时按角色默认执行（普通 5GB / VIP 20GB / 管理员不限）",
+    "quotaDescWithUsed": "该账号当前已用空间：{{used}}，超出额度后将无法继续上传",
+    "quotaTitle": "已用 {{used}} / 额度 {{quota}}"
   },
   "adminSettings": {
     "title": "系统维护、全局偏好与数据备份",
@@ -1087,7 +1094,8 @@
     "saveFailed": "保存设置失败",
     "exportFailed": "后端数据拉取失败，无法导出",
     "exportSuccess": "后端全量数据备份文件已成功导出下载",
-    "exportError": "导出失败"
+    "exportError": "导出失败",
+    "storageQuotaGb": "空间总额度 (GB)"
   },
   "adminStorage": {
     "title": "多云存储引擎调度与配置",

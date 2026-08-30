@@ -128,6 +128,8 @@ export interface UploadQuotaSettings {
   user_upload_qps?: number;      // 登录用户上传 QPS（Redis 滑动窗口），0 表示不限流
   anonymous_upload_rpm?: number; // 匿名上传 RPM（每分钟滑动窗口），0 表示不限流
   user_upload_rpm?: number;      // 登录用户上传 RPM（每分钟滑动窗口），0 表示不限流
+  free_storage_quota_gb?: number; // 普通用户默认总空间 GB，未设置时后端回退 5
+  vip_storage_quota_gb?: number;  // VIP 用户默认总空间 GB，未设置时后端回退 20
   naming_rule: 'uuid' | 'original' | 'timestamp' | 'random' | 'custom';
   custom_prefix?: string;
   auto_compress?: boolean;
@@ -144,6 +146,11 @@ export interface UploadQuotaInfo {
   single_max_size_bytes: number;
   allow_anonymous: boolean;
   naming_rule: string;
+  // 总空间额度（仅登录用户有值；unlimited 时 quota 为 0）
+  storage_quota_bytes?: number;
+  storage_unlimited?: boolean;
+  storage_used_bytes?: number;
+  storage_remaining_bytes?: number;
 }
 
 export interface AdminOverviewStats {
@@ -227,6 +234,8 @@ export interface AdminUserItem extends User {
   albumCount?: number;
   uploadQps?: number | null; // null=跟随全局, 0=不限流, >0=自定义 QPS
   uploadRpm?: number | null; // null=跟随全局, 0=不限流, >0=自定义 RPM
+  storageQuotaBytes?: number | null; // null=跟随角色默认, 0=不限, >0=自定义字节
+  usedSpaceBytes?: number; // 已用空间（后端聚合）
 }
 
 export interface CreateUserPayload {
@@ -239,6 +248,7 @@ export interface CreateUserPayload {
   bio?: string;
   uploadQps?: number | null;
   uploadRpm?: number | null;
+  storageQuotaBytes?: number | null;
 }
 
 export interface UpdateUserPayload {
@@ -250,6 +260,7 @@ export interface UpdateUserPayload {
   password?: string;
   uploadQps?: number | null;
   uploadRpm?: number | null;
+  storageQuotaBytes?: number | null;
 }
 
 export interface ResetUserPasswordPayload {

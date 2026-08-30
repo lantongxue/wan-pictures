@@ -127,6 +127,18 @@ func (ctrl *UploadController) checkUploadQuota(role string, userID uint, clientI
 		return fmt.Errorf("单张图片文件大小超出限制（当前: %.2fMB，最大允许: %dMB）", float64(fileSize)/(1024*1024), maxMB)
 	}
 
+	// 2.5 Check total storage quota (registered users only; admins are unlimited
+	// unless an explicit per-account override says otherwise). Covers the regular
+	// upload, instant-upload pre-check and OpenAPI upload — they all funnel here.
+	if userID > 0 {
+		var user models.User
+		if err := database.DB.First(&user, userID).Error; err == nil {
+			if err := CheckUserStorageQuota(&user, fileSize); err != nil {
+				return err
+			}
+		}
+	}
+
 	// 3. Admin has no daily count limit
 	if role == "admin" {
 		return nil
@@ -741,6 +753,24 @@ func (ctrl *UploadController) GetQuota(c *gin.Context) {
 		remaining = 0
 	}
 
+	// Total storage quota for the authenticated caller (anonymous = unlimited)
+	storageQuotaBytes, storageUnlimited := int64(0), true
+	storageUsedBytes := int64(0)
+	if userID > 0 {
+		var user models.User
+		if err := database.DB.First(&user, userID).Error; err == nil {
+			storageQuotaBytes, storageUnlimited = ResolveStorageQuota(&user)
+			storageUsedBytes = GetUserUsedSpaceBytes(userID)
+		}
+	}
+	storageRemainingBytes := int64(0)
+	if !storageUnlimited {
+		storageRemainingBytes = storageQuotaBytes - storageUsedBytes
+		if storageRemainingBytes < 0 {
+			storageRemainingBytes = 0
+		}
+	}
+
 	c.JSON(http.StatusOK, models.SuccessResponse(models.UploadQuotaInfo{
 		Role:               role,
 		DailyLimit:         dailyLimit,
@@ -750,6 +780,11 @@ func (ctrl *UploadController) GetQuota(c *gin.Context) {
 		SingleMaxSizeBytes: int64(maxMB) * 1024 * 1024,
 		AllowAnonymous:     quotas.AllowAnonymous,
 		NamingRule:         quotas.NamingRule,
+
+		StorageQuotaBytes:     storageQuotaBytes,
+		StorageUnlimited:      storageUnlimited,
+		StorageUsedBytes:      storageUsedBytes,
+		StorageRemainingBytes: storageRemainingBytes,
 	}))
 }
 

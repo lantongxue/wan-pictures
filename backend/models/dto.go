@@ -187,6 +187,8 @@ type AdminCreateUserRequest struct {
 	Bio       string `json:"bio" binding:"omitempty,max=255"`
 	UploadQPS *int   `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
 	UploadRPM *int   `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
+	// StorageQuotaBytes: -1/NULL=follow role default, 0=unlimited, >0=custom bytes
+	StorageQuotaBytes *int64 `json:"storage_quota_bytes"`
 }
 
 type AdminUpdateUserRequest struct {
@@ -198,6 +200,9 @@ type AdminUpdateUserRequest struct {
 	Password  *string `json:"password" binding:"omitempty,min=6,max=64"`
 	UploadQPS *int    `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
 	UploadRPM *int    `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
+	// StorageQuotaBytes: -1=follow role default (resets stored value to NULL),
+	// 0=unlimited, >0=custom bytes; NULL (key absent) leaves it untouched.
+	StorageQuotaBytes *int64 `json:"storage_quota_bytes"`
 }
 
 type AdminResetPasswordRequest struct {
@@ -205,19 +210,22 @@ type AdminResetPasswordRequest struct {
 }
 
 type AdminUserItemResponse struct {
-	ID         uint      `json:"id"`
-	Username   string    `json:"username"`
-	Email      string    `json:"email"`
-	Nickname   string    `json:"nickname"`
-	Avatar     string    `json:"avatar"`
-	Role       string    `json:"role"`
-	Bio        string    `json:"bio"`
-	UploadQPS  *int      `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
-	UploadRPM  *int      `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
-	ImageCount int64     `json:"image_count"`
-	AlbumCount int64     `json:"album_count"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Nickname  string `json:"nickname"`
+	Avatar    string `json:"avatar"`
+	Role      string `json:"role"`
+	Bio       string `json:"bio"`
+	UploadQPS *int   `json:"upload_qps"` // -1/NULL=follow global, 0=unlimited, >0=custom QPS
+	UploadRPM *int   `json:"upload_rpm"` // -1/NULL=follow global, 0=unlimited, >0=custom RPM
+	// StorageQuotaBytes: NULL=follow role default, 0=unlimited, >0=custom bytes
+	StorageQuotaBytes *int64    `json:"storage_quota_bytes"`
+	UsedSpaceBytes    int64     `json:"used_space_bytes"`
+	ImageCount        int64     `json:"image_count"`
+	AlbumCount        int64     `json:"album_count"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // Storage Config Request DTOs
@@ -258,14 +266,20 @@ type CheckHashResponse struct {
 }
 
 type UploadQuotaInfo struct {
-	Role               string `json:"role"`                 // "anonymous", "user", "vip", "admin"
-	DailyLimit         int    `json:"daily_limit"`         // Max uploads today (e.g. 20)
-	TodayUsed          int    `json:"today_used"`          // Count uploaded today
-	RemainingToday     int    `json:"remaining_today"`     // Remaining allowed uploads
-	SingleMaxSizeMB    int    `json:"single_max_size_mb"`  // Max MB per image
+	Role               string `json:"role"`               // "anonymous", "user", "vip", "admin"
+	DailyLimit         int    `json:"daily_limit"`        // Max uploads today (e.g. 20)
+	TodayUsed          int    `json:"today_used"`         // Count uploaded today
+	RemainingToday     int    `json:"remaining_today"`    // Remaining allowed uploads
+	SingleMaxSizeMB    int    `json:"single_max_size_mb"` // Max MB per image
 	SingleMaxSizeBytes int64  `json:"single_max_size_bytes"`
 	AllowAnonymous     bool   `json:"allow_anonymous"`
 	NamingRule         string `json:"naming_rule"`
+
+	// Total storage quota for the account; StorageQuotaBytes is 0 when unlimited
+	StorageQuotaBytes     int64 `json:"storage_quota_bytes"`
+	StorageUnlimited      bool  `json:"storage_unlimited"`
+	StorageUsedBytes      int64 `json:"storage_used_bytes"`
+	StorageRemainingBytes int64 `json:"storage_remaining_bytes"` // 0 when unlimited or exhausted
 }
 
 // Developer API Key DTOs
@@ -301,5 +315,3 @@ type AdminApiKeyResponse struct {
 	IsRevoked   bool       `json:"is_revoked"`
 	CreatedAt   time.Time  `json:"created_at"`
 }
-
-
